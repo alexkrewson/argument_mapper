@@ -1,0 +1,266 @@
+/* ===========================================
+   App.css — All styles for the Argument Mapper
+   =========================================== */
+
+/* --- Layout: full-height app with header, main, footer --- */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: #1e293b;
+  background: #f8fafc;
+}
+
+/* --- Header --- */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* --- API Key Input --- */
+.api-key-input {
+  margin-left: auto;
+}
+
+.api-key-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.api-key-form label {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.api-key-form input {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  width: 200px;
+}
+
+.api-key-collapsed {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.api-key-status {
+  font-size: 0.8rem;
+  color: #22c55e;
+  font-weight: 500;
+}
+
+/* --- Main content: graph + sidebar --- */
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Graph area takes up most of the space */
+.graph-area {
+  flex: 1;
+  position: relative;
+}
+
+.argument-map {
+  width: 100%;
+  height: 100%;
+}
+
+.argument-map.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 1rem;
+}
+
+/* --- Sidebar --- */
+.sidebar {
+  width: 280px;
+  border-left: 1px solid #e2e8f0;
+  background: #fff;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* --- Node List --- */
+.node-list {
+  padding: 1rem;
+}
+
+.node-list h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #334155;
+}
+
+.node-list .empty-message {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+.node-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.node-list li {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.node-list li.flagged {
+  opacity: 0.5;
+}
+
+.speaker-badge {
+  font-size: 0.65rem;
+  color: #fff;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.claim-text {
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.original-text {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  cursor: help;
+}
+
+.veto-btn {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  background: #fff;
+  border: 1px solid #ef4444;
+  color: #ef4444;
+  border-radius: 3px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.veto-btn:hover {
+  background: #fef2f2;
+}
+
+.flagged-label {
+  font-size: 0.7rem;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* --- Error bar --- */
+.error-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1.5rem;
+  background: #fef2f2;
+  border-top: 1px solid #fecaca;
+  color: #dc2626;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.error-bar button {
+  background: none;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-decoration: underline;
+}
+
+/* --- Footer / Statement Input --- */
+.app-footer {
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.statement-input {
+  padding: 0.75rem 1.5rem;
+}
+
+.speaker-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.input-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.input-row textarea {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  resize: none;
+}
+
+.input-row textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+}
+
+.input-row button {
+  padding: 0.5rem 1.5rem;
+  background: #3b82f6;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.input-row button:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.input-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Generic button styles --- */
+button {
+  font-family: inherit;
+}
