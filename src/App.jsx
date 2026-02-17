@@ -12,6 +12,7 @@ import { useState, useCallback, useRef } from "react";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeList from "./components/NodeList";
+import NodeDetailPopup from "./components/NodeDetailPopup";
 import { updateArgumentMap, rateNode, sendDirectMessage } from "./utils/claude";
 import "./App.css";
 
@@ -30,6 +31,8 @@ export default function App() {
   const [error, setError] = useState(null);          // Last error message
   const [directMode, setDirectMode] = useState(false); // Talk-to-AI mode?
   const [sidebarWidth, setSidebarWidth] = useState(280);
+  const [originalTexts, setOriginalTexts] = useState({}); // { [nodeId]: original statement }
+  const [selectedNode, setSelectedNode] = useState(null); // Node shown in detail popup
   const dragging = useRef(false);
 
   const handleMouseDown = useCallback((e) => {
@@ -71,6 +74,19 @@ export default function App() {
         currentSpeaker,
         statement
       );
+
+      // Track original text for newly created nodes
+      const oldIds = new Set(argumentMap.argument_map.nodes.map((n) => n.id));
+      const newNodes = updatedMap.argument_map.nodes.filter((n) => !oldIds.has(n.id));
+      if (newNodes.length > 0) {
+        setOriginalTexts((prev) => {
+          const next = { ...prev };
+          for (const n of newNodes) {
+            next[n.id] = statement;
+          }
+          return next;
+        });
+      }
 
       // Update the map state with Claude's response
       setArgumentMap(updatedMap);
@@ -119,6 +135,10 @@ export default function App() {
     }
   };
 
+  const handleNodeClick = useCallback((node) => {
+    setSelectedNode(node);
+  }, []);
+
   // Unwrap the inner argument_map for components
   const inner = argumentMap.argument_map;
 
@@ -146,6 +166,7 @@ export default function App() {
           <ArgumentMap
             nodes={inner.nodes}
             edges={inner.edges}
+            onNodeClick={handleNodeClick}
           />
         </div>
 
@@ -158,6 +179,7 @@ export default function App() {
             nodes={inner.nodes}
             currentSpeaker={currentSpeaker}
             onRate={handleRate}
+            onNodeClick={handleNodeClick}
             loading={loading}
           />
         </aside>
@@ -169,6 +191,15 @@ export default function App() {
           <span>{error}</span>
           <button onClick={() => setError(null)}>Dismiss</button>
         </div>
+      )}
+
+      {/* Node detail popup */}
+      {selectedNode && (
+        <NodeDetailPopup
+          node={selectedNode}
+          originalText={originalTexts[selectedNode.id]}
+          onClose={() => setSelectedNode(null)}
+        />
       )}
 
       {/* Statement input at the bottom */}

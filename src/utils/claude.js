@@ -57,12 +57,13 @@ JSON schema:
     "nodes": [{
       "id": "node_1",
       "type": "claim|premise|objection|rebuttal|evidence|clarification",
-      "content": "Concise text (1-3 sentences)",
+      "content": "Neutral, concise summary (1 sentence preferred)",
       "speaker": "User A|User B",
       "metadata": {
         "confidence": "high|medium|low",
         "tags": ["keyword1", "keyword2"],
-        "tactics": ["tactic_key_1", "tactic_key_2"]
+        "tactics": ["tactic_key_1", "tactic_key_2"],
+        "tactic_reasons": { "tactic_key_1": "One-sentence explanation of why this tactic applies" }
       }
     }],
     "edges": [{
@@ -97,6 +98,7 @@ Tactics detection:
 - Re-evaluate ALL existing nodes for tactics each turn — new context may reveal fallacies in earlier statements. Update metadata.tactics arrays accordingly.
 - Keep all other existing node fields unchanged when updating tactics.
 - Use an empty array [] if no tactics apply to a node.
+- For every tactic in a node's tactics array, include a corresponding entry in metadata.tactic_reasons explaining WHY that tactic applies. Each reason should be one concise sentence. Example: "tactic_reasons": { "ad_hominem": "Attacks the speaker's character rather than their argument" }
 
 Rules:
 - Node IDs are "node_1", "node_2", etc. (incrementing). Edge IDs are "edge_1", "edge_2", etc.
@@ -104,7 +106,8 @@ Rules:
 - Set the "speaker" field on new nodes to the current speaker.
 - The first statement should set the title and description. Update them if the debate topic evolves.
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
-- Add 2-4 relevant tags per node.`;
+- Add 2-4 relevant tags per node.
+- Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible.`;
 
   const userMessage = `Current argument map:
 ${JSON.stringify(currentMap, null, 2)}

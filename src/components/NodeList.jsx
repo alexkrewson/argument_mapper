@@ -7,7 +7,7 @@
 
 import { TACTICS } from "../utils/tactics.js";
 
-export default function NodeList({ nodes, currentSpeaker, onRate, loading }) {
+export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, loading }) {
   if (nodes.length === 0) {
     return (
       <div className="node-list">
@@ -22,7 +22,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, loading }) {
       <h3>Claims ({nodes.length})</h3>
       <ul>
         {nodes.map((node) => (
-          <li key={node.id}>
+          <li key={node.id} onClick={() => onNodeClick?.(node)}>
             {/* Top row: badges */}
             <div className="node-badges">
               <span
@@ -67,7 +67,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, loading }) {
 
             {/* Thumbs up/down — only for the OTHER user's statements */}
             {node.speaker !== currentSpeaker && (
-              <span className="rating-buttons">
+              <span className="rating-buttons" onClick={(e) => e.stopPropagation()}>
                 <button
                   className={`rate-btn ${node.rating === "up" ? "active-up" : ""}`}
                   onClick={() => onRate(node.id, "up")}

@@ -1,65 +1,166 @@
 /**
  * ArgumentMap.jsx — Cytoscape.js graph visualization of the argument map.
  *
- * Takes nodes and edges from the spec v1.0 map and renders them as an interactive graph.
- * Color coding:
- *   - Blue (#3b82f6) for User A nodes
- *   - Green (#22c55e) for User B nodes
- *   - Red border for flagged/vetoed nodes
- * Node shapes by type:
- *   - claim → roundrectangle (bold border)
- *   - premise → roundrectangle
- *   - evidence → barrel
- *   - objection → octagon
- *   - rebuttal → hexagon
- *   - clarification → ellipse (dashed border)
- * Edge colors by relationship:
- *   - supports → green, strongly_supports → dark green (thick)
- *   - opposes → red, refutes → dark red (thick)
- *   - clarifies → blue (dashed)
- *   - rebuts → orange
+ * Uses dagre for hierarchical top-down layout (claims on top, supporting
+ * arguments below) similar to standard argument map diagrams.
  *
  * Each node has a small ID badge in its top-left corner via cytoscape-node-html-label.
  */
 
-import { useCallback } from "react";
-import CytoscapeComponent from "react-cytoscapejs";
+import { useEffect, useRef } from "react";
 import cytoscape from "cytoscape";
 import nodeHtmlLabel from "cytoscape-node-html-label";
+import dagre from "cytoscape-dagre";
 import { TACTICS } from "../utils/tactics.js";
 
-// Register the HTML label extension (idempotent check)
+// Register extensions once
 if (typeof cytoscape("core", "nodeHtmlLabel") === "undefined") {
   nodeHtmlLabel(cytoscape);
 }
+if (typeof cytoscape("layout", "dagre") === "undefined") {
+  cytoscape.use(dagre);
+}
 
-export default function ArgumentMap({ nodes, edges }) {
-  // Convert our map format into Cytoscape's element format.
-  const elements = [
-    ...nodes.map((node) => ({
-      data: {
-        id: node.id,
-        label: node.content,
-        speaker: node.speaker,
-        type: node.type,
-        rating: node.rating,
-        tactics: node.metadata?.tactics || [],
-      },
-    })),
-    ...edges.map((edge) => ({
-      data: {
-        id: edge.id,
-        source: edge.from,
-        target: edge.to,
-        label: edge.relationship,
-        relationship: edge.relationship,
-      },
-    })),
-  ];
+const stylesheet = [
+  // --- Base node style ---
+  {
+    selector: "node",
+    style: {
+      label: "data(label)",
+      "text-wrap": "wrap",
+      "text-max-width": "160px",
+      "font-size": "12px",
+      "text-valign": "center",
+      "text-halign": "center",
+      width: 180,
+      height: 70,
+      shape: "roundrectangle",
+      "background-color": "#f8fafc",
+      "border-width": 2,
+      "border-color": "#94a3b8",
+      padding: "10px",
+    },
+  },
+  // --- Node types ---
+  {
+    selector: 'node[type = "claim"]',
+    style: {
+      "border-width": 3,
+      "font-weight": "bold",
+      "font-size": "13px",
+    },
+  },
+  {
+    selector: 'node[type = "objection"]',
+    style: {
+      "border-style": "dashed",
+    },
+  },
+  // --- Speaker colors ---
+  {
+    selector: 'node[speaker = "User A"]',
+    style: {
+      "background-color": "#dbeafe",
+      "border-color": "#3b82f6",
+    },
+  },
+  {
+    selector: 'node[speaker = "User B"]',
+    style: {
+      "background-color": "#dcfce7",
+      "border-color": "#22c55e",
+    },
+  },
+  // --- Agreed-upon nodes (thumbs up) get a gold glow ---
+  {
+    selector: 'node[rating = "up"]',
+    style: {
+      "border-color": "#f59e0b",
+      "border-width": 3,
+      "background-color": "#fffbeb",
+      "shadow-blur": 12,
+      "shadow-color": "#f59e0b",
+      "shadow-opacity": 0.4,
+      "shadow-offset-x": 0,
+      "shadow-offset-y": 0,
+    },
+  },
+  // --- Base edge style ---
+  {
+    selector: "edge",
+    style: {
+      label: "data(label)",
+      "font-size": "9px",
+      "text-rotation": "autorotate",
+      "text-margin-y": -10,
+      "curve-style": "taxi",
+      "taxi-direction": "vertical",
+      "target-arrow-shape": "triangle",
+      "arrow-scale": 1.2,
+      width: 2,
+      "line-color": "#94a3b8",
+      "target-arrow-color": "#94a3b8",
+    },
+  },
+  // --- Relationship colors ---
+  {
+    selector: 'edge[relationship = "supports"]',
+    style: { "line-color": "#22c55e", "target-arrow-color": "#22c55e" },
+  },
+  {
+    selector: 'edge[relationship = "strongly_supports"]',
+    style: { "line-color": "#15803d", "target-arrow-color": "#15803d", width: 3 },
+  },
+  {
+    selector: 'edge[relationship = "opposes"]',
+    style: { "line-color": "#ef4444", "target-arrow-color": "#ef4444" },
+  },
+  {
+    selector: 'edge[relationship = "refutes"]',
+    style: { "line-color": "#b91c1c", "target-arrow-color": "#b91c1c", width: 3 },
+  },
+  {
+    selector: 'edge[relationship = "clarifies"]',
+    style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6", "line-style": "dashed" },
+  },
+  {
+    selector: 'edge[relationship = "rebuts"]',
+    style: { "line-color": "#f59e0b", "target-arrow-color": "#f59e0b" },
+  },
+];
 
-  // Configure HTML labels when cytoscape instance is ready
-  const cyRef = useCallback((cy) => {
-    if (!cy) return;
+function runLayout(cy) {
+  cy.layout({
+    name: "dagre",
+    rankDir: "BT",
+    nodeSep: 60,
+    rankSep: 100,
+    padding: 40,
+    animate: true,
+    animationDuration: 300,
+    fit: true,
+    nodeDimensionsIncludeLabels: true,
+  }).run();
+}
+
+export default function ArgumentMap({ nodes, edges, onNodeClick }) {
+  const containerRef = useRef(null);
+  const cyRef = useRef(null);
+
+  // Initialize cytoscape once
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const cy = cytoscape({
+      container: containerRef.current,
+      style: stylesheet,
+      userZoomingEnabled: true,
+      userPanningEnabled: true,
+      boxSelectionEnabled: false,
+      maxZoom: 2.5,
+      minZoom: 0.2,
+    });
+
     cy.nodeHtmlLabel([
       {
         query: "node",
@@ -86,178 +187,79 @@ export default function ArgumentMap({ nodes, edges }) {
         },
       },
     ]);
+
+    cyRef.current = cy;
+
+    return () => {
+      cy.destroy();
+      cyRef.current = null;
+    };
   }, []);
 
-  // Cytoscape stylesheet
-  const stylesheet = [
-    // --- Base node style ---
-    {
-      selector: "node",
-      style: {
-        label: "data(label)",
-        "text-wrap": "wrap",
-        "text-max-width": "120px",
-        "font-size": "11px",
-        "text-valign": "center",
-        "text-halign": "center",
-        width: 140,
-        height: 60,
-        shape: "roundrectangle",
-        "background-color": "#e2e8f0",
-        "border-width": 2,
-        "border-color": "#94a3b8",
-        padding: "8px",
-      },
-    },
-    // --- Node type shapes ---
-    {
-      selector: 'node[type = "claim"]',
-      style: {
-        shape: "roundrectangle",
-        "border-width": 3,
-        "font-weight": "bold",
-      },
-    },
-    {
-      selector: 'node[type = "premise"]',
-      style: {
-        shape: "roundrectangle",
-      },
-    },
-    {
-      selector: 'node[type = "evidence"]',
-      style: {
-        shape: "barrel",
-      },
-    },
-    {
-      selector: 'node[type = "objection"]',
-      style: {
-        shape: "octagon",
-      },
-    },
-    {
-      selector: 'node[type = "rebuttal"]',
-      style: {
-        shape: "hexagon",
-      },
-    },
-    {
-      selector: 'node[type = "clarification"]',
-      style: {
-        shape: "ellipse",
-        "border-style": "dashed",
-      },
-    },
-    // --- Speaker colors ---
-    {
-      selector: 'node[speaker = "User A"]',
-      style: {
-        "background-color": "#dbeafe",
-        "border-color": "#3b82f6",
-      },
-    },
-    {
-      selector: 'node[speaker = "User B"]',
-      style: {
-        "background-color": "#dcfce7",
-        "border-color": "#22c55e",
-      },
-    },
-    // --- Base edge style ---
-    {
-      selector: "edge",
-      style: {
-        label: "data(label)",
-        "font-size": "10px",
-        "text-rotation": "autorotate",
-        "curve-style": "bezier",
-        "target-arrow-shape": "triangle",
-        "arrow-scale": 1.2,
-        width: 2,
-        "line-color": "#94a3b8",
-        "target-arrow-color": "#94a3b8",
-      },
-    },
-    // --- Relationship styles ---
-    {
-      selector: 'edge[relationship = "supports"]',
-      style: {
-        "line-color": "#22c55e",
-        "target-arrow-color": "#22c55e",
-      },
-    },
-    {
-      selector: 'edge[relationship = "strongly_supports"]',
-      style: {
-        "line-color": "#15803d",
-        "target-arrow-color": "#15803d",
-        width: 3,
-      },
-    },
-    {
-      selector: 'edge[relationship = "opposes"]',
-      style: {
-        "line-color": "#ef4444",
-        "target-arrow-color": "#ef4444",
-      },
-    },
-    {
-      selector: 'edge[relationship = "refutes"]',
-      style: {
-        "line-color": "#b91c1c",
-        "target-arrow-color": "#b91c1c",
-        width: 3,
-      },
-    },
-    {
-      selector: 'edge[relationship = "clarifies"]',
-      style: {
-        "line-color": "#3b82f6",
-        "target-arrow-color": "#3b82f6",
-        "line-style": "dashed",
-      },
-    },
-    {
-      selector: 'edge[relationship = "rebuts"]',
-      style: {
-        "line-color": "#f59e0b",
-        "target-arrow-color": "#f59e0b",
-      },
-    },
-  ];
+  // Wire up node tap → onNodeClick callback
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !onNodeClick) return;
 
-  // Layout algorithm — "cose" gives a nice force-directed layout.
-  const layout = {
-    name: "cose",
-    animate: true,
-    animationDuration: 500,
-    nodeRepulsion: () => 8000,
-    idealEdgeLength: () => 150,
-    padding: 30,
-  };
+    const handler = (evt) => {
+      const data = evt.target.data();
+      // Find the full node object from props to include metadata
+      const node = nodes.find((n) => n.id === data.id);
+      if (node) onNodeClick(node);
+    };
+    cy.on("tap", "node", handler);
+    return () => cy.off("tap", "node", handler);
+  }, [onNodeClick, nodes]);
 
-  // Show a placeholder when there are no nodes yet
-  if (nodes.length === 0) {
-    return (
-      <div className="argument-map empty">
-        <p>Submit a statement to start building the argument map.</p>
-      </div>
-    );
-  }
+  // Update elements and re-run layout whenever nodes/edges change
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+
+    const newElements = [
+      ...nodes.map((node) => ({
+        group: "nodes",
+        data: {
+          id: node.id,
+          label: node.content,
+          speaker: node.speaker,
+          type: node.type,
+          rating: node.rating,
+          tactics: node.metadata?.tactics || [],
+        },
+      })),
+      ...edges.map((edge) => ({
+        group: "edges",
+        data: {
+          id: edge.id,
+          source: edge.from,
+          target: edge.to,
+          label: edge.relationship,
+          relationship: edge.relationship,
+        },
+      })),
+    ];
+
+    // Diff and update: remove old, add new, update existing
+    cy.elements().remove();
+    cy.add(newElements);
+
+    if (cy.nodes().length > 0) {
+      runLayout(cy);
+    }
+  }, [nodes, edges]);
 
   return (
     <div className="argument-map">
-      <CytoscapeComponent
-        elements={elements}
-        stylesheet={stylesheet}
-        layout={layout}
-        style={{ width: "100%", height: "100%" }}
-        userZoomingEnabled={true}
-        userPanningEnabled={true}
-        boxSelectionEnabled={false}
-        cy={cyRef}
-      />
+      {nodes.length === 0 && (
+        <p style={{
+          position: "absolute", top: "50%", left: "50%",
+          transform: "translate(-50%, -50%)", color: "#94a3b8"
+        }}>
+          Submit a statement to start building the argument map.
+        </p>
+      )}
+      <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
     </div>
   );
 }
