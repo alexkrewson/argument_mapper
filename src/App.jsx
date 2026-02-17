@@ -8,12 +8,14 @@
  * - Loading state (while waiting for Claude's response)
  */
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeList from "./components/NodeList";
 import NodeDetailPopup from "./components/NodeDetailPopup";
-import { updateArgumentMap, rateNode, sendDirectMessage } from "./utils/claude";
+import ModeratorGauge from "./components/ModeratorGauge";
+import ModeratorGaugePopup from "./components/ModeratorGaugePopup";
+import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
 import "./App.css";
 
 // Initial empty map — spec v1.0 wrapper format
@@ -28,11 +30,15 @@ export default function App() {
   const [argumentMap, setArgumentMap] = useState(EMPTY_MAP); // The argument map data
   const [currentSpeaker, setCurrentSpeaker] = useState("User A"); // Whose turn
   const [loading, setLoading] = useState(false);     // Waiting for Claude?
+  const [loadingSpeaker, setLoadingSpeaker] = useState(null); // Who submitted the loading request
   const [error, setError] = useState(null);          // Last error message
   const [directMode, setDirectMode] = useState(false); // Talk-to-AI mode?
   const [sidebarWidth, setSidebarWidth] = useState(280);
   const [originalTexts, setOriginalTexts] = useState({}); // { [nodeId]: original statement }
   const [selectedNode, setSelectedNode] = useState(null); // Node shown in detail popup
+  const [chatMessages, setChatMessages] = useState([]); // AI moderator chat history
+  const [moderatorAnalysis, setModeratorAnalysis] = useState(null);
+  const [showGaugePopup, setShowGaugePopup] = useState(false);
   const dragging = useRef(false);
 
   const handleMouseDown = useCallback((e) => {
@@ -64,6 +70,7 @@ export default function App() {
     }
 
     setLoading(true);
+    setLoadingSpeaker(currentSpeaker);
     setError(null);
 
     try {
@@ -90,6 +97,7 @@ export default function App() {
 
       // Update the map state with Claude's response
       setArgumentMap(updatedMap);
+      setModeratorAnalysis(updatedMap.moderator_analysis || null);
 
       // Switch turns: User A → User B → User A → ...
       setCurrentSpeaker((prev) =>
@@ -98,8 +106,10 @@ export default function App() {
     } catch (err) {
       console.error("Error calling Claude:", err);
       setError(err.message);
+      throw err; // Re-throw so StatementInput knows submission failed
     } finally {
       setLoading(false);
+      setLoadingSpeaker(null);
     }
   };
 
@@ -108,28 +118,60 @@ export default function App() {
    */
   const handleRate = (nodeId, rating) => {
     const updatedMap = rateNode(argumentMap, nodeId, rating);
-    setArgumentMap(updatedMap);
+    // Add/remove agreed_by metadata for manual thumbs-up
+    const inner = updatedMap.argument_map;
+    const updatedNodes = inner.nodes.map((node) => {
+      if (node.id !== nodeId) return node;
+      if (node.rating === "up") {
+        // Setting thumbs-up: add agreed_by with current speaker (no text for manual)
+        return {
+          ...node,
+          metadata: {
+            ...node.metadata,
+            agreed_by: { speaker: currentSpeaker },
+          },
+        };
+      } else {
+        // Toggling off: remove agreed_by
+        const { agreed_by, ...restMetadata } = node.metadata || {};
+        return { ...node, metadata: restMetadata };
+      }
+    });
+    setArgumentMap({
+      argument_map: { ...inner, nodes: updatedNodes },
+    });
   };
 
   /**
-   * Called when a user sends a direct message to the AI (correction/instruction).
-   * Does not advance the debate turn.
+   * Called when a user sends a chat message to the AI moderator.
+   * Maintains conversation history and optionally updates the map.
    */
-  const handleDirectMessage = async (instruction) => {
+  const handleChatMessage = async (message) => {
     if (!apiKey) {
       setError("Please enter your API key first.");
       return;
     }
 
+    const userMsg = { role: "user", content: message };
+    const updatedHistory = [...chatMessages, userMsg];
+    setChatMessages(updatedHistory);
+
     setLoading(true);
     setError(null);
 
     try {
-      const updatedMap = await sendDirectMessage(apiKey, argumentMap, instruction);
-      setArgumentMap(updatedMap);
+      const { reply, updatedMap } = await chatWithModerator(apiKey, argumentMap, updatedHistory);
+      const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
+      setChatMessages((prev) => [...prev, assistantMsg]);
+      if (updatedMap) {
+        setArgumentMap(updatedMap);
+      }
     } catch (err) {
-      console.error("Error sending direct message:", err);
+      console.error("Error chatting with moderator:", err);
       setError(err.message);
+      // Remove the optimistically-added user message on failure
+      setChatMessages(chatMessages);
+      throw err; // Re-throw so StatementInput knows submission failed
     } finally {
       setLoading(false);
     }
@@ -141,6 +183,70 @@ export default function App() {
 
   // Unwrap the inner argument_map for components
   const inner = argumentMap.argument_map;
+
+  // Compute faded node IDs: agreed nodes + all their supporting predecessors
+  const fadedNodeIds = useMemo(() => {
+    const faded = new Set();
+    const agreedIds = new Set(
+      inner.nodes.filter((n) => n.rating === "up").map((n) => n.id)
+    );
+    if (agreedIds.size === 0) return faded;
+
+    // Build adjacency: for each edge from→to, "from" supports "to",
+    // so "from" is a predecessor of "to"
+    const predecessorMap = new Map(); // targetId → Set of sourceIds
+    for (const edge of inner.edges) {
+      if (!predecessorMap.has(edge.to)) predecessorMap.set(edge.to, new Set());
+      predecessorMap.get(edge.to).add(edge.from);
+    }
+
+    // BFS from agreed nodes, collecting predecessors
+    const queue = [...agreedIds];
+    for (const id of agreedIds) faded.add(id);
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const preds = predecessorMap.get(current);
+      if (preds) {
+        for (const predId of preds) {
+          if (!faded.has(predId)) {
+            faded.add(predId);
+            queue.push(predId);
+          }
+        }
+      }
+    }
+    return faded;
+  }, [inner.nodes, inner.edges]);
+
+  // Compute agreement-adjusted moderator analysis
+  const effectiveAnalysis = useMemo(() => {
+    if (!moderatorAnalysis) return null;
+
+    // Collect agreed-upon nodes and compute leaning adjustment
+    const agreements = [];
+    let adjustment = 0;
+    for (const node of inner.nodes) {
+      if (node.rating !== "up") continue;
+      agreements.push({
+        nodeId: node.id,
+        nodeSpeaker: node.speaker,
+        content: node.content,
+        agreedBy: node.metadata?.agreed_by?.speaker || null,
+      });
+      // Agreement with User A's node strengthens A → shift negative
+      // Agreement with User B's node strengthens B → shift positive
+      if (node.speaker === "User A") adjustment -= 0.1;
+      if (node.speaker === "User B") adjustment += 0.1;
+    }
+
+    const adjustedLeaning = Math.max(-1, Math.min(1, moderatorAnalysis.leaning + adjustment));
+
+    return {
+      ...moderatorAnalysis,
+      leaning: adjustedLeaning,
+      agreements,
+    };
+  }, [moderatorAnalysis, inner.nodes]);
 
   // Derive a concise position summary for each speaker from their first claim node
   const getSpeakerSummary = (speaker) => {
@@ -168,6 +274,10 @@ export default function App() {
             edges={inner.edges}
             onNodeClick={handleNodeClick}
           />
+          <ModeratorGauge
+            analysis={effectiveAnalysis}
+            onShowDetail={() => setShowGaugePopup(true)}
+          />
         </div>
 
         {/* Resize handle */}
@@ -181,6 +291,7 @@ export default function App() {
             onRate={handleRate}
             onNodeClick={handleNodeClick}
             loading={loading}
+            fadedNodeIds={fadedNodeIds}
           />
         </aside>
       </main>
@@ -199,6 +310,15 @@ export default function App() {
           node={selectedNode}
           originalText={originalTexts[selectedNode.id]}
           onClose={() => setSelectedNode(null)}
+          fadedNodeIds={fadedNodeIds}
+        />
+      )}
+
+      {/* Moderator gauge popup */}
+      {showGaugePopup && effectiveAnalysis && (
+        <ModeratorGaugePopup
+          analysis={effectiveAnalysis}
+          onClose={() => setShowGaugePopup(false)}
         />
       )}
 
@@ -208,10 +328,12 @@ export default function App() {
           currentSpeaker={currentSpeaker}
           speakerSummary={speakerSummary}
           onSubmit={handleSubmit}
-          onDirectMessage={handleDirectMessage}
+          onChatMessage={handleChatMessage}
           loading={loading}
+          loadingSpeaker={loadingSpeaker}
           directMode={directMode}
           onToggleMode={() => setDirectMode((prev) => !prev)}
+          chatMessages={chatMessages}
         />
       </footer>
     </div>

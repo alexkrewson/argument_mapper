@@ -253,10 +253,7 @@
 }
 
 .node-agreed {
-  background: #fffbeb;
-  border-left: 3px solid #f59e0b;
-  padding-left: calc(0.6rem - 3px);
-  border-radius: 4px;
+  opacity: 0.5;
 }
 
 .rate-btn.active-up {
@@ -269,6 +266,59 @@
   opacity: 1;
   border-color: #ef4444;
   background: #fef2f2;
+}
+
+/* --- Agreement banner (popup) --- */
+.agreement-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  color: #166534;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.agreement-banner-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.agreement-by {
+  font-size: 0.8rem;
+  color: #15803d;
+  margin-top: 0.15rem;
+}
+
+.agreement-quote {
+  margin: 0.4rem 0 0;
+  padding: 0.4rem 0.7rem;
+  background: #dcfce7;
+  border-left: 3px solid #22c55e;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.8rem;
+  color: #14532d;
+  font-style: italic;
+}
+
+/* --- Agreement indicator (sidebar) --- */
+.agreement-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: #15803d;
+  font-weight: 500;
+}
+
+.agreement-indicator-icon {
+  font-size: 0.75rem;
+  color: #22c55e;
 }
 
 /* --- Error bar --- */
@@ -526,6 +576,204 @@
 
 .node-list li:hover {
   background-color: #f8fafc;
+}
+
+/* --- Chat Log (AI Moderator mode) --- */
+.chat-log {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.chat-message {
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-message.user {
+  align-items: flex-end;
+}
+
+.chat-message.assistant {
+  align-items: flex-start;
+}
+
+.chat-bubble {
+  max-width: 80%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.chat-message.user .chat-bubble {
+  background: #8b5cf6;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.chat-message.assistant .chat-bubble {
+  background: #fff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-map-updated {
+  font-size: 0.7rem;
+  color: #8b5cf6;
+  font-weight: 500;
+  margin-top: 0.2rem;
+  padding-left: 0.25rem;
+}
+
+/* --- Moderator Gauge (floating widget) --- */
+.moderator-gauge {
+  position: absolute;
+  width: 180px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem 0.75rem 0.65rem;
+  cursor: pointer;
+  z-index: 10;
+  user-select: none;
+}
+
+.moderator-gauge:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.gauge-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+  cursor: grab;
+}
+
+.gauge-header:active {
+  cursor: grabbing;
+}
+
+.gauge-grip {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1;
+}
+
+.gauge-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.2rem;
+}
+
+.gauge-label-a {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #3b82f6;
+}
+
+.gauge-label-b {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #22c55e;
+}
+
+.gauge-track {
+  position: relative;
+  height: 8px;
+  background: linear-gradient(to right, #dbeafe, #f1f5f9 50%, #dcfce7);
+  border-radius: 4px;
+}
+
+.gauge-track-large {
+  height: 12px;
+  border-radius: 6px;
+}
+
+.gauge-marker {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  transform: translate(-50%, -50%);
+  transition: left 0.3s ease, background-color 0.3s ease;
+}
+
+.gauge-marker-large {
+  width: 20px;
+  height: 20px;
+  border-width: 3px;
+}
+
+/* Popup-specific gauge wrapper */
+.gauge-popup-track-wrapper {
+  padding: 0.25rem 0;
+}
+
+.gauge-leaning-label {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.4rem;
+}
+
+/* --- Gauge agreements list (popup) --- */
+.gauge-agreements-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gauge-agreement-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.gauge-agreement-content {
+  color: #1e293b;
+}
+
+.gauge-agreed-by {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.gauge-agreement-note {
+  margin: 0.6rem 0 0;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  font-style: italic;
 }
 
 /* --- Generic button styles --- */

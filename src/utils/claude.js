@@ -59,11 +59,13 @@ JSON schema:
       "type": "claim|premise|objection|rebuttal|evidence|clarification",
       "content": "Neutral, concise summary (1 sentence preferred)",
       "speaker": "User A|User B",
+      "rating": "up|down|null",
       "metadata": {
         "confidence": "high|medium|low",
         "tags": ["keyword1", "keyword2"],
         "tactics": ["tactic_key_1", "tactic_key_2"],
-        "tactic_reasons": { "tactic_key_1": "One-sentence explanation of why this tactic applies" }
+        "tactic_reasons": { "tactic_key_1": "One-sentence explanation of why this tactic applies" },
+        "agreed_by": { "speaker": "User X", "text": "the original agreeing statement" }
       }
     }],
     "edges": [{
@@ -72,8 +74,20 @@ JSON schema:
       "to": "target_node_id",
       "relationship": "supports|strongly_supports|opposes|refutes|clarifies|rebuts"
     }]
+  },
+  "moderator_analysis": {
+    "leaning": 0.0,
+    "leaning_reason": "1-2 sentence explanation of which side has the stronger argument and why",
+    "user_a_style": "Brief assessment of User A's argumentative style: good/bad faith, open/closed-minded, charitable/uncharitable",
+    "user_b_style": "Brief assessment of User B's argumentative style: good/bad faith, open/closed-minded, charitable/uncharitable"
   }
 }
+
+Moderator analysis:
+- "leaning": float from -1.0 (strongly favors User A) to +1.0 (strongly favors User B). 0 = neutral/balanced.
+- "leaning_reason": 1-2 sentences explaining why one side has the edge (or why it's balanced).
+- "user_a_style" / "user_b_style": brief assessment covering good/bad faith, open/closed-minded, charitable/uncharitable.
+- Always include moderator_analysis in your response. If only one speaker has spoken, assess what you can and note the other hasn't spoken yet.
 
 Example — after User A says "We should invest in renewable energy because fossil fuels cause climate change":
 {
@@ -107,7 +121,14 @@ Rules:
 - The first statement should set the title and description. Update them if the debate topic evolves.
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
 - Add 2-4 relevant tags per node.
-- Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible.`;
+- Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible.
+
+Agreement detection:
+- When a speaker explicitly or implicitly agrees with an opposing speaker's node (e.g. "I agree that...", "You're right about...", "Fair point on...", or conceding a point), set "rating": "up" on that agreed-upon node.
+- Also set "metadata.agreed_by": { "speaker": "<the agreeing speaker>", "text": "<the original agreeing statement verbatim>" } on that node. The "speaker" is who agreed (the current speaker), and "text" is the exact words from their statement that express agreement.
+- Only set rating on nodes belonging to the OTHER speaker — a speaker cannot agree with their own nodes.
+- Preserve any existing rating values set by the user. Only add new "up" ratings for newly detected agreements. Do not overwrite existing agreed_by metadata.
+- If no agreement is detected, leave the rating field unchanged (null or its current value).`;
 
   const userMessage = `Current argument map:
 ${JSON.stringify(currentMap, null, 2)}
@@ -158,25 +179,30 @@ Return the updated map JSON.`;
 }
 
 /**
- * Sends a direct instruction to Claude about the map (corrections, edits, etc.)
- * This does NOT add a new debate argument — it lets the user fix misrepresentations.
+ * Chat with the AI moderator about the argument map.
+ * Supports back-and-forth conversation with optional map updates.
  *
  * @param {string} apiKey       — The user's Anthropic API key
  * @param {object} currentMap   — Current map state (full wrapper with argument_map)
- * @param {string} instruction  — The user's instruction (e.g. "node_3 should say X")
- * @returns {object}            — Updated map with corrections applied
+ * @param {Array}  chatHistory  — Array of { role: "user"|"assistant", content: string }
+ * @returns {{ reply: string, updatedMap: object|null }}
  */
-export async function sendDirectMessage(apiKey, currentMap, instruction) {
-  const systemPrompt = `You are an argument mapping assistant. The user is giving you a direct instruction to modify the current argument map. This is NOT a new debate statement — it's a correction, edit, or restructuring request.
+export async function chatWithModerator(apiKey, currentMap, chatHistory) {
+  const systemPrompt = `You are an AI debate moderator discussing an argument map with the user. You can explain your reasoning, discuss node classifications, answer questions about the map, and make edits when asked.
 
-Apply the user's instruction to the map and return the updated JSON. You may:
-- Edit node content, type, or metadata
-- Add, remove, or modify edges
-- Split or merge nodes
-- Fix misrepresentations
-- Restructure relationships
+Current argument map:
+${JSON.stringify(currentMap, null, 2)}
 
-Return ONLY the updated JSON map — no explanation, no markdown fences. Keep the same schema:
+You MUST respond with valid JSON in this exact format:
+{
+  "reply": "Your conversational response here",
+  "argument_map": null
+}
+
+- "reply" is your text response to the user (use plain text, not markdown).
+- "argument_map" should be null unless the user asks you to modify the map. When modifying, return the full updated argument_map object (same schema as above).
+
+Map schema when returning updates:
 {
   "argument_map": {
     "title": "...",
@@ -187,17 +213,16 @@ Return ONLY the updated JSON map — no explanation, no markdown fences. Keep th
 }
 
 Rules:
-- Only change what the user asks for. Keep everything else unchanged.
-- Maintain valid node/edge IDs and references.
-- If the user references a node by ID (e.g. "node_3"), modify that specific node.`;
+- Always include a conversational "reply" explaining what you did or answering the question.
+- Only modify the map when the user explicitly asks for changes (corrections, edits, restructuring).
+- When modifying, only change what was asked for. Keep everything else unchanged.
+- Maintain valid node/edge IDs and references.`;
 
-  const userMessage = `Current argument map:
-${JSON.stringify(currentMap, null, 2)}
-
-User instruction:
-"${instruction}"
-
-Return the updated map JSON.`;
+  // Build messages array from chat history
+  const messages = chatHistory.map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+  }));
 
   const response = await fetch(API_URL, {
     method: "POST",
@@ -211,7 +236,7 @@ Return the updated map JSON.`;
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 4096,
       system: systemPrompt,
-      messages: [{ role: "user", content: userMessage }],
+      messages,
     }),
   });
 
@@ -225,7 +250,11 @@ Return the updated map JSON.`;
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
   try {
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    return {
+      reply: parsed.reply || "I couldn't generate a response.",
+      updatedMap: parsed.argument_map ? { argument_map: parsed.argument_map } : null,
+    };
   } catch (e) {
     console.error("Failed to parse Claude response:", text);
     throw new Error("Claude returned invalid JSON. Try again.");

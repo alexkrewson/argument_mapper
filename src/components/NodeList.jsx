@@ -7,7 +7,7 @@
 
 import { TACTICS } from "../utils/tactics.js";
 
-export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, loading }) {
+export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds }) {
   if (nodes.length === 0) {
     return (
       <div className="node-list">
@@ -22,7 +22,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
       <h3>Claims ({nodes.length})</h3>
       <ul>
         {nodes.map((node) => (
-          <li key={node.id} onClick={() => onNodeClick?.(node)}>
+          <li key={node.id} onClick={() => onNodeClick?.(node)} style={fadedNodeIds?.has(node.id) ? { opacity: 0.5 } : undefined}>
             {/* Top row: badges */}
             <div className="node-badges">
               <span
@@ -62,6 +62,14 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
                       {TACTICS[key].symbol} {TACTICS[key].name}
                     </span>
                   ))}
+              </div>
+            )}
+
+            {/* Agreement indicator */}
+            {fadedNodeIds?.has(node.id) && node.metadata?.agreed_by && (
+              <div className="agreement-indicator">
+                <span className="agreement-indicator-icon">&#x2714;</span>
+                Agreed by {node.metadata.agreed_by.speaker}
               </div>
             )}
 

@@ -71,18 +71,17 @@ const stylesheet = [
       "border-color": "#22c55e",
     },
   },
-  // --- Agreed-upon nodes (thumbs up) get a gold glow ---
+  // --- Faded nodes (agreed-upon + their supporters) ---
   {
-    selector: 'node[rating = "up"]',
+    selector: "node.faded",
     style: {
-      "border-color": "#f59e0b",
-      "border-width": 3,
-      "background-color": "#fffbeb",
-      "shadow-blur": 12,
-      "shadow-color": "#f59e0b",
-      "shadow-opacity": 0.4,
-      "shadow-offset-x": 0,
-      "shadow-offset-y": 0,
+      opacity: 0.5,
+    },
+  },
+  {
+    selector: "edge.faded",
+    style: {
+      opacity: 0.5,
     },
   },
   // --- Base edge style ---
@@ -243,6 +242,15 @@ export default function ArgumentMap({ nodes, edges, onNodeClick }) {
     // Diff and update: remove old, add new, update existing
     cy.elements().remove();
     cy.add(newElements);
+
+    // Compute faded set: agreed nodes + all their predecessors (supporters)
+    const agreedNodes = cy.nodes().filter((n) => n.data("rating") === "up");
+    const fadedNodes = agreedNodes.union(agreedNodes.predecessors("node"));
+    const fadedEdges = agreedNodes.predecessors("edge");
+    cy.nodes().removeClass("faded");
+    cy.edges().removeClass("faded");
+    fadedNodes.addClass("faded");
+    fadedEdges.addClass("faded");
 
     if (cy.nodes().length > 0) {
       runLayout(cy);

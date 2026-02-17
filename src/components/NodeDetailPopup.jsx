@@ -8,7 +8,7 @@
 import { useEffect } from "react";
 import { TACTICS } from "../utils/tactics.js";
 
-export default function NodeDetailPopup({ node, originalText, onClose }) {
+export default function NodeDetailPopup({ node, originalText, onClose, fadedNodeIds }) {
   // Close on Escape key
   useEffect(() => {
     const handleKey = (e) => {
@@ -50,6 +50,26 @@ export default function NodeDetailPopup({ node, originalText, onClose }) {
             &times;
           </button>
         </div>
+
+        {/* Agreement banner */}
+        {fadedNodeIds?.has(node.id) && (
+          <div className="agreement-banner">
+            <span className="agreement-banner-icon">&#x2714;</span>
+            <div>
+              <strong>Both users agree</strong>
+              {node.metadata?.agreed_by?.speaker && (
+                <div className="agreement-by">
+                  Agreed by {node.metadata.agreed_by.speaker}
+                </div>
+              )}
+              {node.metadata?.agreed_by?.text && (
+                <blockquote className="agreement-quote">
+                  {node.metadata.agreed_by.text}
+                </blockquote>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Original text */}
         {originalText && (
