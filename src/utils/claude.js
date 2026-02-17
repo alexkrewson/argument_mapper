@@ -2,14 +2,19 @@
  * claude.js — Helper for calling the Claude API directly from the browser.
  *
  * We send the current argument map (as JSON) plus the new statement to Claude,
- * and ask it to return an updated map with new nodes/edges.
+ * and ask it to return an updated map following the Argument Mapping Spec v1.0.
  *
- * The map format we use:
+ * The map format:
  *   {
- *     nodes: [{ id: "n1", speaker: "User A", claim: "Short summary", original: "Full text", flagged: false }],
- *     edges: [{ id: "e1", source: "n1", target: "n2", label: "supports" | "opposes" | "qualifies" }]
+ *     argument_map: {
+ *       title, description,
+ *       nodes: [{ id, type, content, speaker, metadata: { confidence, source, tags } }],
+ *       edges: [{ id, from, to, relationship }]
+ *     }
  *   }
  */
+
+import { TACTIC_KEYS } from "./tactics.js";
 
 // The Anthropic Messages API endpoint.
 // NOTE: This calls the API directly from the browser. In production you'd proxy
@@ -21,37 +26,85 @@ const API_URL = "https://api.anthropic.com/v1/messages";
  * Sends the current map + a new statement to Claude and gets back an updated map.
  *
  * @param {string} apiKey       — The user's Anthropic API key
- * @param {object} currentMap   — Current map state ({ nodes: [], edges: [] })
+ * @param {object} currentMap   — Current map state (full wrapper with argument_map)
  * @param {string} speaker      — "User A" or "User B"
  * @param {string} statement    — The raw statement the user typed
  * @returns {object}            — Updated map with new nodes/edges added
  */
 export async function updateArgumentMap(apiKey, currentMap, speaker, statement) {
-  // Build the prompt that tells Claude exactly what we need.
-  // We give it the current map as JSON and ask it to return an updated version.
-  const systemPrompt = `You are an argument mapping assistant. You analyze debate statements and maintain a structured argument map as JSON.
+  const systemPrompt = `You are an argument mapping assistant for a two-person debate. You analyze statements and maintain a structured argument map as JSON following the Argument Mapping Spec v1.0.
 
 Your job:
-1. Summarize the new statement into a concise claim (1 short sentence).
-2. Add it as a new node to the map.
-3. If it relates to existing nodes, add edges with relationship labels.
+1. Analyze the new statement to identify claims, premises, objections, rebuttals, evidence, and clarifications.
+2. Add new nodes to the map — break compound statements into atomic nodes (one idea each).
+3. Add edges connecting new nodes to existing ones where logical relationships exist.
 4. Return ONLY the updated JSON map — no explanation, no markdown fences.
 
-Edge labels must be one of: "supports", "opposes", "qualifies"
+Node types: claim, premise, objection, rebuttal, evidence, clarification
+Relationship types: supports, strongly_supports, opposes, refutes, clarifies, rebuts
 
-Map format:
+Edge direction:
+- Premises/evidence point TO what they support (supports/strongly_supports)
+- Objections point TO what they challenge (opposes/refutes)
+- Rebuttals point TO the objection they counter (rebuts)
+- Clarifications point TO what they clarify (clarifies)
+
+JSON schema:
 {
-  "nodes": [{ "id": "n1", "speaker": "User A", "claim": "...", "original": "...", "flagged": false }],
-  "edges": [{ "id": "e1", "source": "n1", "target": "n2", "label": "supports" }]
+  "argument_map": {
+    "title": "Brief title of the debate",
+    "description": "Overview of what's being argued",
+    "nodes": [{
+      "id": "node_1",
+      "type": "claim|premise|objection|rebuttal|evidence|clarification",
+      "content": "Concise text (1-3 sentences)",
+      "speaker": "User A|User B",
+      "metadata": {
+        "confidence": "high|medium|low",
+        "tags": ["keyword1", "keyword2"],
+        "tactics": ["tactic_key_1", "tactic_key_2"]
+      }
+    }],
+    "edges": [{
+      "id": "edge_1",
+      "from": "source_node_id",
+      "to": "target_node_id",
+      "relationship": "supports|strongly_supports|opposes|refutes|clarifies|rebuts"
+    }]
+  }
 }
 
+Example — after User A says "We should invest in renewable energy because fossil fuels cause climate change":
+{
+  "argument_map": {
+    "title": "Renewable Energy Investment",
+    "description": "Debate on investing in renewable energy",
+    "nodes": [
+      { "id": "node_1", "type": "claim", "content": "We should invest in renewable energy", "speaker": "User A", "metadata": { "confidence": "medium", "tags": ["energy", "policy"] } },
+      { "id": "node_2", "type": "premise", "content": "Fossil fuels contribute to climate change", "speaker": "User A", "metadata": { "confidence": "high", "tags": ["climate", "science"] } }
+    ],
+    "edges": [
+      { "id": "edge_1", "from": "node_2", "to": "node_1", "relationship": "supports" }
+    ]
+  }
+}
+
+Tactics detection:
+- Each node's metadata.tactics is an array of tactic keys identifying argumentative techniques used.
+- Valid tactic keys: ${TACTIC_KEYS.join(", ")}
+- Fallacies: straw_man, ad_hominem, no_true_scotsman, false_dilemma, slippery_slope, appeal_to_authority, red_herring, circular_reasoning, appeal_to_emotion, hasty_generalization
+- Good techniques: steel_man, evidence_based, logical_deduction, addresses_counterargument, cites_source
+- Re-evaluate ALL existing nodes for tactics each turn — new context may reveal fallacies in earlier statements. Update metadata.tactics arrays accordingly.
+- Keep all other existing node fields unchanged when updating tactics.
+- Use an empty array [] if no tactics apply to a node.
+
 Rules:
-- Node IDs are "n1", "n2", "n3", etc. (incrementing).
-- Edge IDs are "e1", "e2", "e3", etc. (incrementing).
-- Keep all existing nodes and edges unchanged.
-- Add at least one new node for the new statement.
-- Only add edges if there's a clear logical relationship to existing nodes.
-- The "claim" field should be a concise summary; "original" is the full text.`;
+- Node IDs are "node_1", "node_2", etc. (incrementing). Edge IDs are "edge_1", "edge_2", etc.
+- Keep all existing nodes and edges unchanged (except for metadata.tactics which should be re-evaluated).
+- Set the "speaker" field on new nodes to the current speaker.
+- The first statement should set the title and description. Update them if the debate topic evolves.
+- Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
+- Add 2-4 relevant tags per node.`;
 
   const userMessage = `Current argument map:
 ${JSON.stringify(currentMap, null, 2)}
@@ -62,9 +115,6 @@ New statement from ${speaker}:
 Return the updated map JSON.`;
 
   // Call the Anthropic Messages API using fetch.
-  // We need to pass the API key and set the anthropic-version header.
-  // The "anthropic-dangerous-direct-browser-access" header is required for
-  // browser-based calls (otherwise CORS blocks it).
   const response = await fetch(API_URL, {
     method: "POST",
     headers: {
@@ -75,7 +125,7 @@ Return the updated map JSON.`;
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -105,24 +155,103 @@ Return the updated map JSON.`;
 }
 
 /**
- * Asks Claude to update the map after a node is vetoed (flagged/removed).
+ * Sends a direct instruction to Claude about the map (corrections, edits, etc.)
+ * This does NOT add a new debate argument — it lets the user fix misrepresentations.
  *
- * @param {string} apiKey     — The user's Anthropic API key
- * @param {object} currentMap — Current map state
- * @param {string} nodeId     — The ID of the node being vetoed
- * @returns {object}          — Updated map with the node flagged
+ * @param {string} apiKey       — The user's Anthropic API key
+ * @param {object} currentMap   — Current map state (full wrapper with argument_map)
+ * @param {string} instruction  — The user's instruction (e.g. "node_3 should say X")
+ * @returns {object}            — Updated map with corrections applied
  */
-export async function vetoNode(apiKey, currentMap, nodeId) {
-  // For veto, we simply flag the node locally and remove its edges.
-  // No need to call Claude for this simple operation.
-  const updatedNodes = currentMap.nodes.map((node) =>
-    node.id === nodeId ? { ...node, flagged: true } : node
-  );
+export async function sendDirectMessage(apiKey, currentMap, instruction) {
+  const systemPrompt = `You are an argument mapping assistant. The user is giving you a direct instruction to modify the current argument map. This is NOT a new debate statement — it's a correction, edit, or restructuring request.
 
-  // Remove edges connected to the flagged node
-  const updatedEdges = currentMap.edges.filter(
-    (edge) => edge.source !== nodeId && edge.target !== nodeId
-  );
+Apply the user's instruction to the map and return the updated JSON. You may:
+- Edit node content, type, or metadata
+- Add, remove, or modify edges
+- Split or merge nodes
+- Fix misrepresentations
+- Restructure relationships
 
-  return { nodes: updatedNodes, edges: updatedEdges };
+Return ONLY the updated JSON map — no explanation, no markdown fences. Keep the same schema:
+{
+  "argument_map": {
+    "title": "...",
+    "description": "...",
+    "nodes": [{ "id": "node_1", "type": "...", "content": "...", "speaker": "...", "metadata": { ... } }],
+    "edges": [{ "id": "edge_1", "from": "...", "to": "...", "relationship": "..." }]
+  }
+}
+
+Rules:
+- Only change what the user asks for. Keep everything else unchanged.
+- Maintain valid node/edge IDs and references.
+- If the user references a node by ID (e.g. "node_3"), modify that specific node.`;
+
+  const userMessage = `Current argument map:
+${JSON.stringify(currentMap, null, 2)}
+
+User instruction:
+"${instruction}"
+
+Return the updated map JSON.`;
+
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages: [{ role: "user", content: userMessage }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Claude API error (${response.status}): ${errorBody}`);
+  }
+
+  const data = await response.json();
+  const text = data.content[0].text;
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error("Failed to parse Claude response:", text);
+    throw new Error("Claude returned invalid JSON. Try again.");
+  }
+}
+
+/**
+ * Toggles a thumbs-up or thumbs-down rating on a node.
+ * Clicking the same rating again removes it. Ratings are mutually exclusive.
+ *
+ * @param {object} currentMap — Current map state (full wrapper with argument_map)
+ * @param {string} nodeId     — The ID of the node being rated
+ * @param {"up"|"down"} rating — The rating to toggle
+ * @returns {object}          — Updated map
+ */
+export function rateNode(currentMap, nodeId, rating) {
+  const inner = currentMap.argument_map;
+
+  const updatedNodes = inner.nodes.map((node) => {
+    if (node.id !== nodeId) return node;
+    const current = node.rating;
+    // Toggle off if same rating, otherwise set new rating
+    return { ...node, rating: current === rating ? null : rating };
+  });
+
+  return {
+    argument_map: {
+      ...inner,
+      nodes: updatedNodes,
+    },
+  };
 }

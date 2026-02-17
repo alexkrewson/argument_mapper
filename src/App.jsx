@@ -8,24 +8,46 @@
  * - Loading state (while waiting for Claude's response)
  */
 
-import { useState } from "react";
-import ApiKeyInput from "./components/ApiKeyInput";
+import { useState, useCallback, useRef } from "react";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeList from "./components/NodeList";
-import { updateArgumentMap, vetoNode } from "./utils/claude";
+import { updateArgumentMap, rateNode, sendDirectMessage } from "./utils/claude";
 import "./App.css";
 
-// Initial empty map — no nodes, no edges
-const EMPTY_MAP = { nodes: [], edges: [] };
+// Initial empty map — spec v1.0 wrapper format
+const EMPTY_MAP = {
+  argument_map: { title: "", description: "", nodes: [], edges: [] },
+};
 
 export default function App() {
   // --- State ---
-  const [apiKey, setApiKey] = useState("");          // User's Anthropic API key
+  // API key from .env (VITE_ prefix required by Vite)
+  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
   const [argumentMap, setArgumentMap] = useState(EMPTY_MAP); // The argument map data
   const [currentSpeaker, setCurrentSpeaker] = useState("User A"); // Whose turn
   const [loading, setLoading] = useState(false);     // Waiting for Claude?
   const [error, setError] = useState(null);          // Last error message
+  const [directMode, setDirectMode] = useState(false); // Talk-to-AI mode?
+  const [sidebarWidth, setSidebarWidth] = useState(280);
+  const dragging = useRef(false);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    dragging.current = true;
+    const onMouseMove = (e) => {
+      if (!dragging.current) return;
+      const newWidth = window.innerWidth - e.clientX;
+      setSidebarWidth(Math.max(200, Math.min(600, newWidth)));
+    };
+    const onMouseUp = () => {
+      dragging.current = false;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, []);
 
   /**
    * Called when a user submits a new statement.
@@ -66,30 +88,55 @@ export default function App() {
   };
 
   /**
-   * Called when a user vetos (flags) a node.
-   * Flags the node and removes its edges.
+   * Called when a user rates (thumbs up/down) the other user's node.
    */
-  const handleVeto = async (nodeId) => {
+  const handleRate = (nodeId, rating) => {
+    const updatedMap = rateNode(argumentMap, nodeId, rating);
+    setArgumentMap(updatedMap);
+  };
+
+  /**
+   * Called when a user sends a direct message to the AI (correction/instruction).
+   * Does not advance the debate turn.
+   */
+  const handleDirectMessage = async (instruction) => {
+    if (!apiKey) {
+      setError("Please enter your API key first.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const updatedMap = await vetoNode(apiKey, argumentMap, nodeId);
+      const updatedMap = await sendDirectMessage(apiKey, argumentMap, instruction);
       setArgumentMap(updatedMap);
     } catch (err) {
-      console.error("Error vetoing node:", err);
+      console.error("Error sending direct message:", err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Unwrap the inner argument_map for components
+  const inner = argumentMap.argument_map;
+
+  // Derive a concise position summary for each speaker from their first claim node
+  const getSpeakerSummary = (speaker) => {
+    const claim = inner.nodes.find(
+      (n) => n.speaker === speaker && n.type === "claim"
+    );
+    if (!claim) return null;
+    const text = claim.content;
+    return text.length > 60 ? text.slice(0, 57) + "..." : text;
+  };
+  const speakerSummary = getSpeakerSummary(currentSpeaker);
+
   return (
     <div className="app">
-      {/* Header with API key input */}
       <header className="app-header">
         <h1>Argument Mapper</h1>
-        <ApiKeyInput apiKey={apiKey} onApiKeyChange={setApiKey} />
       </header>
 
       {/* Main content: graph + sidebar */}
@@ -97,16 +144,20 @@ export default function App() {
         {/* The argument map graph takes up most of the screen */}
         <div className="graph-area">
           <ArgumentMap
-            nodes={argumentMap.nodes}
-            edges={argumentMap.edges}
+            nodes={inner.nodes}
+            edges={inner.edges}
           />
         </div>
 
+        {/* Resize handle */}
+        <div className="sidebar-resize-handle" onMouseDown={handleMouseDown} />
+
         {/* Sidebar with node list */}
-        <aside className="sidebar">
+        <aside className="sidebar" style={{ width: sidebarWidth }}>
           <NodeList
-            nodes={argumentMap.nodes}
-            onVeto={handleVeto}
+            nodes={inner.nodes}
+            currentSpeaker={currentSpeaker}
+            onRate={handleRate}
             loading={loading}
           />
         </aside>
@@ -124,8 +175,12 @@ export default function App() {
       <footer className="app-footer">
         <StatementInput
           currentSpeaker={currentSpeaker}
+          speakerSummary={speakerSummary}
           onSubmit={handleSubmit}
+          onDirectMessage={handleDirectMessage}
           loading={loading}
+          directMode={directMode}
+          onToggleMode={() => setDirectMode((prev) => !prev)}
         />
       </footer>
     </div>

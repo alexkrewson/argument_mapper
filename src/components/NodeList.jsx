@@ -1,11 +1,13 @@
 /**
  * NodeList.jsx — Sidebar list of all nodes in the argument map.
  *
- * Shows each node's claim, speaker, and status.
- * Each node has a "Veto" button to flag it (marks it as disputed/removed).
+ * Shows each node's content, type, speaker, confidence, tactics, and rating.
+ * Users can rate (thumbs up/down) only the OTHER user's statements.
  */
 
-export default function NodeList({ nodes, onVeto, loading }) {
+import { TACTICS } from "../utils/tactics.js";
+
+export default function NodeList({ nodes, currentSpeaker, onRate, loading }) {
   if (nodes.length === 0) {
     return (
       <div className="node-list">
@@ -20,40 +22,69 @@ export default function NodeList({ nodes, onVeto, loading }) {
       <h3>Claims ({nodes.length})</h3>
       <ul>
         {nodes.map((node) => (
-          <li key={node.id} className={node.flagged ? "flagged" : ""}>
-            {/* Speaker badge — colored to match the graph */}
-            <span
-              className="speaker-badge"
-              style={{
-                backgroundColor:
-                  node.speaker === "User A" ? "#3b82f6" : "#22c55e",
-              }}
-            >
-              {node.speaker}
-            </span>
-
-            {/* The summarized claim */}
-            <span className="claim-text">{node.claim}</span>
-
-            {/* Show the original text on hover via title attribute */}
-            {node.original && (
-              <span className="original-text" title={node.original}>
-                (hover for original)
+          <li key={node.id}>
+            {/* Top row: badges */}
+            <div className="node-badges">
+              <span
+                className="speaker-badge"
+                style={{
+                  backgroundColor:
+                    node.speaker === "User A" ? "#3b82f6" : "#22c55e",
+                }}
+              >
+                {node.speaker}
               </span>
+              <span className="node-id-badge">{node.id}</span>
+              <span className={`type-badge type-${node.type}`}>
+                {node.type}
+              </span>
+              {node.metadata?.confidence && (
+                <span className={`confidence-badge confidence-${node.metadata.confidence}`}>
+                  {node.metadata.confidence}
+                </span>
+              )}
+            </div>
+
+            {/* Content text */}
+            <span className="claim-text">{node.content}</span>
+
+            {/* Tactic badges */}
+            {node.metadata?.tactics?.length > 0 && (
+              <div className="node-badges">
+                {node.metadata.tactics
+                  .filter((key) => TACTICS[key])
+                  .map((key) => (
+                    <span
+                      key={key}
+                      className={`tactic-badge tactic-${TACTICS[key].type}`}
+                      title={TACTICS[key].name}
+                    >
+                      {TACTICS[key].symbol} {TACTICS[key].name}
+                    </span>
+                  ))}
+              </div>
             )}
 
-            {/* Veto button — flags the node as disputed */}
-            {!node.flagged ? (
-              <button
-                className="veto-btn"
-                onClick={() => onVeto(node.id)}
-                disabled={loading}
-                title="Flag this claim as disputed"
-              >
-                Veto
-              </button>
-            ) : (
-              <span className="flagged-label">Vetoed</span>
+            {/* Thumbs up/down — only for the OTHER user's statements */}
+            {node.speaker !== currentSpeaker && (
+              <span className="rating-buttons">
+                <button
+                  className={`rate-btn ${node.rating === "up" ? "active-up" : ""}`}
+                  onClick={() => onRate(node.id, "up")}
+                  disabled={loading}
+                  title="I agree with this representation"
+                >
+                  &#x1F44D;
+                </button>
+                <button
+                  className={`rate-btn ${node.rating === "down" ? "active-down" : ""}`}
+                  onClick={() => onRate(node.id, "down")}
+                  disabled={loading}
+                  title="I disagree with this representation"
+                >
+                  &#x1F44E;
+                </button>
+              </span>
             )}
           </li>
         ))}
