@@ -73,27 +73,26 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
               </div>
             )}
 
-            {/* Thumbs up/down — only for the OTHER user's statements */}
-            {node.speaker !== currentSpeaker && (
-              <span className="rating-buttons" onClick={(e) => e.stopPropagation()}>
-                <button
-                  className={`rate-btn ${node.rating === "up" ? "active-up" : ""}`}
-                  onClick={() => onRate(node.id, "up")}
-                  disabled={loading}
-                  title="I agree with this representation"
-                >
-                  &#x1F44D;
-                </button>
-                <button
-                  className={`rate-btn ${node.rating === "down" ? "active-down" : ""}`}
-                  onClick={() => onRate(node.id, "down")}
-                  disabled={loading}
-                  title="I disagree with this representation"
-                >
-                  &#x1F44E;
-                </button>
-              </span>
-            )}
+            {/* Thumbs up — only for the OTHER user's statements */}
+            {/* Thumbs down — only for YOUR OWN statements */}
+            <span className="rating-buttons" onClick={(e) => e.stopPropagation()}>
+              <button
+                className={`rate-btn ${node.rating === "up" ? "active-up" : ""} ${node.speaker === currentSpeaker ? "rate-btn-unavailable" : ""}`}
+                onClick={() => onRate(node.id, "up")}
+                disabled={loading || node.speaker === currentSpeaker}
+                title={node.speaker !== currentSpeaker ? "I agree with this representation" : "You can only agree with the other user's statements"}
+              >
+                &#x1F44D;
+              </button>
+              <button
+                className={`rate-btn ${node.rating === "down" ? "active-down" : ""} ${node.speaker !== currentSpeaker ? "rate-btn-unavailable" : ""}`}
+                onClick={() => onRate(node.id, "down")}
+                disabled={loading || node.speaker !== currentSpeaker}
+                title={node.speaker === currentSpeaker ? "Retract this argument" : "You can only retract your own statements"}
+              >
+                &#x1F44E;
+              </button>
+            </span>
           </li>
         ))}
       </ul>

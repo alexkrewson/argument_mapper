@@ -8,7 +8,7 @@
 import { useEffect } from "react";
 import { TACTICS } from "../utils/tactics.js";
 
-export default function NodeDetailPopup({ node, originalText, onClose, fadedNodeIds }) {
+export default function NodeDetailPopup({ node, originalText, onClose, fadedNodeIds, nodes, onNodeClick }) {
   // Close on Escape key
   useEffect(() => {
     const handleKey = (e) => {
@@ -22,6 +22,10 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
 
   const tactics = node.metadata?.tactics?.filter((key) => TACTICS[key]) || [];
   const tacticReasons = node.metadata?.tactic_reasons || {};
+  const contradictsId = node.metadata?.contradicts;
+  const goalpostsId = node.metadata?.moves_goalposts_from;
+  const contradictsNode = contradictsId ? nodes?.find((n) => n.id === contradictsId) : null;
+  const goalpostsNode = goalpostsId ? nodes?.find((n) => n.id === goalpostsId) : null;
 
   return (
     <div className="popup-backdrop" onClick={onClose}>
@@ -67,6 +71,34 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
                   {node.metadata.agreed_by.text}
                 </blockquote>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Contradiction banner */}
+        {contradictsNode && (
+          <div className="flag-banner flag-contradiction">
+            <span className="flag-banner-icon">⚠️</span>
+            <div className="flag-banner-body">
+              <strong>Contradicts an earlier statement</strong>
+              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(contradictsNode); }}>
+                <span className="node-id-badge">{contradictsNode.id}</span>
+                <span className="flag-banner-linked-text">{contradictsNode.content}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Goalpost moving banner */}
+        {goalpostsNode && (
+          <div className="flag-banner flag-goalposts">
+            <span className="flag-banner-icon">🥅</span>
+            <div className="flag-banner-body">
+              <strong>Moves the goalposts</strong>
+              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(goalpostsNode); }}>
+                <span className="node-id-badge">{goalpostsNode.id}</span>
+                <span className="flag-banner-linked-text">{goalpostsNode.content}</span>
+              </div>
             </div>
           </div>
         )}

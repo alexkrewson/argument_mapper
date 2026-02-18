@@ -65,7 +65,9 @@ JSON schema:
         "tags": ["keyword1", "keyword2"],
         "tactics": ["tactic_key_1", "tactic_key_2"],
         "tactic_reasons": { "tactic_key_1": "One-sentence explanation of why this tactic applies" },
-        "agreed_by": { "speaker": "User X", "text": "the original agreeing statement" }
+        "agreed_by": { "speaker": "User X", "text": "the original agreeing statement" },
+        "contradicts": "node_id_or_null",
+        "moves_goalposts_from": "node_id_or_null"
       }
     }],
     "edges": [{
@@ -122,6 +124,18 @@ Rules:
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
 - Add 2-4 relevant tags per node.
 - Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible.
+
+Contradiction detection:
+- When a speaker's new node directly contradicts one of their OWN earlier nodes (the speaker asserts something logically incompatible with what they previously said), set "metadata.contradicts" to the ID of the contradicted node (e.g., "node_3").
+- A contradiction means both statements cannot be true simultaneously — e.g., first claiming "X causes Y" then later claiming "X does not cause Y."
+- Only flag clear, direct logical contradictions between the SAME speaker's nodes. Do not flag normal argumentation against the other user.
+- Omit the field or set to null if no contradiction exists.
+
+Goalpost moving detection:
+- When a speaker's new node shifts, redefines, or significantly qualifies the scope of one of their OWN earlier claims in a way that changes its meaning — especially if the shift appears motivated by a counter-argument — set "metadata.moves_goalposts_from" to the ID of the node whose position is being moved away from.
+- This is distinct from normal clarification. Goalpost moving is when the original claim is quietly replaced with a weaker or different claim to dodge a challenge.
+- Example: originally claiming "all X are Y," then under pressure claiming "most X are Y" or "I only meant some X."
+- Only flag clear cases. Omit the field or set to null if not applicable.
 
 Agreement detection:
 - When a speaker explicitly or implicitly agrees with an opposing speaker's node (e.g. "I agree that...", "You're right about...", "Fair point on...", or conceding a point), set "rating": "up" on that agreed-upon node.

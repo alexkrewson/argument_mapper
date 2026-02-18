@@ -75,13 +75,29 @@ const stylesheet = [
   {
     selector: "node.faded",
     style: {
-      opacity: 0.5,
+      opacity: 0.25,
     },
   },
   {
     selector: "edge.faded",
     style: {
-      opacity: 0.5,
+      opacity: 0.25,
+    },
+  },
+  // --- Contradiction border (overrides speaker color) ---
+  {
+    selector: "node.contradicts",
+    style: {
+      "border-color": "#dc2626",
+      "border-width": 3,
+    },
+  },
+  // --- Goalpost moving border (overrides speaker color) ---
+  {
+    selector: "node.moves-goalposts",
+    style: {
+      "border-color": "#f97316",
+      "border-width": 3,
     },
   },
   // --- Base edge style ---
@@ -128,18 +144,20 @@ const stylesheet = [
   },
 ];
 
-function runLayout(cy) {
-  cy.layout({
+function runLayout(cy, onDone) {
+  const layout = cy.layout({
     name: "dagre",
     rankDir: "BT",
-    nodeSep: 60,
-    rankSep: 100,
+    nodeSep: 80,
+    rankSep: 120,
     padding: 40,
     animate: true,
     animationDuration: 300,
     fit: true,
     nodeDimensionsIncludeLabels: true,
-  }).run();
+  });
+  if (onDone) layout.one("layoutstop", onDone);
+  layout.run();
 }
 
 export default function ArgumentMap({ nodes, edges, onNodeClick }) {
@@ -225,6 +243,8 @@ export default function ArgumentMap({ nodes, edges, onNodeClick }) {
           type: node.type,
           rating: node.rating,
           tactics: node.metadata?.tactics || [],
+          contradicts: node.metadata?.contradicts || "",
+          movesGoalpostsFrom: node.metadata?.moves_goalposts_from || "",
         },
       })),
       ...edges.map((edge) => ({
@@ -239,21 +259,78 @@ export default function ArgumentMap({ nodes, edges, onNodeClick }) {
       })),
     ];
 
-    // Diff and update: remove old, add new, update existing
+    // Save positions of all current nodes before clearing, so existing
+    // nodes can be locked in place during layout and only new nodes move.
+    const savedPositions = {};
+    cy.nodes().forEach((n) => {
+      savedPositions[n.id()] = { x: n.position("x"), y: n.position("y") };
+    });
+
     cy.elements().remove();
     cy.add(newElements);
 
-    // Compute faded set: agreed nodes + all their predecessors (supporters)
+    // Thumbs UP: fade agreed nodes + all predecessors (supporting arguments)
     const agreedNodes = cy.nodes().filter((n) => n.data("rating") === "up");
-    const fadedNodes = agreedNodes.union(agreedNodes.predecessors("node"));
-    const fadedEdges = agreedNodes.predecessors("edge");
+    const upFadedNodes = agreedNodes.union(agreedNodes.predecessors("node"));
+    const upFadedEdges = agreedNodes.predecessors("edge");
+
+    // Thumbs DOWN: fade retracted nodes + all predecessors (opposing arguments attacking it)
+    const downNodes = cy.nodes().filter((n) => n.data("rating") === "down");
+    const downFadedNodes = downNodes.union(downNodes.predecessors("node"));
+    const downFadedEdges = downNodes.predecessors("edge");
+
     cy.nodes().removeClass("faded");
     cy.edges().removeClass("faded");
-    fadedNodes.addClass("faded");
-    fadedEdges.addClass("faded");
+
+    // Apply contradiction / goalpost-moving border classes
+    cy.nodes().removeClass("contradicts moves-goalposts");
+    cy.nodes().filter((n) => !!n.data("contradicts")).addClass("contradicts");
+    cy.nodes().filter((n) => !!n.data("movesGoalpostsFrom")).addClass("moves-goalposts");
+
+    // Fade the contradicted/goalpost-referenced node + its entire supporting subtree.
+    // The flagged node itself is NOT faded — it stays visible with its colored border.
+    const contradictionTargetIds = new Set();
+    cy.nodes().forEach((n) => {
+      if (n.data("contradicts")) contradictionTargetIds.add(n.data("contradicts"));
+      if (n.data("movesGoalpostsFrom")) contradictionTargetIds.add(n.data("movesGoalpostsFrom"));
+    });
+    const contradictionTargets = cy.nodes().filter((n) => contradictionTargetIds.has(n.id()));
+    const contradictionFadedNodes = contradictionTargets.union(contradictionTargets.predecessors("node"));
+    const contradictionFadedEdges = contradictionTargets.predecessors("edge");
+
+    // Build the protected set: flagging nodes + their predecessor subtree + their direct
+    // edge targets (nodes they are actively pointing to / challenging).
+    //
+    // Exception: if a flagging node is ITSELF a contradiction target (mutual contradiction),
+    // don't protect its predecessor subtree — those nodes should still be faded because the
+    // flagging node's own position has been walked back.
+    const flaggingNodes = cy.nodes().filter((n) => !!n.data("contradicts") || !!n.data("movesGoalpostsFrom"));
+    const predecessorProtected = flaggingNodes.filter((n) => !contradictionTargetIds.has(n.id()));
+    const protectedNodes = flaggingNodes
+      .union(predecessorProtected.predecessors("node"))
+      .union(flaggingNodes.outgoers("node"));
+
+    const protectedEdges = protectedNodes.connectedEdges();
+
+    const allFadedNodes = upFadedNodes.union(downFadedNodes).union(contradictionFadedNodes)
+      .not(protectedNodes);
+    const allFadedEdges = upFadedEdges.union(downFadedEdges).union(contradictionFadedEdges)
+      .not(protectedEdges);
+    allFadedNodes.addClass("faded");
+    allFadedEdges.addClass("faded");
+
+    // Restore positions of existing nodes and lock them so dagre only
+    // places new nodes, keeping the graph growing downward.
+    cy.nodes().forEach((n) => {
+      const saved = savedPositions[n.id()];
+      if (saved) {
+        n.position(saved);
+        n.lock();
+      }
+    });
 
     if (cy.nodes().length > 0) {
-      runLayout(cy);
+      runLayout(cy, () => cy.nodes().unlock());
     }
   }, [nodes, edges]);
 

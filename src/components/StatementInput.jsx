@@ -11,6 +11,7 @@ import { useState, useRef, useEffect } from "react";
 export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onToggleMode, chatMessages }) {
   const [text, setText] = useState("");
   const chatLogRef = useRef(null);
+  const textareaRef = useRef(null);
 
   // Auto-scroll chat log to bottom when new messages arrive
   useEffect(() => {
@@ -18,6 +19,13 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Refocus textarea when Claude finishes thinking
+  useEffect(() => {
+    if (!loading) {
+      textareaRef.current?.focus();
+    }
+  }, [loading]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,6 +37,7 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
         await onSubmit(text.trim());
       }
       setText(""); // Only clear on success
+      textareaRef.current?.focus();
     } catch {
       // Text stays in the textarea so the user doesn't have to retype
     }
@@ -45,7 +54,9 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
           </div>
         ) : (
           <div className="speaker-label" style={{ color: speakerColor }}>
-            {loading && loadingSpeaker ? `Thinking about ${loadingSpeaker}'s last submission` : `${currentSpeaker}'s turn`}
+            {loading && loadingSpeaker ? (
+              <>Thinking about {loadingSpeaker}'s last submission<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
+            ) : `${currentSpeaker}'s turn`}
             {!loading && speakerSummary && (
               <span className="speaker-summary"> — {speakerSummary}</span>
             )}
@@ -77,6 +88,8 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
 
       <div className="input-row">
         <textarea
+          ref={textareaRef}
+          autoFocus
           placeholder={
             directMode
               ? "Ask the AI moderator anything..."

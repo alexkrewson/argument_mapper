@@ -184,47 +184,121 @@ export default function App() {
   // Unwrap the inner argument_map for components
   const inner = argumentMap.argument_map;
 
-  // Compute faded node IDs: agreed nodes + all their supporting predecessors
+  // Compute faded node IDs:
+  // - thumbs-up (agreed): that node + all predecessors (supporting arguments)
+  // - thumbs-down (retracted): that node + all successors (dependent arguments)
   const fadedNodeIds = useMemo(() => {
     const faded = new Set();
-    const agreedIds = new Set(
-      inner.nodes.filter((n) => n.rating === "up").map((n) => n.id)
-    );
-    if (agreedIds.size === 0) return faded;
 
-    // Build adjacency: for each edge from→to, "from" supports "to",
-    // so "from" is a predecessor of "to"
-    const predecessorMap = new Map(); // targetId → Set of sourceIds
+    // Build predecessor map: targetId → Set of sourceIds
+    const predecessorMap = new Map();
     for (const edge of inner.edges) {
       if (!predecessorMap.has(edge.to)) predecessorMap.set(edge.to, new Set());
       predecessorMap.get(edge.to).add(edge.from);
     }
 
-    // BFS from agreed nodes, collecting predecessors
-    const queue = [...agreedIds];
+    // Thumbs UP: BFS backwards from agreed nodes, collecting predecessors
+    const agreedIds = inner.nodes.filter((n) => n.rating === "up").map((n) => n.id);
+    const queue1 = [...agreedIds];
     for (const id of agreedIds) faded.add(id);
-    while (queue.length > 0) {
-      const current = queue.shift();
+    while (queue1.length > 0) {
+      const current = queue1.shift();
       const preds = predecessorMap.get(current);
       if (preds) {
         for (const predId of preds) {
           if (!faded.has(predId)) {
             faded.add(predId);
-            queue.push(predId);
+            queue1.push(predId);
           }
         }
       }
     }
+
+    // Thumbs DOWN: BFS backwards from retracted nodes, collecting predecessors
+    // (the opposing arguments that were attacking the retracted point also go away)
+    const downIds = inner.nodes.filter((n) => n.rating === "down").map((n) => n.id);
+    const queue2 = [...downIds];
+    for (const id of downIds) faded.add(id);
+    while (queue2.length > 0) {
+      const current = queue2.shift();
+      const preds = predecessorMap.get(current);
+      if (preds) {
+        for (const predId of preds) {
+          if (!faded.has(predId)) {
+            faded.add(predId);
+            queue2.push(predId);
+          }
+        }
+      }
+    }
+
+    // Contradiction / goalpost-moving: BFS backwards from the *referenced* node
+    // (the node being contradicted/moved-from + its entire supporting subtree fades).
+    const contradictionTargetIds = new Set();
+    for (const node of inner.nodes) {
+      if (node.metadata?.contradicts) contradictionTargetIds.add(node.metadata.contradicts);
+      if (node.metadata?.moves_goalposts_from) contradictionTargetIds.add(node.metadata.moves_goalposts_from);
+    }
+    const queue3 = [...contradictionTargetIds];
+    for (const id of contradictionTargetIds) faded.add(id);
+    while (queue3.length > 0) {
+      const current = queue3.shift();
+      const preds = predecessorMap.get(current);
+      if (preds) {
+        for (const predId of preds) {
+          if (!faded.has(predId)) {
+            faded.add(predId);
+            queue3.push(predId);
+          }
+        }
+      }
+    }
+
+    // The flagging nodes (red/orange border), their supporting subtree (predecessors),
+    // AND any node they directly point to (their immediate edge targets) must stay visible.
+    //
+    // Exception: if a flagging node is ITSELF a contradiction target (mutual contradiction —
+    // e.g. A contradicts B and B contradicts A), don't protect its predecessor subtree.
+    // Its own position has been walked back, so its supporters should still be faded.
+    const protectedIds = new Set();
+    for (const node of inner.nodes) {
+      if (node.metadata?.contradicts || node.metadata?.moves_goalposts_from) {
+        protectedIds.add(node.id);
+        // Only BFS-protect predecessors if this flagging node is not itself a contradiction target
+        if (!contradictionTargetIds.has(node.id)) {
+          const protectQueue = [node.id];
+          while (protectQueue.length > 0) {
+            const current = protectQueue.shift();
+            const preds = predecessorMap.get(current);
+            if (preds) {
+              for (const predId of preds) {
+                if (!protectedIds.has(predId)) {
+                  protectedIds.add(predId);
+                  protectQueue.push(predId);
+                }
+              }
+            }
+          }
+        }
+        // Also protect nodes this flagging node directly points to
+        for (const edge of inner.edges) {
+          if (edge.from === node.id) protectedIds.add(edge.to);
+        }
+      }
+    }
+    for (const id of protectedIds) faded.delete(id);
+
     return faded;
   }, [inner.nodes, inner.edges]);
 
-  // Compute agreement-adjusted moderator analysis
+  // Compute invalidation-adjusted moderator analysis.
+  // Accounts for all forms of argument invalidation: thumbs-up/down, contradictions,
+  // and goalpost-moving — all of which land nodes in fadedNodeIds.
   const effectiveAnalysis = useMemo(() => {
     if (!moderatorAnalysis) return null;
 
-    // Collect agreed-upon nodes and compute leaning adjustment
+    // Collect agreed-upon nodes for display
     const agreements = [];
-    let adjustment = 0;
     for (const node of inner.nodes) {
       if (node.rating !== "up") continue;
       agreements.push({
@@ -233,12 +307,21 @@ export default function App() {
         content: node.content,
         agreedBy: node.metadata?.agreed_by?.speaker || null,
       });
-      // Agreement with User A's node strengthens A → shift negative
-      // Agreement with User B's node strengthens B → shift positive
-      if (node.speaker === "User A") adjustment -= 0.1;
-      if (node.speaker === "User B") adjustment += 0.1;
     }
 
+    // For each speaker, compute what fraction of their nodes are still active (not faded).
+    // A side whose arguments are fully invalidated should move the gauge against them.
+    const totalA = inner.nodes.filter((n) => n.speaker === "User A").length;
+    const totalB = inner.nodes.filter((n) => n.speaker === "User B").length;
+    const activeA = inner.nodes.filter((n) => n.speaker === "User A" && !fadedNodeIds.has(n.id)).length;
+    const activeB = inner.nodes.filter((n) => n.speaker === "User B" && !fadedNodeIds.has(n.id)).length;
+
+    const effectivenessA = totalA > 0 ? activeA / totalA : 1;
+    const effectivenessB = totalB > 0 ? activeB / totalB : 1;
+
+    // Positive adjustment favours B; negative favours A.
+    // Weight of 0.7 makes the effect significant without fully overriding Claude's analysis.
+    const adjustment = (effectivenessB - effectivenessA) * 0.7;
     const adjustedLeaning = Math.max(-1, Math.min(1, moderatorAnalysis.leaning + adjustment));
 
     return {
@@ -246,7 +329,7 @@ export default function App() {
       leaning: adjustedLeaning,
       agreements,
     };
-  }, [moderatorAnalysis, inner.nodes]);
+  }, [moderatorAnalysis, inner.nodes, fadedNodeIds]);
 
   // Derive a concise position summary for each speaker from their first claim node
   const getSpeakerSummary = (speaker) => {
@@ -311,6 +394,8 @@ export default function App() {
           originalText={originalTexts[selectedNode.id]}
           onClose={() => setSelectedNode(null)}
           fadedNodeIds={fadedNodeIds}
+          nodes={inner.nodes}
+          onNodeClick={handleNodeClick}
         />
       )}
 
