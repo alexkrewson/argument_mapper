@@ -55,22 +55,53 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
           </button>
         </div>
 
-        {/* Agreement banner */}
-        {fadedNodeIds?.has(node.id) && (
+        {/* Fading reason banner — only shown when this node is greyed out */}
+        {fadedNodeIds?.has(node.id) && node.rating === "up" && (
           <div className="agreement-banner">
             <span className="agreement-banner-icon">&#x2714;</span>
             <div>
-              <strong>Both users agree</strong>
-              {node.metadata?.agreed_by?.speaker && (
-                <div className="agreement-by">
-                  Agreed by {node.metadata.agreed_by.speaker}
-                </div>
+              {node.metadata?.agreed_by?.text ? (
+                <>
+                  <strong>Implicit agreement detected</strong>
+                  <div className="agreement-by">
+                    {node.metadata.agreed_by.speaker} conceded this in their submission
+                  </div>
+                  <blockquote className="agreement-quote">
+                    "{node.metadata.agreed_by.text}"
+                  </blockquote>
+                </>
+              ) : node.metadata?.agreed_by?.speaker ? (
+                <>
+                  <strong>Agreed via thumbs up</strong>
+                  <div className="agreement-by">
+                    {node.metadata.agreed_by.speaker} manually agreed with this
+                  </div>
+                </>
+              ) : (
+                <strong>Both users agree</strong>
               )}
-              {node.metadata?.agreed_by?.text && (
-                <blockquote className="agreement-quote">
-                  {node.metadata.agreed_by.text}
-                </blockquote>
-              )}
+            </div>
+          </div>
+        )}
+
+        {fadedNodeIds?.has(node.id) && node.rating === "down" && (
+          <div className="flag-banner flag-goalposts">
+            <span className="flag-banner-icon">↩</span>
+            <div className="flag-banner-body">
+              <strong>Retracted</strong>
+              <div>{node.speaker} retracted this argument via thumbs down</div>
+            </div>
+          </div>
+        )}
+
+        {fadedNodeIds?.has(node.id) && !node.rating && (
+          <div className="inactive-banner">
+            <span className="inactive-banner-icon">⬡</span>
+            <div>
+              <strong>No longer active</strong>
+              <div className="inactive-banner-reason">
+                This argument supports a claim that has been agreed on, retracted, or walked back
+              </div>
             </div>
           </div>
         )}

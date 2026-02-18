@@ -392,6 +392,46 @@
   color: #22c55e;
 }
 
+.retracted-indicator {
+  font-size: 0.7rem;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.inactive-indicator {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+/* --- Inactive banner (popup) --- */
+.inactive-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  color: #475569;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.inactive-banner-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: #94a3b8;
+}
+
+.inactive-banner-reason {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
 /* --- Error bar --- */
 .error-bar {
   display: flex;

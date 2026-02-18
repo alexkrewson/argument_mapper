@@ -65,11 +65,25 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
               </div>
             )}
 
-            {/* Agreement indicator */}
-            {fadedNodeIds?.has(node.id) && node.metadata?.agreed_by && (
+            {/* Fading reason indicator */}
+            {fadedNodeIds?.has(node.id) && node.rating === "up" && (
               <div className="agreement-indicator">
                 <span className="agreement-indicator-icon">&#x2714;</span>
-                Agreed by {node.metadata.agreed_by.speaker}
+                {node.metadata?.agreed_by?.text
+                  ? `Implicit agreement — ${node.metadata.agreed_by.speaker}`
+                  : node.metadata?.agreed_by?.speaker
+                  ? `Thumbs up — ${node.metadata.agreed_by.speaker}`
+                  : "Agreed"}
+              </div>
+            )}
+            {fadedNodeIds?.has(node.id) && node.rating === "down" && (
+              <div className="retracted-indicator">
+                ↩ Retracted by {node.speaker}
+              </div>
+            )}
+            {fadedNodeIds?.has(node.id) && !node.rating && (
+              <div className="inactive-indicator">
+                ⬡ Supporting a resolved claim
               </div>
             )}
 
