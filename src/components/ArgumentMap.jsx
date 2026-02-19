@@ -123,10 +123,7 @@ const stylesheet = [
       "font-size": "9px",
       "text-rotation": "autorotate",
       "text-margin-y": -10,
-      "curve-style": "taxi",
-      "taxi-direction": "upward",
-      "taxi-turn": "50%",
-      "taxi-radius": 8,
+      "curve-style": "straight",
       "target-arrow-shape": "triangle",
       "arrow-scale": 1.2,
       width: 2,
@@ -162,10 +159,18 @@ const stylesheet = [
 ];
 
 /**
- * After layout, route edges as orthogonal "pipes" with rounded corners:
- * - Single child → straight vertical line
- * - Multiple children → taxi routing with staggered turn heights so
- *   horizontal segments never share the same Y lane (no overlaps)
+ * After layout, route edges as orthogonal conduits (no overlap anywhere):
+ *
+ * - Single child  → straight vertical line.
+ * - Multiple children → Z-shaped polyline per edge:
+ *     child top-center  ──up──►  (rail Y)  ──horizontal──►  parent attachment  ──up──►  parent bottom
+ *
+ *   Attachment points are spread symmetrically across the parent's bottom edge
+ *   (one dedicated slot per child) so every pipe enters the parent in parallel
+ *   and travels its own lane from top to bottom — zero overlap at any height.
+ *
+ *   Uses canvas-coordinate source/target endpoints so edges do NOT all converge
+ *   at the node center, and `curve-style: "segments"` for true right-angle routing.
  */
 function applyEdgeCurves(cy) {
   const byTarget = new Map();
@@ -176,24 +181,80 @@ function applyEdgeCurves(cy) {
   });
 
   byTarget.forEach((siblings) => {
+    // ── Single child: plain straight line ──────────────────────────────────
     if (siblings.length === 1) {
-      siblings[0].style({ "curve-style": "straight" });
+      siblings[0].style({
+        "curve-style": "straight",
+        "source-endpoint": "outside-to-node",
+        "target-endpoint": "outside-to-node",
+      });
       return;
     }
 
-    // Sort left-to-right so lane assignment is spatially consistent
+    // ── Multiple children: Z-shaped conduit routing ─────────────────────────
+    // Sort left-to-right so lane index matches spatial order (crossing-free).
     siblings.sort((a, b) => a.source().position("x") - b.source().position("x"));
     const n = siblings.length;
 
+    const tgt  = siblings[0].target();
+    const tx   = tgt.position("x");
+    const ty   = tgt.position("y");
+    const th   = tgt.height();
+    const tw   = tgt.width();
+
+    // Spread n attachment points symmetrically along the parent's bottom edge.
+    const pipeSpacing = Math.min(28, (tw * 0.75) / Math.max(n - 1, 1));
+
+    // Shared horizontal rail Y — midpoint between the topmost child top and parent bottom.
+    let minChildTopY = Infinity;
+    siblings.forEach((e) => {
+      const topY = e.source().position("y") - e.source().height() / 2;
+      if (topY < minChildTopY) minChildTopY = topY;
+    });
+    const parentBottomY = ty + th / 2;
+    const railY = (minChildTopY + parentBottomY) / 2;
+
     siblings.forEach((edge, i) => {
-      // Spread turn points evenly from 20 % to 80 % of the vertical distance.
-      // Each sibling gets its own horizontal lane → zero overlap.
-      const pct = Math.round(20 + (i / Math.max(n - 1, 1)) * 60);
+      const src = edge.source();
+      const sx  = src.position("x");
+      const sy  = src.position("y");
+      const sh  = src.height();
+
+      const offsetX = (i - (n - 1) / 2) * pipeSpacing;
+
+      // Explicit canvas-coordinate endpoints (not node-center defaults).
+      const P0x = sx,           P0y = sy - sh / 2;   // child top-center
+      const P3x = tx + offsetX, P3y = ty + th / 2;   // dedicated slot on parent bottom
+
+      // Z-shape waypoints: go straight up to rail, then across, then up.
+      const W1x = P0x, W1y = railY;   // above child, at rail
+      const W2x = P3x, W2y = railY;   // below parent attachment, at rail
+
+      // Convert absolute waypoints → (weight, distance) relative to P0→P3 line.
+      const dx = P3x - P0x, dy = P3y - P0y;
+      const L  = Math.sqrt(dx * dx + dy * dy);
+      if (L < 1) {
+        edge.style({ "curve-style": "straight", "source-endpoint": "outside-to-node", "target-endpoint": "outside-to-node" });
+        return;
+      }
+      const ux = dx / L, uy = dy / L;   // unit along edge
+      const nx = -uy,    ny = ux;        // unit perpendicular (left-hand)
+
+      function toSeg(Wx, Wy) {
+        const rx = Wx - P0x, ry = Wy - P0y;
+        return { w: (rx * ux + ry * uy) / L, d: rx * nx + ry * ny };
+      }
+
+      const s1 = toSeg(W1x, W1y);
+      const s2 = toSeg(W2x, W2y);
+
       edge.style({
-        "curve-style": "taxi",
-        "taxi-direction": "upward",
-        "taxi-turn": `${pct}%`,
-        "taxi-radius": 8,
+        "curve-style":       "segments",
+        "segment-weights":   `${s1.w.toFixed(4)} ${s2.w.toFixed(4)}`,
+        "segment-distances": `${s1.d.toFixed(2)} ${s2.d.toFixed(2)}`,
+        "segment-radii":     "8 8",          // rounded conduit bends (Cytoscape ≥ 3.19)
+        "source-endpoint":   `${P0x}px ${P0y}px`,
+        "target-endpoint":   `${P3x}px ${P3y}px`,
       });
     });
   });
