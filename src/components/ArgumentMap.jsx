@@ -248,6 +248,7 @@ function applyEdgeCurves(cy) {
 
       edge.style({
         "curve-style":       "segments",
+        "edge-distances":    "node-position",  // weights/distances relative to node centers (matches our math)
         "segment-weights":   `${s1.w.toFixed(4)} ${s2.w.toFixed(4)} ${s3.w.toFixed(4)}`,
         "segment-distances": `${s1.d.toFixed(2)} ${s2.d.toFixed(2)} ${s3.d.toFixed(2)}`,
         "segment-radii":     "8 8 8",
