@@ -123,7 +123,10 @@ const stylesheet = [
       "font-size": "9px",
       "text-rotation": "autorotate",
       "text-margin-y": -10,
-      "curve-style": "unbundled-bezier",
+      "curve-style": "taxi",
+      "taxi-direction": "upward",
+      "taxi-turn": "50%",
+      "taxi-radius": 8,
       "target-arrow-shape": "triangle",
       "arrow-scale": 1.2,
       width: 2,
@@ -159,54 +162,39 @@ const stylesheet = [
 ];
 
 /**
- * After layout, apply per-edge S-curve control points so every edge:
- * - Exits from the TOP-CENTER of the child (source) node
- * - Enters the BOTTOM-CENTER of the parent (target) node
- * - Curves with axis-aligned control points at midpoint Y (prevents crossing)
- * - Uses a straight vertical line when the parent has only one child
+ * After layout, route edges as orthogonal "pipes" with rounded corners:
+ * - Single child → straight vertical line
+ * - Multiple children → taxi routing with staggered turn heights so
+ *   horizontal segments never share the same Y lane (no overlaps)
  */
 function applyEdgeCurves(cy) {
+  const byTarget = new Map();
   cy.edges().forEach((edge) => {
-    const src = edge.source();
-    const tgt = edge.target();
-    const sx = src.position("x"), sy = src.position("y"), sh = src.height();
-    const tx = tgt.position("x"), ty = tgt.position("y"), th = tgt.height();
+    const id = edge.target().id();
+    if (!byTarget.has(id)) byTarget.set(id, []);
+    byTarget.get(id).push(edge);
+  });
 
-    // Straight line when parent has only one child (dagre places it directly below)
-    if (tgt.incomers("edge").length <= 1) {
-      edge.style({ "curve-style": "straight" });
+  byTarget.forEach((siblings) => {
+    if (siblings.length === 1) {
+      siblings[0].style({ "curve-style": "straight" });
       return;
     }
 
-    // In BT layout the default outside-to-node endpoint is approximately:
-    //   source endpoint ≈ top-center of child:  (sx, sy - sh/2)
-    //   target endpoint ≈ bottom-center of parent: (tx, ty + th/2)
-    // S-curve: two axis-aligned control points at midY prevent crossing.
-    const p0y = sy - sh / 2;
-    const p3y = ty + th / 2;
-    const dx = tx - sx, dy = p3y - p0y;
-    const L = Math.sqrt(dx * dx + dy * dy);
-    if (L < 1) { edge.style({ "curve-style": "straight" }); return; }
+    // Sort left-to-right so lane assignment is spatially consistent
+    siblings.sort((a, b) => a.source().position("x") - b.source().position("x"));
+    const n = siblings.length;
 
-    const midY = (p0y + p3y) / 2;
-
-    // Unit vectors along and perpendicular to the P0→P3 line
-    const ux = dx / L, uy = dy / L;
-    const nx = -uy, ny = ux;
-
-    // CP1 = (sx, midY): directly above child, at midpoint height
-    const w1 = ((midY - p0y) * uy) / L;
-    const d1 = (midY - p0y) * ny;
-
-    // CP2 = (tx, midY): directly below parent, at midpoint height
-    const r2x = dx, r2y = midY - p0y;
-    const w2 = (r2x * ux + r2y * uy) / L;
-    const d2 = r2x * nx + r2y * ny;
-
-    edge.style({
-      "curve-style": "unbundled-bezier",
-      "control-point-weights": `${w1} ${w2}`,
-      "control-point-distances": `${d1} ${d2}`,
+    siblings.forEach((edge, i) => {
+      // Spread turn points evenly from 20 % to 80 % of the vertical distance.
+      // Each sibling gets its own horizontal lane → zero overlap.
+      const pct = Math.round(20 + (i / Math.max(n - 1, 1)) * 60);
+      edge.style({
+        "curve-style": "taxi",
+        "taxi-direction": "upward",
+        "taxi-turn": `${pct}%`,
+        "taxi-radius": 8,
+      });
     });
   });
 }
