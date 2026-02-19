@@ -66,16 +66,121 @@
   font-weight: 500;
 }
 
-/* --- Main content: graph + sidebar --- */
-.app-main {
+/* --- Tab bar --- */
+.tab-bar {
   display: flex;
-  flex: 1;
-  overflow: hidden;
+  gap: 0;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fff;
+  flex-shrink: 0;
 }
 
-/* Graph area takes up most of the space */
-.graph-area {
+.tab-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #64748b;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.tab-btn:hover {
+  color: #334155;
+}
+
+.tab-btn--active {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+  font-weight: 600;
+}
+
+.tab-gauge-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.tab-gauge-label-a {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #3b82f6;
+  white-space: nowrap;
+}
+
+.tab-gauge-label-b {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #22c55e;
+  white-space: nowrap;
+}
+
+.tab-gauge-inline-track {
+  position: relative;
+  width: 60px;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.tab-gauge-inline-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+
+/* --- Moderator tab content --- */
+.moderator-tab-content {
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+  max-width: 640px;
+}
+
+/* --- Main content area --- */
+.app-main {
   flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* --- List tab --- */
+.list-area {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.chat-area {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.chat-area .chat-log {
+  flex: 1;
+  overflow-y: auto;
+  max-height: none;
+}
+
+.chat-area .empty-message {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+/* Graph area fills the tab content area */
+.graph-area {
+  width: 100%;
+  height: 100%;
   position: relative;
 }
 
@@ -92,28 +197,93 @@
   font-size: 1rem;
 }
 
-/* --- Sidebar resize handle --- */
-.sidebar-resize-handle {
-  width: 5px;
-  cursor: col-resize;
-  background: transparent;
-  flex-shrink: 0;
-  position: relative;
+
+/* --- Map Tree List (indented hierarchy in List tab) --- */
+.map-tree-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.sidebar-resize-handle:hover,
-.sidebar-resize-handle:active {
-  background: #3b82f6;
-  opacity: 0.3;
+.map-tree-item {
+  padding: 0.3rem 0.75rem 0.3rem 0;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-/* --- Sidebar --- */
-.sidebar {
-  width: 280px;
-  border-left: 1px solid #e2e8f0;
-  background: #fff;
-  overflow-y: auto;
+.map-tree-item--faded {
+  opacity: 0.5;
+}
+
+.map-tree-cell {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.map-tree-cell:hover {
+  filter: brightness(0.96);
+}
+
+.map-tree-crosslink {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-weight: 600;
   flex-shrink: 0;
+  cursor: default;
+}
+
+/* Collapse toggle button */
+.tree-toggle {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.12s;
+  transform-origin: center;
+}
+
+.tree-toggle:hover {
+  color: #475569;
+}
+
+.tree-toggle--collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Children animation via grid-template-rows */
+.tree-children {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.22s ease;
+  overflow: hidden;
+}
+
+.tree-children--collapsed {
+  grid-template-rows: 0fr;
+}
+
+.tree-children-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Summary line shown when a node is collapsed */
+.tree-collapsed-summary {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-style: italic;
 }
 
 /* --- Node List --- */
@@ -480,7 +650,7 @@
 .input-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
   margin-bottom: 0.4rem;
 }
 
@@ -516,6 +686,55 @@
   margin-bottom: 0;
 }
 
+.turn-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.skip-turn-btn {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.skip-turn-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.history-btn {
+  font-size: 0.9rem;
+  padding: 0.1rem 0.35rem;
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.history-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.history-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.popup-rating-row {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: 0.25rem;
+}
+
 .speaker-summary {
   font-weight: 400;
   font-size: 0.8rem;
@@ -531,7 +750,7 @@
 .input-row textarea {
   flex: 1;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--speaker-color, #cbd5e1);
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
@@ -540,13 +759,13 @@
 
 .input-row textarea:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  border-color: var(--speaker-color, #3b82f6);
+  box-shadow: 0 0 0 2px var(--speaker-glow, rgba(59,130,246,0.15));
 }
 
-.input-row button {
+.input-row button[type="submit"] {
   padding: 0.5rem 1.5rem;
-  background: #3b82f6;
+  background: var(--speaker-color, #3b82f6);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -556,11 +775,11 @@
   white-space: nowrap;
 }
 
-.input-row button:hover:not(:disabled) {
-  background: #2563eb;
+.input-row button[type="submit"]:hover:not(:disabled) {
+  opacity: 0.88;
 }
 
-.input-row button:disabled {
+.input-row button[type="submit"]:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -727,15 +946,13 @@
 }
 
 .chat-message.user .chat-bubble {
-  background: #8b5cf6;
   color: #fff;
   border-bottom-right-radius: 4px;
 }
 
 .chat-message.assistant .chat-bubble {
-  background: #fff;
-  color: #1e293b;
-  border: 1px solid #e2e8f0;
+  background: #8b5cf6;
+  color: #fff;
   border-bottom-left-radius: 4px;
 }
 

@@ -8,14 +8,14 @@
  * - Loading state (while waiting for Claude's response)
  */
 
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useMemo, useReducer, useRef, useEffect } from "react";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeList from "./components/NodeList";
+import MapTreeView from "./components/MapTreeView";
 import NodeDetailPopup from "./components/NodeDetailPopup";
-import ModeratorGauge from "./components/ModeratorGauge";
-import ModeratorGaugePopup from "./components/ModeratorGaugePopup";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
+import { spk } from "./utils/speakers.js";
 import "./App.css";
 
 // Initial empty map — spec v1.0 wrapper format
@@ -23,40 +23,63 @@ const EMPTY_MAP = {
   argument_map: { title: "", description: "", nodes: [], edges: [] },
 };
 
+// Strips "User A" → "A" and "User B" → "B" from AI-generated analysis text
+function sanitizeAnalysis(analysis) {
+  if (!analysis) return null;
+  const fix = (s) => typeof s === "string"
+    ? s.replace(/User A/g, "A").replace(/User B/g, "B").replace(/\busers\b/gi, "sides")
+    : s;
+  return { ...analysis, leaning_reason: fix(analysis.leaning_reason), user_a_style: fix(analysis.user_a_style), user_b_style: fix(analysis.user_b_style) };
+}
+
+// History reducer — tracks map+analysis snapshots for undo/redo
+function historyReducer(state, action) {
+  switch (action.type) {
+    case "push": {
+      const trimmed = state.entries.slice(0, state.index + 1);
+      return { entries: [...trimmed, action.entry], index: state.index + 1 };
+    }
+    case "undo": return state.index > 0 ? { ...state, index: state.index - 1 } : state;
+    case "redo": return state.index < state.entries.length - 1 ? { ...state, index: state.index + 1 } : state;
+    default: return state;
+  }
+}
+
 export default function App() {
   // --- State ---
   // API key from .env (VITE_ prefix required by Vite)
   const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
-  const [argumentMap, setArgumentMap] = useState(EMPTY_MAP); // The argument map data
+  const [{ entries: histEntries, index: histIndex }, dispatchHistory] = useReducer(
+    historyReducer,
+    { entries: [{ map: EMPTY_MAP, analysis: null }], index: 0 }
+  );
+  const argumentMap = histEntries[histIndex].map;
+  const moderatorAnalysis = histEntries[histIndex].analysis;
+  const canUndo = histIndex > 0;
+  const canRedo = histIndex < histEntries.length - 1;
+  const pushHistory = (newMap, newAnalysis) =>
+    dispatchHistory({ type: "push", entry: { map: newMap, analysis: newAnalysis } });
+  const handleUndo = () => dispatchHistory({ type: "undo" });
+  const handleRedo = () => dispatchHistory({ type: "redo" });
+
   const [currentSpeaker, setCurrentSpeaker] = useState("User A"); // Whose turn
   const [loading, setLoading] = useState(false);     // Waiting for Claude?
   const [loadingSpeaker, setLoadingSpeaker] = useState(null); // Who submitted the loading request
   const [error, setError] = useState(null);          // Last error message
-  const [directMode, setDirectMode] = useState(false); // Talk-to-AI mode?
-  const [sidebarWidth, setSidebarWidth] = useState(280);
   const [originalTexts, setOriginalTexts] = useState({}); // { [nodeId]: original statement }
   const [selectedNode, setSelectedNode] = useState(null); // Node shown in detail popup
   const [chatMessages, setChatMessages] = useState([]); // AI moderator chat history
-  const [moderatorAnalysis, setModeratorAnalysis] = useState(null);
-  const [showGaugePopup, setShowGaugePopup] = useState(false);
-  const dragging = useRef(false);
+  const [activeTab, setActiveTab] = useState(
+    () => window.innerWidth < 640 ? "list" : "map"
+  );
+  const directMode = activeTab === "chat";
 
-  const handleMouseDown = useCallback((e) => {
-    e.preventDefault();
-    dragging.current = true;
-    const onMouseMove = (e) => {
-      if (!dragging.current) return;
-      const newWidth = window.innerWidth - e.clientX;
-      setSidebarWidth(Math.max(200, Math.min(600, newWidth)));
-    };
-    const onMouseUp = () => {
-      dragging.current = false;
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-    };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  }, []);
+  const chatLogRef = useRef(null);
+  useEffect(() => {
+    if (chatLogRef.current) {
+      chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   /**
    * Called when a user submits a new statement.
@@ -95,9 +118,8 @@ export default function App() {
         });
       }
 
-      // Update the map state with Claude's response
-      setArgumentMap(updatedMap);
-      setModeratorAnalysis(updatedMap.moderator_analysis || null);
+      // Push to history (enables undo/redo)
+      pushHistory(updatedMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
 
       // Switch turns: User A → User B → User A → ...
       setCurrentSpeaker((prev) =>
@@ -137,9 +159,7 @@ export default function App() {
         return { ...node, metadata: restMetadata };
       }
     });
-    setArgumentMap({
-      argument_map: { ...inner, nodes: updatedNodes },
-    });
+    pushHistory({ argument_map: { ...inner, nodes: updatedNodes } }, moderatorAnalysis);
   };
 
   /**
@@ -152,7 +172,7 @@ export default function App() {
       return;
     }
 
-    const userMsg = { role: "user", content: message };
+    const userMsg = { role: "user", content: message, speaker: currentSpeaker };
     const updatedHistory = [...chatMessages, userMsg];
     setChatMessages(updatedHistory);
 
@@ -164,7 +184,7 @@ export default function App() {
       const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
       setChatMessages((prev) => [...prev, assistantMsg]);
       if (updatedMap) {
-        setArgumentMap(updatedMap);
+        pushHistory(updatedMap, moderatorAnalysis);
       }
     } catch (err) {
       console.error("Error chatting with moderator:", err);
@@ -348,35 +368,144 @@ export default function App() {
         <h1>Argument Mapper</h1>
       </header>
 
-      {/* Main content: graph + sidebar */}
+      {/* Tab bar */}
+      <nav className="tab-bar">
+        <button
+          className={`tab-btn${activeTab === "map" ? " tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("map")}
+        >
+          Map
+        </button>
+        <button
+          className={`tab-btn${activeTab === "list" ? " tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("list")}
+        >
+          List
+        </button>
+        <button
+          className={`tab-btn${activeTab === "chat" ? " tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("chat")}
+        >
+          Chat
+        </button>
+        {effectiveAnalysis && (() => {
+          const gaugePct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
+          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#94a3b8";
+          return (
+            <button
+              className={`tab-btn tab-gauge-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
+              onClick={() => setActiveTab("moderator")}
+              title="AI Moderator Analysis"
+            >
+              <span className="tab-gauge-label-a">A</span>
+              <span className="tab-gauge-inline-track">
+                <span className="tab-gauge-inline-marker" style={{ left: `${gaugePct}%`, backgroundColor: gaugeColor }} />
+              </span>
+              <span className="tab-gauge-label-b">B</span>
+            </button>
+          );
+        })()}
+      </nav>
+
+      {/* Main content: one tab at a time */}
       <main className="app-main">
-        {/* The argument map graph takes up most of the screen */}
-        <div className="graph-area">
-          <ArgumentMap
-            nodes={inner.nodes}
-            edges={inner.edges}
-            onNodeClick={handleNodeClick}
-          />
-          <ModeratorGauge
-            analysis={effectiveAnalysis}
-            onShowDetail={() => setShowGaugePopup(true)}
-          />
-        </div>
+        {activeTab === "map" && (
+          <div className="graph-area">
+            <ArgumentMap
+              nodes={inner.nodes}
+              edges={inner.edges}
+              onNodeClick={handleNodeClick}
+            />
+          </div>
+        )}
 
-        {/* Resize handle */}
-        <div className="sidebar-resize-handle" onMouseDown={handleMouseDown} />
+        {activeTab === "list" && (
+          <div className="list-area">
+            <MapTreeView
+              nodes={inner.nodes}
+              edges={inner.edges}
+              currentSpeaker={currentSpeaker}
+              onRate={handleRate}
+              onNodeClick={handleNodeClick}
+              loading={loading}
+              fadedNodeIds={fadedNodeIds}
+            />
+          </div>
+        )}
 
-        {/* Sidebar with node list */}
-        <aside className="sidebar" style={{ width: sidebarWidth }}>
-          <NodeList
-            nodes={inner.nodes}
-            currentSpeaker={currentSpeaker}
-            onRate={handleRate}
-            onNodeClick={handleNodeClick}
-            loading={loading}
-            fadedNodeIds={fadedNodeIds}
-          />
-        </aside>
+        {activeTab === "chat" && (
+          <div className="chat-area">
+            {chatMessages.length === 0 ? (
+              <p className="empty-message">Ask the AI moderator anything about the argument map.</p>
+            ) : (
+              <div className="chat-log" ref={chatLogRef}>
+                {chatMessages.map((msg, i) => (
+                  <div key={i} className={`chat-message ${msg.role}`}>
+                    <div
+                      className="chat-bubble"
+                      style={msg.role === "user"
+                        ? { backgroundColor: msg.speaker === "User A" ? "#3b82f6" : "#22c55e" }
+                        : undefined}
+                    >{msg.content}</div>
+                    {msg.mapUpdated && <div className="chat-map-updated">Map updated</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "moderator" && (() => {
+          if (!effectiveAnalysis) {
+            return <p className="empty-message">No moderator analysis yet. Submit some arguments first.</p>;
+          }
+          const pct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
+          const markerColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#94a3b8";
+          const leaningLabel = effectiveAnalysis.leaning < -0.1 ? "Leaning A" : effectiveAnalysis.leaning > 0.1 ? "Leaning B" : "Balanced";
+          return (
+            <div className="moderator-tab-content">
+              <div className="popup-section">
+                <h4>Debate Leaning</h4>
+                <div className="gauge-popup-track-wrapper">
+                  <div className="gauge-labels">
+                    <span className="gauge-label-a">A</span>
+                    <span className="gauge-label-b">B</span>
+                  </div>
+                  <div className="gauge-track gauge-track-large">
+                    <div className="gauge-marker gauge-marker-large" style={{ left: `${pct}%`, backgroundColor: markerColor }} />
+                  </div>
+                  <div className="gauge-leaning-label" style={{ color: markerColor }}>
+                    {leaningLabel} ({effectiveAnalysis.leaning > 0 ? "+" : ""}{effectiveAnalysis.leaning.toFixed(2)})
+                  </div>
+                </div>
+                <p className="popup-summary" style={{ marginTop: "0.75rem" }}>{effectiveAnalysis.leaning_reason}</p>
+              </div>
+              <div className="popup-section">
+                <h4>A's Argumentative Style</h4>
+                <p className="popup-summary" style={{ borderLeft: "3px solid #3b82f6", paddingLeft: "0.75rem" }}>{effectiveAnalysis.user_a_style}</p>
+              </div>
+              <div className="popup-section">
+                <h4>B's Argumentative Style</h4>
+                <p className="popup-summary" style={{ borderLeft: "3px solid #22c55e", paddingLeft: "0.75rem" }}>{effectiveAnalysis.user_b_style}</p>
+              </div>
+              {effectiveAnalysis.agreements?.length > 0 && (
+                <div className="popup-section">
+                  <h4>Points of Agreement</h4>
+                  <ul className="gauge-agreements-list">
+                    {effectiveAnalysis.agreements.map((a) => (
+                      <li key={a.nodeId} className="gauge-agreement-item">
+                        <span className="speaker-badge" style={{ backgroundColor: a.nodeSpeaker === "User A" ? "#3b82f6" : "#22c55e" }}>{spk(a.nodeSpeaker)}</span>
+                        <span className="gauge-agreement-content">{a.content}</span>
+                        {a.agreedBy && <span className="gauge-agreed-by">— agreed by {spk(a.agreedBy)}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="gauge-agreement-note">Each agreement shifts the gauge by 0.1 toward the agreed-upon speaker.</p>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </main>
 
       {/* Error display */}
@@ -388,39 +517,42 @@ export default function App() {
       )}
 
       {/* Node detail popup */}
-      {selectedNode && (
-        <NodeDetailPopup
-          node={selectedNode}
-          originalText={originalTexts[selectedNode.id]}
-          onClose={() => setSelectedNode(null)}
-          fadedNodeIds={fadedNodeIds}
-          nodes={inner.nodes}
-          onNodeClick={handleNodeClick}
-        />
-      )}
+      {selectedNode && (() => {
+        const liveNode = inner.nodes.find((n) => n.id === selectedNode.id) || selectedNode;
+        return (
+          <NodeDetailPopup
+            node={liveNode}
+            originalText={originalTexts[liveNode.id]}
+            onClose={() => setSelectedNode(null)}
+            fadedNodeIds={fadedNodeIds}
+            nodes={inner.nodes}
+            onNodeClick={handleNodeClick}
+            onRate={handleRate}
+            currentSpeaker={currentSpeaker}
+            loading={loading}
+          />
+        );
+      })()}
 
-      {/* Moderator gauge popup */}
-      {showGaugePopup && effectiveAnalysis && (
-        <ModeratorGaugePopup
-          analysis={effectiveAnalysis}
-          onClose={() => setShowGaugePopup(false)}
-        />
+      {/* Statement input at the bottom — hidden on moderator tab */}
+      {activeTab !== "moderator" && (
+        <footer className="app-footer">
+          <StatementInput
+            currentSpeaker={currentSpeaker}
+            speakerSummary={speakerSummary}
+            onSubmit={handleSubmit}
+            onChatMessage={handleChatMessage}
+            loading={loading}
+            loadingSpeaker={loadingSpeaker}
+            directMode={directMode}
+            onSkipTurn={() => setCurrentSpeaker((prev) => prev === "User A" ? "User B" : "User A")}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+          />
+        </footer>
       )}
-
-      {/* Statement input at the bottom */}
-      <footer className="app-footer">
-        <StatementInput
-          currentSpeaker={currentSpeaker}
-          speakerSummary={speakerSummary}
-          onSubmit={handleSubmit}
-          onChatMessage={handleChatMessage}
-          loading={loading}
-          loadingSpeaker={loadingSpeaker}
-          directMode={directMode}
-          onToggleMode={() => setDirectMode((prev) => !prev)}
-          chatMessages={chatMessages}
-        />
-      </footer>
     </div>
   );
 }

@@ -28,17 +28,17 @@ const stylesheet = [
     style: {
       label: "data(label)",
       "text-wrap": "wrap",
-      "text-max-width": "160px",
+      "text-max-width": "200px",
       "font-size": "12px",
       "text-valign": "center",
       "text-halign": "center",
-      width: 180,
-      height: 70,
+      width: "label",
+      height: "label",
       shape: "roundrectangle",
       "background-color": "#f8fafc",
       "border-width": 2,
       "border-color": "#94a3b8",
-      padding: "10px",
+      padding: "15px",
     },
   },
   // --- Node types ---
@@ -69,6 +69,13 @@ const stylesheet = [
     style: {
       "background-color": "#dcfce7",
       "border-color": "#22c55e",
+    },
+  },
+  {
+    selector: 'node[speaker = "Moderator"]',
+    style: {
+      "background-color": "#ede9fe",
+      "border-color": "#8b5cf6",
     },
   },
   // --- Faded nodes (agreed-upon + their supporters) ---
@@ -341,7 +348,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick }) {
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, -50%)", color: "#94a3b8"
         }}>
-          Submit a statement to start building the argument map.
+          No claims yet.
         </p>
       )}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />

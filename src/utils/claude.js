@@ -230,7 +230,8 @@ Rules:
 - Always include a conversational "reply" explaining what you did or answering the question.
 - Only modify the map when the user explicitly asks for changes (corrections, edits, restructuring).
 - When modifying, only change what was asked for. Keep everything else unchanged.
-- Maintain valid node/edge IDs and references.`;
+- Maintain valid node/edge IDs and references.
+- When adding new nodes yourself (not on behalf of User A or B), always set "speaker": "Moderator".`;
 
   // Build messages array from chat history
   const messages = chatHistory.map((msg) => ({

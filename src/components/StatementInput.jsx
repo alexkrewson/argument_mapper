@@ -3,22 +3,15 @@
  *
  * Has two modes:
  * - Debate mode (default): statement is added as an argument in the debate flow
- * - AI Moderator mode: chat with the AI about the map, with optional map updates
+ * - AI Moderator mode (Chat tab): chat with the AI about the map
  */
 
 import { useState, useRef, useEffect } from "react";
+import { spk } from "../utils/speakers.js";
 
-export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onToggleMode, chatMessages }) {
+export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo }) {
   const [text, setText] = useState("");
-  const chatLogRef = useRef(null);
   const textareaRef = useRef(null);
-
-  // Auto-scroll chat log to bottom when new messages arrive
-  useEffect(() => {
-    if (chatLogRef.current) {
-      chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
-    }
-  }, [chatMessages]);
 
   // Refocus textarea when Claude finishes thinking
   useEffect(() => {
@@ -44,47 +37,33 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
   };
 
   const speakerColor = currentSpeaker === "User A" ? "#3b82f6" : "#22c55e";
+  const speakerGlow = currentSpeaker === "User A" ? "rgba(59,130,246,0.15)" : "rgba(34,197,94,0.15)";
+  const activeColor = loading ? "#8b5cf6" : speakerColor;
+  const activeGlow  = loading ? "rgba(139,92,246,0.15)" : speakerGlow;
 
   return (
-    <form className="statement-input" onSubmit={handleSubmit}>
+    <form
+      className="statement-input"
+      style={{ "--speaker-color": activeColor, "--speaker-glow": activeGlow }}
+      onSubmit={handleSubmit}
+    >
       <div className="input-header">
-        {directMode ? (
-          <div className="speaker-label" style={{ color: "#8b5cf6" }}>
-            AI Moderator
-          </div>
-        ) : (
-          <div className="speaker-label" style={{ color: speakerColor }}>
-            {loading && loadingSpeaker ? (
-              <>Thinking about {loadingSpeaker}'s last submission<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
-            ) : `${currentSpeaker}'s turn`}
-            {!loading && speakerSummary && (
-              <span className="speaker-summary"> — {speakerSummary}</span>
-            )}
+        <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#8b5cf6" : speakerColor }}>
+          {loading && loadingSpeaker ? (
+            <>Considering {spk(loadingSpeaker)}'s {directMode ? "submission" : "claim"}<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
+          ) : `${spk(currentSpeaker)}'s turn`}
+        </div>
+        {!loading && (
+          <div className="turn-controls">
+            <button className="skip-turn-btn" onClick={onSkipTurn} type="button">Skip Turn</button>
+            <button className="history-btn" onClick={onUndo} disabled={!canUndo} type="button" title="Undo">↩</button>
+            <button className="history-btn" onClick={onRedo} disabled={!canRedo} type="button" title="Redo">↪</button>
           </div>
         )}
-        <button
-          type="button"
-          className={`mode-toggle ${directMode ? "active" : ""}`}
-          onClick={onToggleMode}
-          title={directMode ? "Switch back to debate mode" : "Talk directly to AI about the map"}
-        >
-          {directMode ? "Back to Debate" : "Talk to AI"}
-        </button>
+        {!loading && speakerSummary && (
+          <span className="speaker-summary">— {speakerSummary}</span>
+        )}
       </div>
-
-      {/* Chat log — only visible in AI moderator mode */}
-      {directMode && chatMessages.length > 0 && (
-        <div className="chat-log" ref={chatLogRef}>
-          {chatMessages.map((msg, i) => (
-            <div key={i} className={`chat-message ${msg.role}`}>
-              <div className="chat-bubble">{msg.content}</div>
-              {msg.mapUpdated && (
-                <div className="chat-map-updated">Map updated</div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
       <div className="input-row">
         <textarea
@@ -93,7 +72,7 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
           placeholder={
             directMode
               ? "Ask the AI moderator anything..."
-              : `${currentSpeaker}, type your statement...`
+              : `${spk(currentSpeaker)}, say whatever you want...`
           }
           value={text}
           onChange={(e) => setText(e.target.value)}

@@ -7,8 +7,9 @@
 
 import { useEffect } from "react";
 import { TACTICS } from "../utils/tactics.js";
+import { spk } from "../utils/speakers.js";
 
-export default function NodeDetailPopup({ node, originalText, onClose, fadedNodeIds, nodes, onNodeClick }) {
+export default function NodeDetailPopup({ node, originalText, onClose, fadedNodeIds, nodes, onNodeClick, onRate, currentSpeaker, loading }) {
   // Close on Escape key
   useEffect(() => {
     const handleKey = (e) => {
@@ -42,7 +43,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
                   node.speaker === "User A" ? "#3b82f6" : "#22c55e",
               }}
             >
-              {node.speaker}
+              {spk(node.speaker)}
             </span>
             {node.metadata?.confidence && (
               <span className={`confidence-badge confidence-${node.metadata.confidence}`}>
@@ -64,7 +65,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
                 <>
                   <strong>Implicit agreement detected</strong>
                   <div className="agreement-by">
-                    {node.metadata.agreed_by.speaker} conceded this in their submission
+                    {spk(node.metadata.agreed_by.speaker)} conceded this in their submission
                   </div>
                   <blockquote className="agreement-quote">
                     "{node.metadata.agreed_by.text}"
@@ -74,11 +75,11 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
                 <>
                   <strong>Agreed via thumbs up</strong>
                   <div className="agreement-by">
-                    {node.metadata.agreed_by.speaker} manually agreed with this
+                    {spk(node.metadata.agreed_by.speaker)} manually agreed with this
                   </div>
                 </>
               ) : (
-                <strong>Both users agree</strong>
+                <strong>Both sides agree</strong>
               )}
             </div>
           </div>
@@ -89,7 +90,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
             <span className="flag-banner-icon">↩</span>
             <div className="flag-banner-body">
               <strong>Retracted</strong>
-              <div>{node.speaker} retracted this argument via thumbs down</div>
+              <div>{spk(node.speaker)} retracted this argument via thumbs down</div>
             </div>
           </div>
         )}
@@ -164,6 +165,24 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Rating buttons */}
+        {onRate && (
+          <div className="popup-section popup-rating-row">
+            <button
+              className={`rate-btn ${node.rating === "up" ? "active-up" : ""} ${node.speaker === currentSpeaker ? "rate-btn-unavailable" : ""}`}
+              onClick={() => onRate(node.id, "up")}
+              disabled={loading || node.speaker === currentSpeaker}
+              title={node.speaker !== currentSpeaker ? "I agree with this representation" : "You can only agree with the other user's statements"}
+            >&#x1F44D;</button>
+            <button
+              className={`rate-btn ${node.rating === "down" ? "active-down" : ""} ${node.speaker !== currentSpeaker ? "rate-btn-unavailable" : ""}`}
+              onClick={() => onRate(node.id, "down")}
+              disabled={loading || node.speaker !== currentSpeaker}
+              title={node.speaker === currentSpeaker ? "Retract this argument" : "You can only retract your own statements"}
+            >&#x1F44E;</button>
           </div>
         )}
 

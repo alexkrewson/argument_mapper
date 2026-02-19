@@ -6,6 +6,7 @@
  */
 
 import { TACTICS } from "../utils/tactics.js";
+import { spk } from "../utils/speakers.js";
 
 export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds }) {
   if (nodes.length === 0) {
@@ -32,7 +33,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
                     node.speaker === "User A" ? "#3b82f6" : "#22c55e",
                 }}
               >
-                {node.speaker}
+                {spk(node.speaker)}
               </span>
               <span className="node-id-badge">{node.id}</span>
               <span className={`type-badge type-${node.type}`}>
@@ -70,15 +71,15 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
               <div className="agreement-indicator">
                 <span className="agreement-indicator-icon">&#x2714;</span>
                 {node.metadata?.agreed_by?.text
-                  ? `Implicit agreement — ${node.metadata.agreed_by.speaker}`
+                  ? `Implicit agreement — ${spk(node.metadata.agreed_by.speaker)}`
                   : node.metadata?.agreed_by?.speaker
-                  ? `Thumbs up — ${node.metadata.agreed_by.speaker}`
+                  ? `Thumbs up — ${spk(node.metadata.agreed_by.speaker)}`
                   : "Agreed"}
               </div>
             )}
             {fadedNodeIds?.has(node.id) && node.rating === "down" && (
               <div className="retracted-indicator">
-                ↩ Retracted by {node.speaker}
+                ↩ Retracted by {spk(node.speaker)}
               </div>
             )}
             {fadedNodeIds?.has(node.id) && !node.rating && (
