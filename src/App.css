@@ -93,8 +93,8 @@
 }
 
 .tab-btn--active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
+  color: #8b5cf6;
+  border-bottom-color: #8b5cf6;
   font-weight: 600;
 }
 
@@ -733,6 +733,42 @@
   display: flex;
   gap: 0.5rem;
   padding-top: 0.25rem;
+}
+
+/* --- Concede button (replaces thumbs up/down) --- */
+.concede-btn {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  color: #475569;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+
+.concede-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+.concede-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.concede-btn--active {
+  background: #f0fdf4;
+  border-color: #22c55e;
+  color: #166534;
+  font-weight: 600;
+}
+
+.concede-btn--active:hover:not(:disabled) {
+  background: #dcfce7;
 }
 
 .speaker-summary {

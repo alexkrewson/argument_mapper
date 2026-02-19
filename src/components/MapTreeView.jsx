@@ -87,23 +87,48 @@ function countDescendants(children) {
   return count;
 }
 
-function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds }) {
+function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds }) {
   const { node, crossLinkCount, children } = item;
   const style = SPEAKER_STYLE[node.speaker] || { bg: "#f8fafc", border: "#94a3b8" };
   const isFaded = fadedNodeIds?.has(node.id);
+  const isContradictionBorder = contradictionBorderIds?.has(node.id);
+  const isWalkbackBorder = walkbackBorderIds?.has(node.id);
+  const isContradictionFaded = !isContradictionBorder && contradictionFadedIds?.has(node.id);
+  const isWalkbackFaded = !isWalkbackBorder && walkbackFadedIds?.has(node.id);
+
+  // Determine background and outline based on contradiction/walkback state
+  let bgColor = style.bg;
+  let outlineStyle;
+  if (isContradictionBorder) {
+    bgColor = "#fee2e2";
+    outlineStyle = "2px solid #dc2626";
+  } else if (isWalkbackBorder) {
+    bgColor = "#ffedd5";
+    outlineStyle = "2px solid #f97316";
+  } else if (isContradictionFaded) {
+    bgColor = "#fee2e2";
+  } else if (isWalkbackFaded) {
+    bgColor = "#ffedd5";
+  }
+
+  // Only apply opacity fading if NOT already getting colored background
+  const hasColoredBg = isContradictionBorder || isWalkbackBorder || isContradictionFaded || isWalkbackFaded;
+  const shouldFadeOpacity = isFaded && !hasColoredBg;
+
   const tactics = (node.metadata?.tactics || []).filter((k) => TACTICS[k]);
   const hasChildren = children.length > 0;
   const isCollapsed = collapsed.has(node.id);
 
   return (
-    <li className={`map-tree-item${isFaded ? " map-tree-item--faded" : ""}`}>
+    <li className={`map-tree-item${shouldFadeOpacity ? " map-tree-item--faded" : ""}`}>
       {/* Card */}
       <div
         className="map-tree-cell"
         style={{
           marginLeft: `${depth * INDENT_PX}px`,
-          background: style.bg,
+          background: bgColor,
           borderLeft: `3px solid ${style.border}`,
+          outline: outlineStyle,
         }}
         onClick={() => onNodeClick?.(node)}
       >
@@ -184,24 +209,23 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           </div>
         )}
 
-        {/* Rating buttons */}
+        {/* Concede button */}
         <span className="rating-buttons" onClick={(e) => e.stopPropagation()}>
-          <button
-            className={`rate-btn ${node.rating === "up" ? "active-up" : ""} ${node.speaker === currentSpeaker ? "rate-btn-unavailable" : ""}`}
-            onClick={() => onRate(node.id, "up")}
-            disabled={loading || node.speaker === currentSpeaker}
-            title={node.speaker !== currentSpeaker ? "I agree with this representation" : "You can only agree with the other user's statements"}
-          >
-            &#x1F44D;
-          </button>
-          <button
-            className={`rate-btn ${node.rating === "down" ? "active-down" : ""} ${node.speaker !== currentSpeaker ? "rate-btn-unavailable" : ""}`}
-            onClick={() => onRate(node.id, "down")}
-            disabled={loading || node.speaker !== currentSpeaker}
-            title={node.speaker === currentSpeaker ? "Retract this argument" : "You can only retract your own statements"}
-          >
-            &#x1F44E;
-          </button>
+          {(() => {
+            const isOtherNode = node.speaker !== currentSpeaker;
+            const isActive = isOtherNode ? node.rating === "up" : node.rating === "down";
+            const ratingType = isOtherNode ? "up" : "down";
+            const btnText = isOtherNode ? "I concede, this was correct" : "I concede, this was incorrect";
+            return (
+              <button
+                className={`concede-btn${isActive ? " concede-btn--active" : ""}`}
+                onClick={() => onRate(node.id, ratingType)}
+                disabled={loading}
+              >
+                {isActive ? `✓ ${btnText}` : btnText}
+              </button>
+            );
+          })()}
         </span>
       </div>
 
@@ -222,6 +246,10 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
                   onNodeClick={onNodeClick}
                   loading={loading}
                   fadedNodeIds={fadedNodeIds}
+                  contradictionFadedIds={contradictionFadedIds}
+                  walkbackFadedIds={walkbackFadedIds}
+                  contradictionBorderIds={contradictionBorderIds}
+                  walkbackBorderIds={walkbackBorderIds}
                 />
               ))}
             </ul>
@@ -232,7 +260,7 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
   );
 }
 
-export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds }) {
+export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds }) {
   const trees = useMemo(() => buildTree(nodes, edges), [nodes, edges]);
   const [collapsed, setCollapsed] = useState(() => new Set());
 
@@ -265,6 +293,10 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
             onNodeClick={onNodeClick}
             loading={loading}
             fadedNodeIds={fadedNodeIds}
+            contradictionFadedIds={contradictionFadedIds}
+            walkbackFadedIds={walkbackFadedIds}
+            contradictionBorderIds={contradictionBorderIds}
+            walkbackBorderIds={walkbackBorderIds}
           />
         ))}
       </ul>

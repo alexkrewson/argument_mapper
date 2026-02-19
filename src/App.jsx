@@ -29,7 +29,7 @@ function sanitizeAnalysis(analysis) {
   const fix = (s) => typeof s === "string"
     ? s.replace(/User A/g, "A").replace(/User B/g, "B").replace(/\busers\b/gi, "sides")
     : s;
-  return { ...analysis, leaning_reason: fix(analysis.leaning_reason), user_a_style: fix(analysis.user_a_style), user_b_style: fix(analysis.user_b_style) };
+  return { ...analysis, leaning: -(analysis.leaning ?? 0), leaning_reason: fix(analysis.leaning_reason), user_a_style: fix(analysis.user_a_style), user_b_style: fix(analysis.user_b_style) };
 }
 
 // History reducer — tracks map+analysis snapshots for undo/redo
@@ -204,12 +204,13 @@ export default function App() {
   // Unwrap the inner argument_map for components
   const inner = argumentMap.argument_map;
 
-  // Compute faded node IDs:
-  // - thumbs-up (agreed): that node + all predecessors (supporting arguments)
-  // - thumbs-down (retracted): that node + all successors (dependent arguments)
-  const fadedNodeIds = useMemo(() => {
-    const faded = new Set();
-
+  // Compute faded/colored node sets for visual invalidation:
+  // - fadedNodeIds: opacity-faded due to thumbs-up (agreement) or thumbs-down (retraction)
+  // - contradictionFadedIds: light-red background (contradiction-affected)
+  // - walkbackFadedIds: light-orange background (goalpost-moving-affected)
+  // - contradictionBorderIds: thick red border (the two contradicting nodes)
+  // - walkbackBorderIds: thick orange border (the two walkback nodes)
+  const fadedInfo = useMemo(() => {
     // Build predecessor map: targetId → Set of sourceIds
     const predecessorMap = new Map();
     for (const edge of inner.edges) {
@@ -217,105 +218,65 @@ export default function App() {
       predecessorMap.get(edge.to).add(edge.from);
     }
 
-    // Thumbs UP: BFS backwards from agreed nodes, collecting predecessors
+    function bfsBack(startIds) {
+      const visited = new Set(startIds);
+      const queue = [...startIds];
+      while (queue.length > 0) {
+        const current = queue.shift();
+        for (const predId of predecessorMap.get(current) || []) {
+          if (!visited.has(predId)) {
+            visited.add(predId);
+            queue.push(predId);
+          }
+        }
+      }
+      return visited;
+    }
+
+    // Thumbs-up/down opacity fading (agreement + retraction)
     const agreedIds = inner.nodes.filter((n) => n.rating === "up").map((n) => n.id);
-    const queue1 = [...agreedIds];
-    for (const id of agreedIds) faded.add(id);
-    while (queue1.length > 0) {
-      const current = queue1.shift();
-      const preds = predecessorMap.get(current);
-      if (preds) {
-        for (const predId of preds) {
-          if (!faded.has(predId)) {
-            faded.add(predId);
-            queue1.push(predId);
-          }
-        }
-      }
-    }
-
-    // Thumbs DOWN: BFS backwards from retracted nodes, collecting predecessors
-    // (the opposing arguments that were attacking the retracted point also go away)
     const downIds = inner.nodes.filter((n) => n.rating === "down").map((n) => n.id);
-    const queue2 = [...downIds];
-    for (const id of downIds) faded.add(id);
-    while (queue2.length > 0) {
-      const current = queue2.shift();
-      const preds = predecessorMap.get(current);
-      if (preds) {
-        for (const predId of preds) {
-          if (!faded.has(predId)) {
-            faded.add(predId);
-            queue2.push(predId);
-          }
-        }
-      }
-    }
+    const fadedNodeIds = new Set([...bfsBack(agreedIds), ...bfsBack(downIds)]);
 
-    // Contradiction / goalpost-moving: BFS backwards from the *referenced* node
-    // (the node being contradicted/moved-from + its entire supporting subtree fades).
-    const contradictionTargetIds = new Set();
+    // Contradiction borders: both the flagging node AND the node being contradicted
+    const contradictionBorderIds = new Set();
+    const walkbackBorderIds = new Set();
     for (const node of inner.nodes) {
-      if (node.metadata?.contradicts) contradictionTargetIds.add(node.metadata.contradicts);
-      if (node.metadata?.moves_goalposts_from) contradictionTargetIds.add(node.metadata.moves_goalposts_from);
-    }
-    const queue3 = [...contradictionTargetIds];
-    for (const id of contradictionTargetIds) faded.add(id);
-    while (queue3.length > 0) {
-      const current = queue3.shift();
-      const preds = predecessorMap.get(current);
-      if (preds) {
-        for (const predId of preds) {
-          if (!faded.has(predId)) {
-            faded.add(predId);
-            queue3.push(predId);
-          }
-        }
+      if (node.metadata?.contradicts) {
+        contradictionBorderIds.add(node.id);
+        contradictionBorderIds.add(node.metadata.contradicts);
+      }
+      if (node.metadata?.moves_goalposts_from) {
+        walkbackBorderIds.add(node.id);
+        walkbackBorderIds.add(node.metadata.moves_goalposts_from);
       }
     }
 
-    // The flagging nodes (red/orange border), their supporting subtree (predecessors),
-    // AND any node they directly point to (their immediate edge targets) must stay visible.
-    //
-    // Exception: if a flagging node is ITSELF a contradiction target (mutual contradiction —
-    // e.g. A contradicts B and B contradicts A), don't protect its predecessor subtree.
-    // Its own position has been walked back, so its supporters should still be faded.
-    const protectedIds = new Set();
-    for (const node of inner.nodes) {
-      if (node.metadata?.contradicts || node.metadata?.moves_goalposts_from) {
-        protectedIds.add(node.id);
-        // Only BFS-protect predecessors if this flagging node is not itself a contradiction target
-        if (!contradictionTargetIds.has(node.id)) {
-          const protectQueue = [node.id];
-          while (protectQueue.length > 0) {
-            const current = protectQueue.shift();
-            const preds = predecessorMap.get(current);
-            if (preds) {
-              for (const predId of preds) {
-                if (!protectedIds.has(predId)) {
-                  protectedIds.add(predId);
-                  protectQueue.push(predId);
-                }
-              }
-            }
-          }
-        }
-        // Also protect nodes this flagging node directly points to
-        for (const edge of inner.edges) {
-          if (edge.from === node.id) protectedIds.add(edge.to);
-        }
-      }
-    }
-    for (const id of protectedIds) faded.delete(id);
+    // Contradiction colored backgrounds: contradicted node + predecessors + all border nodes
+    const contradictionTargetIds = inner.nodes
+      .filter((n) => n.metadata?.contradicts)
+      .map((n) => n.metadata.contradicts);
+    const contradictionFadedIds = bfsBack(contradictionTargetIds);
+    for (const id of contradictionBorderIds) contradictionFadedIds.add(id);
 
-    return faded;
+    // Walkback colored backgrounds: walked-back node + predecessors + all border nodes
+    const walkbackTargetIds = inner.nodes
+      .filter((n) => n.metadata?.moves_goalposts_from)
+      .map((n) => n.metadata.moves_goalposts_from);
+    const walkbackFadedIds = bfsBack(walkbackTargetIds);
+    for (const id of walkbackBorderIds) walkbackFadedIds.add(id);
+
+    return { fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds };
   }, [inner.nodes, inner.edges]);
 
   // Compute invalidation-adjusted moderator analysis.
   // Accounts for all forms of argument invalidation: thumbs-up/down, contradictions,
-  // and goalpost-moving — all of which land nodes in fadedNodeIds.
+  // and goalpost-moving.
   const effectiveAnalysis = useMemo(() => {
     if (!moderatorAnalysis) return null;
+
+    const { fadedNodeIds, contradictionFadedIds, walkbackFadedIds } = fadedInfo;
+    const allInactiveIds = new Set([...fadedNodeIds, ...contradictionFadedIds, ...walkbackFadedIds]);
 
     // Collect agreed-upon nodes for display
     const agreements = [];
@@ -329,18 +290,16 @@ export default function App() {
       });
     }
 
-    // For each speaker, compute what fraction of their nodes are still active (not faded).
-    // A side whose arguments are fully invalidated should move the gauge against them.
+    // For each speaker, compute what fraction of their nodes are still active (not invalidated).
     const totalA = inner.nodes.filter((n) => n.speaker === "User A").length;
     const totalB = inner.nodes.filter((n) => n.speaker === "User B").length;
-    const activeA = inner.nodes.filter((n) => n.speaker === "User A" && !fadedNodeIds.has(n.id)).length;
-    const activeB = inner.nodes.filter((n) => n.speaker === "User B" && !fadedNodeIds.has(n.id)).length;
+    const activeA = inner.nodes.filter((n) => n.speaker === "User A" && !allInactiveIds.has(n.id)).length;
+    const activeB = inner.nodes.filter((n) => n.speaker === "User B" && !allInactiveIds.has(n.id)).length;
 
     const effectivenessA = totalA > 0 ? activeA / totalA : 1;
     const effectivenessB = totalB > 0 ? activeB / totalB : 1;
 
     // Positive adjustment favours B; negative favours A.
-    // Weight of 0.7 makes the effect significant without fully overriding Claude's analysis.
     const adjustment = (effectivenessB - effectivenessA) * 0.7;
     const adjustedLeaning = Math.max(-1, Math.min(1, moderatorAnalysis.leaning + adjustment));
 
@@ -349,7 +308,7 @@ export default function App() {
       leaning: adjustedLeaning,
       agreements,
     };
-  }, [moderatorAnalysis, inner.nodes, fadedNodeIds]);
+  }, [moderatorAnalysis, inner.nodes, fadedInfo]);
 
   // Derive a concise position summary for each speaker from their first claim node
   const getSpeakerSummary = (speaker) => {
@@ -415,6 +374,11 @@ export default function App() {
               nodes={inner.nodes}
               edges={inner.edges}
               onNodeClick={handleNodeClick}
+              fadedNodeIds={fadedInfo.fadedNodeIds}
+              contradictionFadedIds={fadedInfo.contradictionFadedIds}
+              walkbackFadedIds={fadedInfo.walkbackFadedIds}
+              contradictionBorderIds={fadedInfo.contradictionBorderIds}
+              walkbackBorderIds={fadedInfo.walkbackBorderIds}
             />
           </div>
         )}
@@ -428,7 +392,11 @@ export default function App() {
               onRate={handleRate}
               onNodeClick={handleNodeClick}
               loading={loading}
-              fadedNodeIds={fadedNodeIds}
+              fadedNodeIds={fadedInfo.fadedNodeIds}
+              contradictionFadedIds={fadedInfo.contradictionFadedIds}
+              walkbackFadedIds={fadedInfo.walkbackFadedIds}
+              contradictionBorderIds={fadedInfo.contradictionBorderIds}
+              walkbackBorderIds={fadedInfo.walkbackBorderIds}
             />
           </div>
         )}
@@ -524,7 +492,7 @@ export default function App() {
             node={liveNode}
             originalText={originalTexts[liveNode.id]}
             onClose={() => setSelectedNode(null)}
-            fadedNodeIds={fadedNodeIds}
+            fadedNodeIds={fadedInfo.fadedNodeIds}
             nodes={inner.nodes}
             onNodeClick={handleNodeClick}
             onRate={handleRate}

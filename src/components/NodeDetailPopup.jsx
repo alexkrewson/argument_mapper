@@ -21,6 +21,8 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
 
   if (!node) return null;
 
+  const speakerColor = node.speaker === "User A" ? "#3b82f6" : node.speaker === "User B" ? "#22c55e" : "#8b5cf6";
+  const speakerBg = node.speaker === "User A" ? "#eff6ff" : node.speaker === "User B" ? "#f0fdf4" : "#f5f3ff";
   const tactics = node.metadata?.tactics?.filter((key) => TACTICS[key]) || [];
   const tacticReasons = node.metadata?.tactic_reasons || {};
   const contradictsId = node.metadata?.contradicts;
@@ -139,7 +141,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
         {originalText && (
           <div className="popup-section">
             <h4>Original Statement</h4>
-            <blockquote className="popup-quote">{originalText}</blockquote>
+            <blockquote className="popup-quote" style={{ borderLeftColor: speakerColor, background: speakerBg }}>{originalText}</blockquote>
           </div>
         )}
 
@@ -168,23 +170,24 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
           </div>
         )}
 
-        {/* Rating buttons */}
-        {onRate && (
-          <div className="popup-section popup-rating-row">
-            <button
-              className={`rate-btn ${node.rating === "up" ? "active-up" : ""} ${node.speaker === currentSpeaker ? "rate-btn-unavailable" : ""}`}
-              onClick={() => onRate(node.id, "up")}
-              disabled={loading || node.speaker === currentSpeaker}
-              title={node.speaker !== currentSpeaker ? "I agree with this representation" : "You can only agree with the other user's statements"}
-            >&#x1F44D;</button>
-            <button
-              className={`rate-btn ${node.rating === "down" ? "active-down" : ""} ${node.speaker !== currentSpeaker ? "rate-btn-unavailable" : ""}`}
-              onClick={() => onRate(node.id, "down")}
-              disabled={loading || node.speaker !== currentSpeaker}
-              title={node.speaker === currentSpeaker ? "Retract this argument" : "You can only retract your own statements"}
-            >&#x1F44E;</button>
-          </div>
-        )}
+        {/* Concede button */}
+        {onRate && (() => {
+          const isOtherNode = node.speaker !== currentSpeaker;
+          const isActive = isOtherNode ? node.rating === "up" : node.rating === "down";
+          const ratingType = isOtherNode ? "up" : "down";
+          const btnText = isOtherNode ? "I concede, this was correct" : "I concede, this was incorrect";
+          return (
+            <div className="popup-section popup-rating-row">
+              <button
+                className={`concede-btn${isActive ? " concede-btn--active" : ""}`}
+                onClick={() => onRate(node.id, ratingType)}
+                disabled={loading}
+              >
+                {isActive ? `✓ ${btnText}` : btnText}
+              </button>
+            </div>
+          );
+        })()}
 
         {/* Tags */}
         {node.metadata?.tags?.length > 0 && (
