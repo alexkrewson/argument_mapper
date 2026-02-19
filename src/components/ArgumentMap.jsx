@@ -172,42 +172,38 @@ function applyEdgeCurves(cy) {
     const sx = src.position("x"), sy = src.position("y"), sh = src.height();
     const tx = tgt.position("x"), ty = tgt.position("y"), th = tgt.height();
 
-    // Force perpendicular entry/exit at top/bottom centers
-    const endpoints = {
-      "source-endpoint": "50% 0%",    // top-center of child
-      "target-endpoint": "50% 100%",  // bottom-center of parent
-    };
-
-    // Straight vertical line when parent has only one child
+    // Straight line when parent has only one child (dagre places it directly below)
     if (tgt.incomers("edge").length <= 1) {
-      edge.style({ ...endpoints, "curve-style": "straight" });
+      edge.style({ "curve-style": "straight" });
       return;
     }
 
-    // S-curve: axis-aligned control points at midY, one over source X, one over target X
-    const p0y = sy - sh / 2;   // top of source (child)
-    const p3y = ty + th / 2;   // bottom of target (parent)
+    // In BT layout the default outside-to-node endpoint is approximately:
+    //   source endpoint ≈ top-center of child:  (sx, sy - sh/2)
+    //   target endpoint ≈ bottom-center of parent: (tx, ty + th/2)
+    // S-curve: two axis-aligned control points at midY prevent crossing.
+    const p0y = sy - sh / 2;
+    const p3y = ty + th / 2;
     const dx = tx - sx, dy = p3y - p0y;
     const L = Math.sqrt(dx * dx + dy * dy);
-    if (L < 1) { edge.style({ ...endpoints, "curve-style": "straight" }); return; }
+    if (L < 1) { edge.style({ "curve-style": "straight" }); return; }
 
     const midY = (p0y + p3y) / 2;
 
-    // Unit vectors along the P0→P3 line and perpendicular to it
+    // Unit vectors along and perpendicular to the P0→P3 line
     const ux = dx / L, uy = dy / L;
     const nx = -uy, ny = ux;
 
-    // CP1 = (sx, midY) — directly above child top-center at midpoint height
+    // CP1 = (sx, midY): directly above child, at midpoint height
     const w1 = ((midY - p0y) * uy) / L;
     const d1 = (midY - p0y) * ny;
 
-    // CP2 = (tx, midY) — directly below parent bottom-center at midpoint height
-    const r2x = tx - sx, r2y = midY - p0y;
+    // CP2 = (tx, midY): directly below parent, at midpoint height
+    const r2x = dx, r2y = midY - p0y;
     const w2 = (r2x * ux + r2y * uy) / L;
     const d2 = r2x * nx + r2y * ny;
 
     edge.style({
-      ...endpoints,
       "curve-style": "unbundled-bezier",
       "control-point-weights": `${w1} ${w2}`,
       "control-point-distances": `${d1} ${d2}`,
