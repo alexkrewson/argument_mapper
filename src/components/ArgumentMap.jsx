@@ -159,18 +159,20 @@ const stylesheet = [
 ];
 
 /**
- * After layout, route edges as orthogonal conduits (no overlap anywhere):
+ * After layout, route edges as orthogonal conduits using NODE-CENTER coordinates.
  *
- * - Single child  → straight vertical line.
- * - Multiple children → Z-shaped polyline per edge:
- *     child top-center  ──up──►  (rail Y)  ──horizontal──►  parent attachment  ──up──►  parent bottom
+ * Key insight: segment-weights/distances are always relative to the center→center
+ * line regardless of endpoint settings.  By placing a 3rd waypoint W3 INSIDE the
+ * parent node at the spread X position, Cytoscape's outside-to-node clip
+ * naturally stops the edge at (tx+offsetX, parentBottom) — giving truly parallel,
+ * evenly-spaced vertical entry into every parent.
  *
- *   Attachment points are spread symmetrically across the parent's bottom edge
- *   (one dedicated slot per child) so every pipe enters the parent in parallel
- *   and travels its own lane from top to bottom — zero overlap at any height.
+ * Visible path per edge (all segments horizontal or vertical):
+ *   child exits top-center  ──vertical──►  rail Y
+ *                           ──horizontal──►  (tx+offsetX, railY)
+ *                           ──vertical──►  clipped at parent bottom at offsetX
  *
- *   Uses canvas-coordinate source/target endpoints so edges do NOT all converge
- *   at the node center, and `curve-style: "segments"` for true right-angle routing.
+ * Single child → straight vertical line (no bends).
  */
 function applyEdgeCurves(cy) {
   const byTarget = new Map();
@@ -181,64 +183,59 @@ function applyEdgeCurves(cy) {
   });
 
   byTarget.forEach((siblings) => {
-    // ── Single child: plain straight line ──────────────────────────────────
+    // ── Single child: straight line ─────────────────────────────────────────
     if (siblings.length === 1) {
-      siblings[0].style({
-        "curve-style": "straight",
-        "source-endpoint": "outside-to-node",
-        "target-endpoint": "outside-to-node",
-      });
+      siblings[0].style({ "curve-style": "straight" });
       return;
     }
 
-    // ── Multiple children: Z-shaped conduit routing ─────────────────────────
-    // Sort left-to-right so lane index matches spatial order (crossing-free).
+    // ── Multiple children: Z-shaped conduit ─────────────────────────────────
     siblings.sort((a, b) => a.source().position("x") - b.source().position("x"));
-    const n = siblings.length;
+    const n   = siblings.length;
+    const tgt = siblings[0].target();
+    const tx  = tgt.position("x");
+    const ty  = tgt.position("y");
+    const th  = tgt.height();
+    const tw  = tgt.width();
 
-    const tgt  = siblings[0].target();
-    const tx   = tgt.position("x");
-    const ty   = tgt.position("y");
-    const th   = tgt.height();
-    const tw   = tgt.width();
+    // Clamp spread so W3 stays inside the parent bounding box horizontally.
+    const maxOffset  = (tw / 2) * 0.8;
+    const pipeSpacing = n > 1 ? (maxOffset * 2) / (n - 1) : 0;
 
-    // Spread n attachment points symmetrically along the parent's bottom edge.
-    const pipeSpacing = Math.min(28, (tw * 0.75) / Math.max(n - 1, 1));
-
-    // Shared horizontal rail Y — midpoint between the topmost child top and parent bottom.
+    // Shared rail Y — midpoint between topmost child top and parent bottom.
     let minChildTopY = Infinity;
     siblings.forEach((e) => {
-      const topY = e.source().position("y") - e.source().height() / 2;
-      if (topY < minChildTopY) minChildTopY = topY;
+      const y = e.source().position("y") - e.source().height() / 2;
+      if (y < minChildTopY) minChildTopY = y;
     });
-    const parentBottomY = ty + th / 2;
-    const railY = (minChildTopY + parentBottomY) / 2;
+    const railY = (minChildTopY + ty + th / 2) / 2;
 
     siblings.forEach((edge, i) => {
       const src = edge.source();
       const sx  = src.position("x");
       const sy  = src.position("y");
-      const sh  = src.height();
 
       const offsetX = (i - (n - 1) / 2) * pipeSpacing;
 
-      // Explicit canvas-coordinate endpoints (not node-center defaults).
-      const P0x = sx,           P0y = sy - sh / 2;   // child top-center
-      const P3x = tx + offsetX, P3y = ty + th / 2;   // dedicated slot on parent bottom
+      // Use node CENTERS as P0/P3 (required by Cytoscape's segment coordinate system).
+      const P0x = sx, P0y = sy;   // child center
+      const P3x = tx, P3y = ty;   // parent center
 
-      // Z-shape waypoints: go straight up to rail, then across, then up.
-      const W1x = P0x, W1y = railY;   // above child, at rail
-      const W2x = P3x, W2y = railY;   // below parent attachment, at rail
+      // Three waypoints that force H/V-only visible segments:
+      //   W1 = (sx,   railY)        child's X, rail height  → child→W1 is vertical
+      //   W2 = (tx+Δ, railY)        spread X,  rail height  → W1→W2 is horizontal
+      //   W3 = (tx+Δ, ty)  ← INSIDE parent node            → W2→W3 is vertical
+      //   outside-to-node clip stops rendering at (tx+Δ, ty+th/2) ← parent bottom edge
+      const W1x = sx,          W1y = railY;
+      const W2x = tx + offsetX, W2y = railY;
+      const W3x = tx + offsetX, W3y = ty;     // inside parent — never rendered
 
-      // Convert absolute waypoints → (weight, distance) relative to P0→P3 line.
+      // Convert absolute waypoints to (weight, distance) in the P0→P3 basis.
       const dx = P3x - P0x, dy = P3y - P0y;
       const L  = Math.sqrt(dx * dx + dy * dy);
-      if (L < 1) {
-        edge.style({ "curve-style": "straight", "source-endpoint": "outside-to-node", "target-endpoint": "outside-to-node" });
-        return;
-      }
-      const ux = dx / L, uy = dy / L;   // unit along edge
-      const nx = -uy,    ny = ux;        // unit perpendicular (left-hand)
+      if (L < 1) { edge.style({ "curve-style": "straight" }); return; }
+      const ux = dx / L, uy = dy / L;
+      const nx = -uy,    ny =  ux;
 
       function toSeg(Wx, Wy) {
         const rx = Wx - P0x, ry = Wy - P0y;
@@ -247,14 +244,13 @@ function applyEdgeCurves(cy) {
 
       const s1 = toSeg(W1x, W1y);
       const s2 = toSeg(W2x, W2y);
+      const s3 = toSeg(W3x, W3y);
 
       edge.style({
         "curve-style":       "segments",
-        "segment-weights":   `${s1.w.toFixed(4)} ${s2.w.toFixed(4)}`,
-        "segment-distances": `${s1.d.toFixed(2)} ${s2.d.toFixed(2)}`,
-        "segment-radii":     "8 8",          // rounded conduit bends (Cytoscape ≥ 3.19)
-        "source-endpoint":   `${P0x}px ${P0y}px`,
-        "target-endpoint":   `${P3x}px ${P3y}px`,
+        "segment-weights":   `${s1.w.toFixed(4)} ${s2.w.toFixed(4)} ${s3.w.toFixed(4)}`,
+        "segment-distances": `${s1.d.toFixed(2)} ${s2.d.toFixed(2)} ${s3.d.toFixed(2)}`,
+        "segment-radii":     "8 8 8",
       });
     });
   });
@@ -378,13 +374,6 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       })),
     ];
 
-    // Save positions of all current nodes before clearing, so existing
-    // nodes can be locked in place during layout and only new nodes move.
-    const savedPositions = {};
-    cy.nodes().forEach((n) => {
-      savedPositions[n.id()] = { x: n.position("x"), y: n.position("y") };
-    });
-
     cy.elements().remove();
     cy.add(newElements);
 
@@ -414,18 +403,10 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       cy.nodes().filter((n) => walkbackFadedIds.has(n.id()) && !walkbackBorderIds?.has(n.id())).addClass("walkback-faded");
     }
 
-    // Restore positions of existing nodes and lock them so dagre only
-    // places new nodes, keeping the graph growing downward.
-    cy.nodes().forEach((n) => {
-      const saved = savedPositions[n.id()];
-      if (saved) {
-        n.position(saved);
-        n.lock();
-      }
-    });
-
+    // Always run a full fresh layout so dagre re-centers and symmetrically
+    // repositions all nodes whenever the graph structure changes.
     if (cy.nodes().length > 0) {
-      runLayout(cy, () => cy.nodes().unlock());
+      runLayout(cy);
     }
   }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds]);
 
