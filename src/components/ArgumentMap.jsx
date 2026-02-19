@@ -155,7 +155,8 @@ const stylesheet = [
  *
  * All siblings sharing the same parent converge at (parent_x, railY),
  * producing the classic org-chart "T-branch" look with right-angle corners.
- * Single child → straight vertical line (no bends).
+ * Single child directly above parent → straight vertical line (no bends).
+ * Single child offset horizontally → same orthogonal routing as multi-child.
  */
 function applyEdgeCurves(cy) {
   const byTarget = new Map();
@@ -166,11 +167,6 @@ function applyEdgeCurves(cy) {
   });
 
   byTarget.forEach((siblings) => {
-    if (siblings.length === 1) {
-      siblings[0].style({ "curve-style": "straight" });
-      return;
-    }
-
     const tgt = siblings[0].target();
     const tx  = tgt.position("x");
     const ty  = tgt.position("y");
@@ -193,19 +189,25 @@ function applyEdgeCurves(cy) {
       const L  = Math.sqrt(dx * dx + dy * dy);
       if (L < 1) { edge.style({ "curve-style": "straight" }); return; }
 
+      // Single child directly above parent → straight vertical line, no bends needed
+      if (siblings.length === 1 && Math.abs(sx - tx) < 1) {
+        edge.style({ "curve-style": "straight" });
+        return;
+      }
+
       const ux = dx / L, uy = dy / L;
       const nx = -uy,    ny =  ux;
 
       // W1: exit child vertically to rail (same x as child)
       // W2: horizontal to parent's x at rail — all siblings converge here
       // The segment from W2 to parent is purely vertical (W2.x == parent.x),
-      // so the edge enters the parent from its bottom center. No W3 inside node needed.
+      // so the edge enters the parent from its bottom center.
       const toSeg = (Wx, Wy) => {
         const rx = Wx - sx, ry = Wy - sy;
         return { w: (rx * ux + ry * uy) / L, d: rx * nx + ry * ny };
       };
 
-      const s1 = toSeg(sx, railY);   // W1
+      const s1 = toSeg(sx, railY);   // W1 — child exits top
       const s2 = toSeg(tx, railY);   // W2 — converge at parent x
 
       edge.style({
@@ -228,7 +230,6 @@ function runLayout(cy, onDone) {
     animate: true,
     animationDuration: 300,
     fit: true,
-    nodeDimensionsIncludeLabels: true,
   });
   layout.one("layoutstop", () => {
     applyEdgeCurves(cy);
