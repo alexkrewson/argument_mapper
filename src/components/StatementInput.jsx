@@ -36,8 +36,8 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
     }
   };
 
-  const speakerColor = currentSpeaker === "User A" ? "#3b82f6" : "#22c55e";
-  const speakerGlow = currentSpeaker === "User A" ? "rgba(59,130,246,0.15)" : "rgba(34,197,94,0.15)";
+  const speakerColor = currentSpeaker === "Blue" ? "#3b82f6" : "#22c55e";
+  const speakerGlow = currentSpeaker === "Blue" ? "rgba(59,130,246,0.15)" : "rgba(34,197,94,0.15)";
   const activeColor = loading ? "#8b5cf6" : speakerColor;
   const activeGlow  = loading ? "rgba(139,92,246,0.15)" : speakerGlow;
 
@@ -50,7 +50,7 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
       <div className="input-header">
         <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#8b5cf6" : speakerColor }}>
           {loading && loadingSpeaker ? (
-            <>Considering {spk(loadingSpeaker)}'s {directMode ? "submission" : "statement"}<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
+            <>Considering {spk(loadingSpeaker)}'s statement<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
           ) : `${spk(currentSpeaker)}'s turn`}
         </div>
         {!loading && (

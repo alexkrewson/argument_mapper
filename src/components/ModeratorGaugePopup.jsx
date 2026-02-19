@@ -19,15 +19,15 @@ export default function ModeratorGaugePopup({ analysis, onClose }) {
   if (!analysis) return null;
 
   const pct = ((analysis.leaning + 1) / 2) * 100;
-  let markerColor = "#94a3b8";
+  let markerColor = "#8b5cf6"; // neutral purple
   if (analysis.leaning < -0.1) markerColor = "#3b82f6";
   if (analysis.leaning > 0.1) markerColor = "#22c55e";
 
   const leaningLabel =
     analysis.leaning < -0.1
-      ? "Leaning User A"
+      ? "Leaning Blue"
       : analysis.leaning > 0.1
-      ? "Leaning User B"
+      ? "Leaning Green"
       : "Balanced";
 
   return (
@@ -45,8 +45,8 @@ export default function ModeratorGaugePopup({ analysis, onClose }) {
           <h4>Debate Leaning</h4>
           <div className="gauge-popup-track-wrapper">
             <div className="gauge-labels">
-              <span className="gauge-label-a">User A</span>
-              <span className="gauge-label-b">User B</span>
+              <span className="gauge-label-a">Blue</span>
+              <span className="gauge-label-b">Green</span>
             </div>
             <div className="gauge-track gauge-track-large">
               <div
@@ -63,17 +63,17 @@ export default function ModeratorGaugePopup({ analysis, onClose }) {
           </p>
         </div>
 
-        {/* User A style */}
+        {/* Blue style */}
         <div className="popup-section">
-          <h4>User A's Argumentative Style</h4>
+          <h4>Blue's Argumentative Style</h4>
           <p className="popup-summary" style={{ borderLeft: "3px solid #3b82f6", paddingLeft: "0.75rem" }}>
             {analysis.user_a_style}
           </p>
         </div>
 
-        {/* User B style */}
+        {/* Green style */}
         <div className="popup-section">
-          <h4>User B's Argumentative Style</h4>
+          <h4>Green's Argumentative Style</h4>
           <p className="popup-summary" style={{ borderLeft: "3px solid #22c55e", paddingLeft: "0.75rem" }}>
             {analysis.user_b_style}
           </p>
@@ -89,7 +89,7 @@ export default function ModeratorGaugePopup({ analysis, onClose }) {
                   <span
                     className="speaker-badge"
                     style={{
-                      backgroundColor: a.nodeSpeaker === "User A" ? "#3b82f6" : "#22c55e",
+                      backgroundColor: a.nodeSpeaker === "Blue" ? "#3b82f6" : "#22c55e",
                     }}
                   >
                     {a.nodeSpeaker}

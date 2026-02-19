@@ -30,7 +30,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
                 className="speaker-badge"
                 style={{
                   backgroundColor:
-                    node.speaker === "User A" ? "#3b82f6" : "#22c55e",
+                    node.speaker === "Blue" ? "#3b82f6" : "#22c55e",
                 }}
               >
                 {spk(node.speaker)}

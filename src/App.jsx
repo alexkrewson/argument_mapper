@@ -23,11 +23,12 @@ const EMPTY_MAP = {
   argument_map: { title: "", description: "", nodes: [], edges: [] },
 };
 
-// Strips "User A" → "A" and "User B" → "B" from AI-generated analysis text
+// Normalise AI-generated analysis: negate leaning (AI: negative=Blue, UI: negative=Blue on left)
+// and replace any legacy "User A"/"User B" the AI may still emit.
 function sanitizeAnalysis(analysis) {
   if (!analysis) return null;
   const fix = (s) => typeof s === "string"
-    ? s.replace(/User A/g, "A").replace(/User B/g, "B").replace(/\busers\b/gi, "sides")
+    ? s.replace(/User A/g, "Blue").replace(/User B/g, "Green")
     : s;
   return { ...analysis, leaning: -(analysis.leaning ?? 0), leaning_reason: fix(analysis.leaning_reason), user_a_style: fix(analysis.user_a_style), user_b_style: fix(analysis.user_b_style) };
 }
@@ -62,7 +63,7 @@ export default function App() {
   const handleUndo = () => dispatchHistory({ type: "undo" });
   const handleRedo = () => dispatchHistory({ type: "redo" });
 
-  const [currentSpeaker, setCurrentSpeaker] = useState("User A"); // Whose turn
+  const [currentSpeaker, setCurrentSpeaker] = useState("Blue"); // Whose turn
   const [loading, setLoading] = useState(false);     // Waiting for Claude?
   const [loadingSpeaker, setLoadingSpeaker] = useState(null); // Who submitted the loading request
   const [error, setError] = useState(null);          // Last error message
@@ -123,7 +124,7 @@ export default function App() {
 
       // Switch turns: User A → User B → User A → ...
       setCurrentSpeaker((prev) =>
-        prev === "User A" ? "User B" : "User A"
+        prev === "Blue" ? "Green" : "Blue"
       );
     } catch (err) {
       console.error("Error calling Claude:", err);
@@ -291,10 +292,10 @@ export default function App() {
     }
 
     // For each speaker, compute what fraction of their nodes are still active (not invalidated).
-    const totalA = inner.nodes.filter((n) => n.speaker === "User A").length;
-    const totalB = inner.nodes.filter((n) => n.speaker === "User B").length;
-    const activeA = inner.nodes.filter((n) => n.speaker === "User A" && !allInactiveIds.has(n.id)).length;
-    const activeB = inner.nodes.filter((n) => n.speaker === "User B" && !allInactiveIds.has(n.id)).length;
+    const totalA = inner.nodes.filter((n) => n.speaker === "Blue").length;
+    const totalB = inner.nodes.filter((n) => n.speaker === "Green").length;
+    const activeA = inner.nodes.filter((n) => n.speaker === "Blue" && !allInactiveIds.has(n.id)).length;
+    const activeB = inner.nodes.filter((n) => n.speaker === "Green" && !allInactiveIds.has(n.id)).length;
 
     const effectivenessA = totalA > 0 ? activeA / totalA : 1;
     const effectivenessB = totalB > 0 ? activeB / totalB : 1;
@@ -348,18 +349,18 @@ export default function App() {
         </button>
         {effectiveAnalysis && (() => {
           const gaugePct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#94a3b8";
+          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#8b5cf6";
           return (
             <button
               className={`tab-btn tab-gauge-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
               onClick={() => setActiveTab("moderator")}
               title="AI Moderator Analysis"
             >
-              <span className="tab-gauge-label-a">A</span>
+              <span className="tab-gauge-label-a">Blue</span>
               <span className="tab-gauge-inline-track">
                 <span className="tab-gauge-inline-marker" style={{ left: `${gaugePct}%`, backgroundColor: gaugeColor }} />
               </span>
-              <span className="tab-gauge-label-b">B</span>
+              <span className="tab-gauge-label-b">Green</span>
             </button>
           );
         })()}
@@ -411,7 +412,7 @@ export default function App() {
                     <div
                       className="chat-bubble"
                       style={msg.role === "user"
-                        ? { backgroundColor: msg.speaker === "User A" ? "#3b82f6" : "#22c55e" }
+                        ? { backgroundColor: msg.speaker === "Blue" ? "#3b82f6" : "#22c55e" }
                         : undefined}
                     >{msg.content}</div>
                     {msg.mapUpdated && <div className="chat-map-updated">Map updated</div>}
@@ -427,7 +428,7 @@ export default function App() {
             return <p className="empty-message">No moderator analysis yet. Submit some arguments first.</p>;
           }
           const pct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const markerColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#94a3b8";
+          const markerColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#8b5cf6";
           const leaningLabel = effectiveAnalysis.leaning < -0.1 ? "Leaning A" : effectiveAnalysis.leaning > 0.1 ? "Leaning B" : "Balanced";
           return (
             <div className="moderator-tab-content">
@@ -435,8 +436,8 @@ export default function App() {
                 <h4>Debate Leaning</h4>
                 <div className="gauge-popup-track-wrapper">
                   <div className="gauge-labels">
-                    <span className="gauge-label-a">A</span>
-                    <span className="gauge-label-b">B</span>
+                    <span className="gauge-label-a">Blue</span>
+                    <span className="gauge-label-b">Green</span>
                   </div>
                   <div className="gauge-track gauge-track-large">
                     <div className="gauge-marker gauge-marker-large" style={{ left: `${pct}%`, backgroundColor: markerColor }} />
@@ -448,11 +449,11 @@ export default function App() {
                 <p className="popup-summary" style={{ marginTop: "0.75rem" }}>{effectiveAnalysis.leaning_reason}</p>
               </div>
               <div className="popup-section">
-                <h4>A's Argumentative Style</h4>
+                <h4>Blue's Argumentative Style</h4>
                 <p className="popup-summary" style={{ borderLeft: "3px solid #3b82f6", paddingLeft: "0.75rem" }}>{effectiveAnalysis.user_a_style}</p>
               </div>
               <div className="popup-section">
-                <h4>B's Argumentative Style</h4>
+                <h4>Green's Argumentative Style</h4>
                 <p className="popup-summary" style={{ borderLeft: "3px solid #22c55e", paddingLeft: "0.75rem" }}>{effectiveAnalysis.user_b_style}</p>
               </div>
               {effectiveAnalysis.agreements?.length > 0 && (
@@ -461,7 +462,7 @@ export default function App() {
                   <ul className="gauge-agreements-list">
                     {effectiveAnalysis.agreements.map((a) => (
                       <li key={a.nodeId} className="gauge-agreement-item">
-                        <span className="speaker-badge" style={{ backgroundColor: a.nodeSpeaker === "User A" ? "#3b82f6" : "#22c55e" }}>{spk(a.nodeSpeaker)}</span>
+                        <span className="speaker-badge" style={{ backgroundColor: a.nodeSpeaker === "Blue" ? "#3b82f6" : "#22c55e" }}>{spk(a.nodeSpeaker)}</span>
                         <span className="gauge-agreement-content">{a.content}</span>
                         {a.agreedBy && <span className="gauge-agreed-by">— agreed by {spk(a.agreedBy)}</span>}
                       </li>
@@ -512,7 +513,7 @@ export default function App() {
             loading={loading}
             loadingSpeaker={loadingSpeaker}
             directMode={directMode}
-            onSkipTurn={() => setCurrentSpeaker((prev) => prev === "User A" ? "User B" : "User A")}
+            onSkipTurn={() => setCurrentSpeaker((prev) => prev === "Blue" ? "Green" : "Blue")}
             onUndo={handleUndo}
             onRedo={handleRedo}
             canUndo={canUndo}

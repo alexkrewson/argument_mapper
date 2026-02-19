@@ -21,14 +21,17 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
 
   if (!node) return null;
 
-  const speakerColor = node.speaker === "User A" ? "#3b82f6" : node.speaker === "User B" ? "#22c55e" : "#8b5cf6";
-  const speakerBg = node.speaker === "User A" ? "#eff6ff" : node.speaker === "User B" ? "#f0fdf4" : "#f5f3ff";
+  const speakerColor = node.speaker === "Blue" ? "#3b82f6" : node.speaker === "Green" ? "#22c55e" : "#8b5cf6";
+  const speakerBg = node.speaker === "Blue" ? "#eff6ff" : node.speaker === "Green" ? "#f0fdf4" : "#f5f3ff";
   const tactics = node.metadata?.tactics?.filter((key) => TACTICS[key]) || [];
   const tacticReasons = node.metadata?.tactic_reasons || {};
   const contradictsId = node.metadata?.contradicts;
   const goalpostsId = node.metadata?.moves_goalposts_from;
   const contradictsNode = contradictsId ? nodes?.find((n) => n.id === contradictsId) : null;
   const goalpostsNode = goalpostsId ? nodes?.find((n) => n.id === goalpostsId) : null;
+  // Reverse lookups: nodes that flag THIS node
+  const contradictedByNode = nodes?.find((n) => n.metadata?.contradicts === node.id) ?? null;
+  const walkedBackByNode = nodes?.find((n) => n.metadata?.moves_goalposts_from === node.id) ?? null;
 
   return (
     <div className="popup-backdrop" onClick={onClose}>
@@ -42,7 +45,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
               className="speaker-badge"
               style={{
                 backgroundColor:
-                  node.speaker === "User A" ? "#3b82f6" : "#22c55e",
+                  node.speaker === "Blue" ? "#3b82f6" : "#22c55e",
               }}
             >
               {spk(node.speaker)}
@@ -127,6 +130,34 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
               <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(goalpostsNode); }}>
                 <span className="node-id-badge">{goalpostsNode.id}</span>
                 <span className="flag-banner-linked-text">{goalpostsNode.content}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reverse: this node is contradicted by a later statement */}
+        {contradictedByNode && (
+          <div className="flag-banner flag-contradiction">
+            <span className="flag-banner-icon">⚠️</span>
+            <div className="flag-banner-body">
+              <strong>Contradicted by a later statement</strong>
+              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(contradictedByNode); }}>
+                <span className="node-id-badge">{contradictedByNode.id}</span>
+                <span className="flag-banner-linked-text">{contradictedByNode.content}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Reverse: this node has its goalposts moved by a later statement */}
+        {walkedBackByNode && (
+          <div className="flag-banner flag-goalposts">
+            <span className="flag-banner-icon">🥅</span>
+            <div className="flag-banner-body">
+              <strong>Goalposts moved by a later statement</strong>
+              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
+                <span className="node-id-badge">{walkedBackByNode.id}</span>
+                <span className="flag-banner-linked-text">{walkedBackByNode.content}</span>
               </div>
             </div>
           </div>

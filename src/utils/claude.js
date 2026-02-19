@@ -27,7 +27,7 @@ const API_URL = "https://api.anthropic.com/v1/messages";
  *
  * @param {string} apiKey       — The user's Anthropic API key
  * @param {object} currentMap   — Current map state (full wrapper with argument_map)
- * @param {string} speaker      — "User A" or "User B"
+ * @param {string} speaker      — "Blue" or "Green"
  * @param {string} statement    — The raw statement the user typed
  * @returns {object}            — Updated map with new nodes/edges added
  */
@@ -58,14 +58,14 @@ JSON schema:
       "id": "node_1",
       "type": "claim|premise|objection|rebuttal|evidence|clarification",
       "content": "Neutral, concise summary (1 sentence preferred)",
-      "speaker": "User A|User B",
+      "speaker": "Blue|Green",
       "rating": "up|down|null",
       "metadata": {
         "confidence": "high|medium|low",
         "tags": ["keyword1", "keyword2"],
         "tactics": ["tactic_key_1", "tactic_key_2"],
         "tactic_reasons": { "tactic_key_1": "One-sentence explanation of why this tactic applies" },
-        "agreed_by": { "speaker": "User X", "text": "the original agreeing statement" },
+        "agreed_by": { "speaker": "Blue|Green", "text": "the original agreeing statement" },
         "contradicts": "node_id_or_null",
         "moves_goalposts_from": "node_id_or_null"
       }
@@ -80,25 +80,25 @@ JSON schema:
   "moderator_analysis": {
     "leaning": 0.0,
     "leaning_reason": "1-2 sentence explanation of which side has the stronger argument and why",
-    "user_a_style": "Brief assessment of User A's argumentative style: good/bad faith, open/closed-minded, charitable/uncharitable",
-    "user_b_style": "Brief assessment of User B's argumentative style: good/bad faith, open/closed-minded, charitable/uncharitable"
+    "user_a_style": "Brief assessment of Blue's argumentative style: good/bad faith, open/closed-minded, charitable/uncharitable",
+    "user_b_style": "Brief assessment of Green's argumentative style: good/bad faith, open/closed-minded, charitable/uncharitable"
   }
 }
 
 Moderator analysis:
-- "leaning": float from -1.0 (strongly favors User A) to +1.0 (strongly favors User B). 0 = neutral/balanced.
+- "leaning": float from -1.0 (strongly favors Blue) to +1.0 (strongly favors Green). 0 = neutral/balanced.
 - "leaning_reason": 1-2 sentences explaining why one side has the edge (or why it's balanced).
 - "user_a_style" / "user_b_style": brief assessment covering good/bad faith, open/closed-minded, charitable/uncharitable.
 - Always include moderator_analysis in your response. If only one speaker has spoken, assess what you can and note the other hasn't spoken yet.
 
-Example — after User A says "We should invest in renewable energy because fossil fuels cause climate change":
+Example — after Blue says "We should invest in renewable energy because fossil fuels cause climate change":
 {
   "argument_map": {
     "title": "Renewable Energy Investment",
     "description": "Debate on investing in renewable energy",
     "nodes": [
-      { "id": "node_1", "type": "claim", "content": "We should invest in renewable energy", "speaker": "User A", "metadata": { "confidence": "medium", "tags": ["energy", "policy"] } },
-      { "id": "node_2", "type": "premise", "content": "Fossil fuels contribute to climate change", "speaker": "User A", "metadata": { "confidence": "high", "tags": ["climate", "science"] } }
+      { "id": "node_1", "type": "claim", "content": "We should invest in renewable energy", "speaker": "Blue", "metadata": { "confidence": "medium", "tags": ["energy", "policy"] } },
+      { "id": "node_2", "type": "premise", "content": "Fossil fuels contribute to climate change", "speaker": "Blue", "metadata": { "confidence": "high", "tags": ["climate", "science"] } }
     ],
     "edges": [
       { "id": "edge_1", "from": "node_2", "to": "node_1", "relationship": "supports" }
@@ -124,6 +124,7 @@ Rules:
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
 - Add 2-4 relevant tags per node.
 - Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible.
+- Each node must have at most ONE outgoing edge (one parent). If a node could logically connect to multiple existing nodes, choose the single most appropriate parent. Do not create multiple edges from the same source node.
 
 Contradiction detection:
 - When a speaker's new node directly contradicts one of their OWN earlier nodes (the speaker asserts something logically incompatible with what they previously said), set "metadata.contradicts" to the ID of the contradicted node (e.g., "node_3").
@@ -236,7 +237,7 @@ Rules:
 - Only modify the map when the user explicitly asks for changes (corrections, edits, restructuring).
 - When modifying, only change what was asked for. Keep everything else unchanged.
 - Maintain valid node/edge IDs and references.
-- When adding new nodes yourself (not on behalf of User A or B), always set "speaker": "Moderator".`;
+- When adding new nodes yourself (not on behalf of Blue or B), always set "speaker": "Moderator".`;
 
   // Build messages array from chat history
   const messages = chatHistory.map((msg) => ({

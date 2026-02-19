@@ -11,8 +11,8 @@ import { TACTICS } from "../utils/tactics.js";
 import { spk } from "../utils/speakers.js";
 
 const SPEAKER_STYLE = {
-  "User A": { bg: "#dbeafe", border: "#3b82f6" },
-  "User B": { bg: "#dcfce7", border: "#22c55e" },
+  "Blue":  { bg: "#dbeafe", border: "#3b82f6" },
+  "Green": { bg: "#dcfce7", border: "#22c55e" },
   "Moderator": { bg: "#ede9fe", border: "#8b5cf6" },
 };
 
@@ -145,7 +145,7 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           )}
           <span
             className="speaker-badge"
-            style={{ backgroundColor: node.speaker === "User A" ? "#3b82f6" : "#22c55e" }}
+            style={{ backgroundColor: node.speaker === "Blue" ? "#3b82f6" : "#22c55e" }}
           >
             {spk(node.speaker)}
           </span>

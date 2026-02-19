@@ -1,0 +1,5 @@
+1) after a contradiction or walkback, all downstream arguments including the instigators of the walkbacks and contradictions should fade.
+
+2) active color for "Map", "List", and "Chat" should be moderator purple.
+
+3) highlight and left border color on "original text" in popup should coordinate with the color of that user

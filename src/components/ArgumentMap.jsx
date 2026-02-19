@@ -54,14 +54,14 @@ const stylesheet = [
   },
   // --- Speaker colors ---
   {
-    selector: 'node[speaker = "User A"]',
+    selector: 'node[speaker = "Blue"]',
     style: {
       "background-color": "#dbeafe",
       "border-color": "#3b82f6",
     },
   },
   {
-    selector: 'node[speaker = "User B"]',
+    selector: 'node[speaker = "Green"]',
     style: {
       "background-color": "#dcfce7",
       "border-color": "#22c55e",
@@ -105,11 +105,11 @@ const stylesheet = [
     },
   },
   {
-    selector: 'node.contradiction-border[speaker = "User A"]',
+    selector: 'node.contradiction-border[speaker = "Blue"]',
     style: { "outline-color": "#3b82f6", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
   },
   {
-    selector: 'node.contradiction-border[speaker = "User B"]',
+    selector: 'node.contradiction-border[speaker = "Green"]',
     style: { "outline-color": "#22c55e", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
   },
   // --- Walkback borders: dashed orange border + speaker-colored outline ring ---
@@ -125,11 +125,11 @@ const stylesheet = [
     },
   },
   {
-    selector: 'node.walkback-border[speaker = "User A"]',
+    selector: 'node.walkback-border[speaker = "Blue"]',
     style: { "outline-color": "#3b82f6", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
   },
   {
-    selector: 'node.walkback-border[speaker = "User B"]',
+    selector: 'node.walkback-border[speaker = "Green"]',
     style: { "outline-color": "#22c55e", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
   },
   // --- Base edge style --- uniform moderator purple, no arrows, no labels ---
@@ -189,8 +189,9 @@ function applyEdgeCurves(cy) {
       const L  = Math.sqrt(dx * dx + dy * dy);
       if (L < 1) { edge.style({ "curve-style": "straight" }); return; }
 
-      // Single child directly above parent → straight vertical line, no bends needed
-      if (siblings.length === 1 && Math.abs(sx - tx) < 1) {
+      // Single child: use straight line unless significantly offset horizontally.
+      // Small offsets produce distracting rectangular jogs — straight looks cleaner.
+      if (siblings.length === 1 && Math.abs(sx - tx) < 40) {
         edge.style({ "curve-style": "straight" });
         return;
       }
@@ -274,8 +275,8 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
             : "";
           return `<div style="display:flex;gap:3px;align-items:center;flex-wrap:nowrap;pointer-events:none;overflow:hidden;transform:translate(-26px,-26px);margin:6px 0 0 6px;opacity:${data.faded ? 0.25 : 1};">
             <span class="node-id-badge">${data.id}</span>
-            ${tacticSymbols ? `<span style="font-size:9px;">${tacticSymbols}</span>` : ''}
             ${typeBadge}
+            ${tacticSymbols ? `<span style="font-size:9px;">${tacticSymbols}</span>` : ''}
           </div>`;
         },
       },

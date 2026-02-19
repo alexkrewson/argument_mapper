@@ -51,9 +51,9 @@ export default function ModeratorGauge({ analysis, onShowDetail }) {
   const pct = ((analysis.leaning + 1) / 2) * 100;
 
   // Dot color: blue when leaning A, gray when neutral, green when leaning B
-  let markerColor = "#94a3b8"; // neutral gray
-  if (analysis.leaning < -0.1) markerColor = "#3b82f6"; // blue (User A)
-  if (analysis.leaning > 0.1) markerColor = "#22c55e"; // green (User B)
+  let markerColor = "#8b5cf6"; // neutral purple
+  if (analysis.leaning < -0.1) markerColor = "#3b82f6"; // blue
+  if (analysis.leaning > 0.1) markerColor = "#22c55e"; // green
 
   const style = {
     left: position.x,
@@ -78,8 +78,8 @@ export default function ModeratorGauge({ analysis, onShowDetail }) {
         <span className="gauge-title">Moderator</span>
       </div>
       <div className="gauge-labels">
-        <span className="gauge-label-a">User A</span>
-        <span className="gauge-label-b">User B</span>
+        <span className="gauge-label-a">Blue</span>
+        <span className="gauge-label-b">Green</span>
       </div>
       <div className="gauge-track">
         <div
