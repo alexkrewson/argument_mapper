@@ -124,8 +124,6 @@ const stylesheet = [
       "text-rotation": "autorotate",
       "text-margin-y": -10,
       "curve-style": "unbundled-bezier",
-      "control-point-distances": [60, -60],
-      "control-point-weights": [0.25, 0.75],
       "target-arrow-shape": "triangle",
       "arrow-scale": 1.2,
       width: 2,
@@ -160,6 +158,63 @@ const stylesheet = [
   },
 ];
 
+/**
+ * After layout, apply per-edge S-curve control points so every edge:
+ * - Exits from the TOP-CENTER of the child (source) node
+ * - Enters the BOTTOM-CENTER of the parent (target) node
+ * - Curves with axis-aligned control points at midpoint Y (prevents crossing)
+ * - Uses a straight vertical line when the parent has only one child
+ */
+function applyEdgeCurves(cy) {
+  cy.edges().forEach((edge) => {
+    const src = edge.source();
+    const tgt = edge.target();
+    const sx = src.position("x"), sy = src.position("y"), sh = src.height();
+    const tx = tgt.position("x"), ty = tgt.position("y"), th = tgt.height();
+
+    // Force perpendicular entry/exit at top/bottom centers
+    const endpoints = {
+      "source-endpoint": "50% 0%",    // top-center of child
+      "target-endpoint": "50% 100%",  // bottom-center of parent
+    };
+
+    // Straight vertical line when parent has only one child
+    if (tgt.incomers("edge").length <= 1) {
+      edge.style({ ...endpoints, "curve-style": "straight" });
+      return;
+    }
+
+    // S-curve: axis-aligned control points at midY, one over source X, one over target X
+    const p0y = sy - sh / 2;   // top of source (child)
+    const p3y = ty + th / 2;   // bottom of target (parent)
+    const dx = tx - sx, dy = p3y - p0y;
+    const L = Math.sqrt(dx * dx + dy * dy);
+    if (L < 1) { edge.style({ ...endpoints, "curve-style": "straight" }); return; }
+
+    const midY = (p0y + p3y) / 2;
+
+    // Unit vectors along the P0→P3 line and perpendicular to it
+    const ux = dx / L, uy = dy / L;
+    const nx = -uy, ny = ux;
+
+    // CP1 = (sx, midY) — directly above child top-center at midpoint height
+    const w1 = ((midY - p0y) * uy) / L;
+    const d1 = (midY - p0y) * ny;
+
+    // CP2 = (tx, midY) — directly below parent bottom-center at midpoint height
+    const r2x = tx - sx, r2y = midY - p0y;
+    const w2 = (r2x * ux + r2y * uy) / L;
+    const d2 = r2x * nx + r2y * ny;
+
+    edge.style({
+      ...endpoints,
+      "curve-style": "unbundled-bezier",
+      "control-point-weights": `${w1} ${w2}`,
+      "control-point-distances": `${d1} ${d2}`,
+    });
+  });
+}
+
 function runLayout(cy, onDone) {
   const layout = cy.layout({
     name: "dagre",
@@ -172,7 +227,10 @@ function runLayout(cy, onDone) {
     fit: true,
     nodeDimensionsIncludeLabels: true,
   });
-  if (onDone) layout.one("layoutstop", onDone);
+  layout.one("layoutstop", () => {
+    applyEdgeCurves(cy);
+    if (onDone) onDone();
+  });
   layout.run();
 }
 
