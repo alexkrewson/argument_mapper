@@ -312,11 +312,10 @@ export default function App() {
 
   // Derive a concise position summary for each speaker from their first claim node
   const getSpeakerSummary = (speaker) => {
-    const claim = inner.nodes.find(
-      (n) => n.speaker === speaker && n.type === "claim"
-    );
-    if (!claim) return null;
-    const text = claim.content;
+    const node = inner.nodes.find((n) => n.speaker === speaker && n.type === "claim")
+      ?? inner.nodes.find((n) => n.speaker === speaker);
+    if (!node) return null;
+    const text = node.content;
     return text.length > 60 ? text.slice(0, 57) + "..." : text;
   };
   const speakerSummary = getSpeakerSummary(currentSpeaker);

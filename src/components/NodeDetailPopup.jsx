@@ -65,23 +65,18 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
             <div>
               {node.metadata?.agreed_by?.text ? (
                 <>
-                  <strong>Implicit agreement detected</strong>
-                  <div className="agreement-by">
-                    {spk(node.metadata.agreed_by.speaker)} conceded this in their submission
-                  </div>
+                  <strong>{spk(node.metadata.agreed_by.speaker)} conceded {spk(node.speaker)}'s point</strong>
+                  <div className="agreement-by">implicit, from their submission</div>
                   <blockquote className="agreement-quote">
                     "{node.metadata.agreed_by.text}"
                   </blockquote>
                 </>
               ) : node.metadata?.agreed_by?.speaker ? (
                 <>
-                  <strong>Agreed via thumbs up</strong>
-                  <div className="agreement-by">
-                    {spk(node.metadata.agreed_by.speaker)} manually agreed with this
-                  </div>
+                  <strong>{spk(node.metadata.agreed_by.speaker)} conceded {spk(node.speaker)}'s point</strong>
                 </>
               ) : (
-                <strong>Both sides agree</strong>
+                <strong>Conceded</strong>
               )}
             </div>
           </div>
@@ -92,7 +87,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
             <span className="flag-banner-icon">↩</span>
             <div className="flag-banner-body">
               <strong>Retracted</strong>
-              <div>{spk(node.speaker)} retracted this argument via thumbs down</div>
+              <div>{spk(node.speaker)} retracted this argument via concession</div>
             </div>
           </div>
         )}
@@ -103,7 +98,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
             <div>
               <strong>No longer active</strong>
               <div className="inactive-banner-reason">
-                This argument supports a claim that has been agreed on, retracted, or walked back
+                This argument supports a statement that has been agreed on, retracted, or walked back
               </div>
             </div>
           </div>
@@ -175,7 +170,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
           const isOtherNode = node.speaker !== currentSpeaker;
           const isActive = isOtherNode ? node.rating === "up" : node.rating === "down";
           const ratingType = isOtherNode ? "up" : "down";
-          const btnText = isOtherNode ? "I concede, this was correct" : "I concede, this was incorrect";
+          const btnText = isOtherNode ? "I concede, this is correct" : "I concede, this is incorrect";
           return (
             <div className="popup-section popup-rating-row">
               <button

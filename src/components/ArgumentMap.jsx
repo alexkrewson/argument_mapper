@@ -32,13 +32,15 @@ const stylesheet = [
       "font-size": "12px",
       "text-valign": "center",
       "text-halign": "center",
+      "text-margin-y": 13,
       width: "label",
+      "min-width": "160px",
       height: "label",
       shape: "roundrectangle",
       "background-color": "#f8fafc",
       "border-width": 2,
       "border-color": "#94a3b8",
-      padding: "15px",
+      padding: "26px",
     },
   },
   // --- Node types ---
@@ -48,12 +50,6 @@ const stylesheet = [
       "border-width": 3,
       "font-weight": "bold",
       "font-size": "13px",
-    },
-  },
-  {
-    selector: 'node[type = "objection"]',
-    style: {
-      "border-style": "dashed",
     },
   },
   // --- Speaker colors ---
@@ -96,82 +92,69 @@ const stylesheet = [
     selector: "node.walkback-faded",
     style: { "background-color": "#ffedd5" },
   },
-  // --- Contradiction/walkback borders (thick colored border + background, full opacity) ---
+  // --- Contradiction borders: dashed red border + speaker-colored outline ring ---
   {
     selector: "node.contradiction-border",
     style: {
       "background-color": "#fee2e2",
       "border-color": "#dc2626",
+      "border-style": "dashed",
+      "border-dash-pattern": [6, 4],
       "border-width": 3,
       opacity: 1,
     },
   },
+  {
+    selector: 'node.contradiction-border[speaker = "User A"]',
+    style: { "outline-color": "#3b82f6", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
+  },
+  {
+    selector: 'node.contradiction-border[speaker = "User B"]',
+    style: { "outline-color": "#22c55e", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
+  },
+  // --- Walkback borders: dashed orange border + speaker-colored outline ring ---
   {
     selector: "node.walkback-border",
     style: {
       "background-color": "#ffedd5",
       "border-color": "#f97316",
+      "border-style": "dashed",
+      "border-dash-pattern": [6, 4],
       "border-width": 3,
       opacity: 1,
     },
   },
-  // --- Base edge style ---
+  {
+    selector: 'node.walkback-border[speaker = "User A"]',
+    style: { "outline-color": "#3b82f6", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
+  },
+  {
+    selector: 'node.walkback-border[speaker = "User B"]',
+    style: { "outline-color": "#22c55e", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
+  },
+  // --- Base edge style --- uniform moderator purple, no arrows, no labels ---
   {
     selector: "edge",
     style: {
-      label: "data(label)",
-      "font-size": "9px",
-      "text-rotation": "autorotate",
-      "text-margin-y": -10,
       "curve-style": "straight",
-      "target-arrow-shape": "triangle",
-      "arrow-scale": 1.2,
+      "target-arrow-shape": "none",
+      "source-arrow-shape": "none",
       width: 2,
-      "line-color": "#94a3b8",
-      "target-arrow-color": "#94a3b8",
+      "line-color": "#8b5cf6",
     },
-  },
-  // --- Relationship colors ---
-  {
-    selector: 'edge[relationship = "supports"]',
-    style: { "line-color": "#22c55e", "target-arrow-color": "#22c55e" },
-  },
-  {
-    selector: 'edge[relationship = "strongly_supports"]',
-    style: { "line-color": "#15803d", "target-arrow-color": "#15803d", width: 3 },
-  },
-  {
-    selector: 'edge[relationship = "opposes"]',
-    style: { "line-color": "#ef4444", "target-arrow-color": "#ef4444" },
-  },
-  {
-    selector: 'edge[relationship = "refutes"]',
-    style: { "line-color": "#b91c1c", "target-arrow-color": "#b91c1c", width: 3 },
-  },
-  {
-    selector: 'edge[relationship = "clarifies"]',
-    style: { "line-color": "#3b82f6", "target-arrow-color": "#3b82f6", "line-style": "dashed" },
-  },
-  {
-    selector: 'edge[relationship = "rebuts"]',
-    style: { "line-color": "#f59e0b", "target-arrow-color": "#f59e0b" },
   },
 ];
 
 /**
- * After layout, route edges as orthogonal conduits using NODE-CENTER coordinates.
+ * After layout, route edges as a clean tree-diagram (org-chart) style.
  *
- * Key insight: segment-weights/distances are always relative to the center→center
- * line regardless of endpoint settings.  By placing a 3rd waypoint W3 INSIDE the
- * parent node at the spread X position, Cytoscape's outside-to-node clip
- * naturally stops the edge at (tx+offsetX, parentBottom) — giving truly parallel,
- * evenly-spaced vertical entry into every parent.
+ * Each edge gets two waypoints:
+ *   W1 = (child_x, railY)   — child exits top vertically to the shared rail
+ *   W2 = (parent_x, railY)  — horizontal along the rail to the parent's x position
+ *   Then the path goes straight up from W2 into the parent bottom-center.
  *
- * Visible path per edge (all segments horizontal or vertical):
- *   child exits top-center  ──vertical──►  rail Y
- *                           ──horizontal──►  (tx+offsetX, railY)
- *                           ──vertical──►  clipped at parent bottom at offsetX
- *
+ * All siblings sharing the same parent converge at (parent_x, railY),
+ * producing the classic org-chart "T-branch" look with right-angle corners.
  * Single child → straight vertical line (no bends).
  */
 function applyEdgeCurves(cy) {
@@ -183,26 +166,17 @@ function applyEdgeCurves(cy) {
   });
 
   byTarget.forEach((siblings) => {
-    // ── Single child: straight line ─────────────────────────────────────────
     if (siblings.length === 1) {
       siblings[0].style({ "curve-style": "straight" });
       return;
     }
 
-    // ── Multiple children: Z-shaped conduit ─────────────────────────────────
-    siblings.sort((a, b) => a.source().position("x") - b.source().position("x"));
-    const n   = siblings.length;
     const tgt = siblings[0].target();
     const tx  = tgt.position("x");
     const ty  = tgt.position("y");
     const th  = tgt.height();
-    const tw  = tgt.width();
 
-    // Clamp spread so W3 stays inside the parent bounding box horizontally.
-    const maxOffset  = (tw / 2) * 0.8;
-    const pipeSpacing = n > 1 ? (maxOffset * 2) / (n - 1) : 0;
-
-    // Shared rail Y — midpoint between topmost child top and parent bottom.
+    // Rail Y: midpoint between the topmost child's top edge and the parent's bottom edge.
     let minChildTopY = Infinity;
     siblings.forEach((e) => {
       const y = e.source().position("y") - e.source().height() / 2;
@@ -210,48 +184,35 @@ function applyEdgeCurves(cy) {
     });
     const railY = (minChildTopY + ty + th / 2) / 2;
 
-    siblings.forEach((edge, i) => {
+    siblings.forEach((edge) => {
       const src = edge.source();
       const sx  = src.position("x");
       const sy  = src.position("y");
 
-      const offsetX = (i - (n - 1) / 2) * pipeSpacing;
-
-      // Use node CENTERS as P0/P3 (required by Cytoscape's segment coordinate system).
-      const P0x = sx, P0y = sy;   // child center
-      const P3x = tx, P3y = ty;   // parent center
-
-      // Three waypoints that force H/V-only visible segments:
-      //   W1 = (sx,   railY)        child's X, rail height  → child→W1 is vertical
-      //   W2 = (tx+Δ, railY)        spread X,  rail height  → W1→W2 is horizontal
-      //   W3 = (tx+Δ, ty)  ← INSIDE parent node            → W2→W3 is vertical
-      //   outside-to-node clip stops rendering at (tx+Δ, ty+th/2) ← parent bottom edge
-      const W1x = sx,          W1y = railY;
-      const W2x = tx + offsetX, W2y = railY;
-      const W3x = tx + offsetX, W3y = ty;     // inside parent — never rendered
-
-      // Convert absolute waypoints to (weight, distance) in the P0→P3 basis.
-      const dx = P3x - P0x, dy = P3y - P0y;
+      const dx = tx - sx, dy = ty - sy;
       const L  = Math.sqrt(dx * dx + dy * dy);
       if (L < 1) { edge.style({ "curve-style": "straight" }); return; }
+
       const ux = dx / L, uy = dy / L;
       const nx = -uy,    ny =  ux;
 
-      function toSeg(Wx, Wy) {
-        const rx = Wx - P0x, ry = Wy - P0y;
+      // W1: exit child vertically to rail (same x as child)
+      // W2: horizontal to parent's x at rail — all siblings converge here
+      // The segment from W2 to parent is purely vertical (W2.x == parent.x),
+      // so the edge enters the parent from its bottom center. No W3 inside node needed.
+      const toSeg = (Wx, Wy) => {
+        const rx = Wx - sx, ry = Wy - sy;
         return { w: (rx * ux + ry * uy) / L, d: rx * nx + ry * ny };
-      }
+      };
 
-      const s1 = toSeg(W1x, W1y);
-      const s2 = toSeg(W2x, W2y);
-      const s3 = toSeg(W3x, W3y);
+      const s1 = toSeg(sx, railY);   // W1
+      const s2 = toSeg(tx, railY);   // W2 — converge at parent x
 
       edge.style({
         "curve-style":       "segments",
-        "edge-distances":    "node-position",  // weights/distances relative to node centers (matches our math)
-        "segment-weights":   `${s1.w.toFixed(4)} ${s2.w.toFixed(4)} ${s3.w.toFixed(4)}`,
-        "segment-distances": `${s1.d.toFixed(2)} ${s2.d.toFixed(2)} ${s3.d.toFixed(2)}`,
-        "segment-radii":     "8 8 8",
+        "edge-distances":    "node-position",
+        "segment-weights":   `${s1.w.toFixed(4)} ${s2.w.toFixed(4)}`,
+        "segment-distances": `${s1.d.toFixed(2)} ${s2.d.toFixed(2)}`,
       });
     });
   });
@@ -290,6 +251,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: false,
+      autoungrabify: true,
       maxZoom: 2.5,
       minZoom: 0.2,
     });
@@ -299,24 +261,21 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         query: "node",
         halign: "left",
         valign: "top",
-        halignBox: "left",
-        valignBox: "top",
+        halignBox: "right",
+        valignBox: "bottom",
         tpl: (data) => {
           const tacticSymbols = (data.tactics || [])
             .filter((key) => TACTICS[key])
             .map((key) => `<span title="${TACTICS[key].name}" style="cursor:default;">${TACTICS[key].symbol}</span>`)
             .join("");
-          return `<span style="
-            font-size: 8px;
-            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-            background: rgba(255,255,255,0.85);
-            border: 1px solid #94a3b8;
-            border-radius: 3px;
-            padding: 0px 3px;
-            color: #475569;
-            pointer-events: none;
-            white-space: nowrap;
-          ">${data.id}${data.rating === 'up' ? ' \u{1F44D}' : data.rating === 'down' ? ' \u{1F44E}' : ''}${tacticSymbols ? ' ' + tacticSymbols : ''}</span>`;
+          const typeBadge = data.type
+            ? `<span class="type-badge type-${data.type}">${data.type}</span>`
+            : "";
+          return `<div style="display:flex;gap:3px;align-items:center;flex-wrap:nowrap;pointer-events:none;overflow:hidden;transform:translate(-26px,-26px);margin:6px 0 0 6px;opacity:${data.faded ? 0.25 : 1};">
+            <span class="node-id-badge">${data.id}</span>
+            ${tacticSymbols ? `<span style="font-size:9px;">${tacticSymbols}</span>` : ''}
+            ${typeBadge}
+          </div>`;
         },
       },
     ]);
@@ -344,45 +303,78 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     return () => cy.off("tap", "node", handler);
   }, [onNodeClick, nodes]);
 
-  // Update elements and re-run layout whenever nodes/edges change
+  // Update elements and re-run layout whenever nodes/edges change.
+  // Uses a diff-based approach so existing nodes keep their positions and
+  // the dagre layout can animate them smoothly to new positions instead of
+  // flashing (remove-all + re-add-all).
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
 
-    const newElements = [
-      ...nodes.map((node) => ({
-        group: "nodes",
-        data: {
-          id: node.id,
-          label: node.content,
-          speaker: node.speaker,
-          type: node.type,
-          rating: node.rating,
-          tactics: node.metadata?.tactics || [],
-          contradicts: node.metadata?.contradicts || "",
-          movesGoalpostsFrom: node.metadata?.moves_goalposts_from || "",
-        },
-      })),
-      ...edges.map((edge) => ({
-        group: "edges",
-        data: {
-          id: edge.id,
-          source: edge.from,
-          target: edge.to,
-          label: edge.relationship,
-          relationship: edge.relationship,
-        },
-      })),
-    ];
+    const nodeDataOf = (node) => ({
+      id: node.id,
+      label: node.content,
+      speaker: node.speaker,
+      type: node.type,
+      rating: node.rating,
+      tactics: node.metadata?.tactics || [],
+      contradicts: node.metadata?.contradicts || "",
+      movesGoalpostsFrom: node.metadata?.moves_goalposts_from || "",
+    });
+    const edgeDataOf = (edge) => ({
+      id: edge.id,
+      source: edge.from,
+      target: edge.to,
+      label: edge.relationship,
+      relationship: edge.relationship,
+    });
 
-    cy.elements().remove();
-    cy.add(newElements);
+    const newNodeIds = new Set(nodes.map((n) => n.id));
+    const newEdgeIds = new Set(edges.map((e) => e.id));
+
+    cy.batch(() => {
+      // Remove stale elements
+      cy.nodes().filter((n) => !newNodeIds.has(n.id())).remove();
+      cy.edges().filter((e) => !newEdgeIds.has(e.id())).remove();
+
+      // Add new nodes / update existing node data
+      for (const node of nodes) {
+        const existing = cy.getElementById(node.id);
+        if (existing.length) {
+          existing.data(nodeDataOf(node));
+        } else {
+          cy.add({ group: "nodes", data: nodeDataOf(node) });
+          // Seed new node position near a connected existing node so it
+          // animates in from a natural starting point rather than (0, 0).
+          const connEdge = edges.find((e) => e.from === node.id || e.to === node.id);
+          if (connEdge) {
+            const neighborId = connEdge.from === node.id ? connEdge.to : connEdge.from;
+            const neighbor = cy.getElementById(neighborId);
+            if (neighbor.length) {
+              const p = neighbor.position();
+              cy.getElementById(node.id).position({ x: p.x, y: p.y + 80 });
+            }
+          }
+        }
+      }
+
+      // Add new edges / update existing edge data
+      for (const edge of edges) {
+        const existing = cy.getElementById(edge.id);
+        if (existing.length) {
+          existing.data(edgeDataOf(edge));
+        } else {
+          cy.add({ group: "edges", data: edgeDataOf(edge) });
+        }
+      }
+    });
 
     // Apply visual classes from props (computed in App.jsx fadedInfo)
     cy.nodes().removeClass("faded contradiction-faded walkback-faded contradiction-border walkback-border");
     cy.edges().removeClass("faded");
 
     // Opacity fading (thumbs-up agreed / thumbs-down retracted)
+    cy.nodes().forEach((n) => n.data("faded", fadedNodeIds?.has(n.id()) || false));
     if (fadedNodeIds?.size) {
       cy.nodes().filter((n) => fadedNodeIds.has(n.id())).addClass("faded");
       cy.edges().filter((e) => fadedNodeIds.has(e.source().id()) && fadedNodeIds.has(e.target().id())).addClass("faded");
@@ -418,7 +410,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, -50%)", color: "#94a3b8"
         }}>
-          No claims yet.
+          No statements yet.
         </p>
       )}
       <div ref={containerRef} style={{ width: "100%", height: "100%" }} />

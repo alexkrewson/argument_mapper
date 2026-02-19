@@ -12,15 +12,15 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
   if (nodes.length === 0) {
     return (
       <div className="node-list">
-        <h3>Claims</h3>
-        <p className="empty-message">No claims yet.</p>
+        <h3>Statements</h3>
+        <p className="empty-message">No statements yet.</p>
       </div>
     );
   }
 
   return (
     <div className="node-list">
-      <h3>Claims ({nodes.length})</h3>
+      <h3>Statements ({nodes.length})</h3>
       <ul>
         {nodes.map((node) => (
           <li key={node.id} onClick={() => onNodeClick?.(node)} style={fadedNodeIds?.has(node.id) ? { opacity: 0.5 } : undefined}>
@@ -84,7 +84,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
             )}
             {fadedNodeIds?.has(node.id) && !node.rating && (
               <div className="inactive-indicator">
-                ⬡ Supporting a resolved claim
+                ⬡ Supporting a resolved statement
               </div>
             )}
 

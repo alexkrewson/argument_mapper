@@ -163,7 +163,7 @@ Return the updated map JSON.`;
     },
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
-      max_tokens: 4096,
+      max_tokens: 8000,
       system: systemPrompt,
       messages: [{ role: "user", content: userMessage }],
     }),
@@ -177,6 +177,11 @@ Return the updated map JSON.`;
 
   const data = await response.json();
 
+  // If the response was cut off mid-stream, the JSON will be truncated
+  if (data.stop_reason === "max_tokens") {
+    throw new Error("Response was too long and got cut off. The map may be too large — try the Chat tab to ask the moderator to summarise or prune some nodes.");
+  }
+ 
   // Claude returns an array of content blocks. The text is in the first one.
   const text = data.content[0].text;
 

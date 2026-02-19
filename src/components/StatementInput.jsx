@@ -50,7 +50,7 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
       <div className="input-header">
         <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#8b5cf6" : speakerColor }}>
           {loading && loadingSpeaker ? (
-            <>Considering {spk(loadingSpeaker)}'s {directMode ? "submission" : "claim"}<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
+            <>Considering {spk(loadingSpeaker)}'s {directMode ? "submission" : "statement"}<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
           ) : `${spk(currentSpeaker)}'s turn`}
         </div>
         {!loading && (

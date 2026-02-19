@@ -184,22 +184,29 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           </div>
         )}
 
+        {/* Topic tags */}
+        {node.metadata?.tags?.length > 0 && (
+          <div className="popup-tags">
+            {node.metadata.tags.map((tag) => (
+              <span key={tag} className="popup-tag">{tag}</span>
+            ))}
+          </div>
+        )}
+
         {/* Fading reason */}
         {isFaded && node.rating === "up" && (
           <div className="agreement-indicator">
             <span className="agreement-indicator-icon">&#x2714;</span>
-            {node.metadata?.agreed_by?.text
-              ? `Implicit agreement — ${node.metadata.agreed_by.speaker}`
-              : node.metadata?.agreed_by?.speaker
-              ? `Thumbs up — ${node.metadata.agreed_by.speaker}`
-              : "Agreed"}
+            {node.metadata?.agreed_by?.speaker
+              ? `${spk(node.metadata.agreed_by.speaker)} conceded ${spk(node.speaker)}'s point`
+              : "Conceded"}
           </div>
         )}
         {isFaded && node.rating === "down" && (
           <div className="retracted-indicator">↩ Retracted by {node.speaker}</div>
         )}
         {isFaded && !node.rating && (
-          <div className="inactive-indicator">⬡ Supporting a resolved claim</div>
+          <div className="inactive-indicator">⬡ Supporting a resolved statement</div>
         )}
 
         {/* Collapsed child summary */}
@@ -215,7 +222,7 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
             const isOtherNode = node.speaker !== currentSpeaker;
             const isActive = isOtherNode ? node.rating === "up" : node.rating === "down";
             const ratingType = isOtherNode ? "up" : "down";
-            const btnText = isOtherNode ? "I concede, this was correct" : "I concede, this was incorrect";
+            const btnText = isOtherNode ? "I concede, this is correct" : "I concede, this is incorrect";
             return (
               <button
                 className={`concede-btn${isActive ? " concede-btn--active" : ""}`}
@@ -274,12 +281,12 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
   };
 
   if (nodes.length === 0) {
-    return <p className="empty-message" style={{ padding: "1rem 1.25rem" }}>No claims yet.</p>;
+    return <p className="empty-message" style={{ padding: "1rem 1.25rem" }}>No statements yet.</p>;
   }
 
   return (
     <div className="node-list">
-      <h3>Claims ({nodes.length})</h3>
+      <h3>Statements ({nodes.length})</h3>
       <ul className="map-tree-list">
         {trees.map((item) => (
           <TreeNode
