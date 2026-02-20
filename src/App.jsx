@@ -402,24 +402,24 @@ export default function App() {
 
       {/* Main content: one tab at a time */}
       <main className="app-main">
-        {activeTab === "map" && (
-          <div className="graph-area">
-            <ArgumentMap
-              key={themeKey}
-              nodes={inner.nodes}
-              edges={inner.edges}
-              onNodeClick={handleNodeClick}
-              fadedNodeIds={fadedInfo.fadedNodeIds}
-              contradictionFadedIds={fadedInfo.contradictionFadedIds}
-              walkbackFadedIds={fadedInfo.walkbackFadedIds}
-              contradictionBorderIds={fadedInfo.contradictionBorderIds}
-              walkbackBorderIds={fadedInfo.walkbackBorderIds}
-              newNodeIds={newNodeIds}
-              onToggleUI={toggleUI}
-              theme={theme}
-            />
-          </div>
-        )}
+        {/* Always mounted so Cytoscape preserves zoom/pan across tab switches.
+            Hidden via inline style when another tab is active. */}
+        <div className="graph-area" style={activeTab !== "map" ? { display: "none" } : undefined}>
+          <ArgumentMap
+            key={themeKey}
+            nodes={inner.nodes}
+            edges={inner.edges}
+            onNodeClick={handleNodeClick}
+            fadedNodeIds={fadedInfo.fadedNodeIds}
+            contradictionFadedIds={fadedInfo.contradictionFadedIds}
+            walkbackFadedIds={fadedInfo.walkbackFadedIds}
+            contradictionBorderIds={fadedInfo.contradictionBorderIds}
+            walkbackBorderIds={fadedInfo.walkbackBorderIds}
+            newNodeIds={newNodeIds}
+            onToggleUI={toggleUI}
+            theme={theme}
+          />
+        </div>
 
         {activeTab === "list" && (
           <div className="list-area" onClick={(e) => { if (e.target === e.currentTarget) toggleUI(); }}>
