@@ -40,7 +40,7 @@ function buildStylesheet(theme) {
         "min-width": "160px",
         height: "label",
         shape: "roundrectangle",
-        color: dark ? "#e2e8f0" : "#1e293b",
+        color: "#0f172a",
         "background-color": dark ? "#1e293b" : "#f8fafc",
         "border-width": 0,
         "font-weight": "bold",
@@ -55,11 +55,11 @@ function buildStylesheet(theme) {
     // --- Speaker colors (internal IDs are always "Blue"/"Green") ---
     {
       selector: 'node[speaker = "Blue"]',
-      style: { "background-color": a.bg, "color": "#fff" },
+      style: { "background-color": a.bg, "color": "#0f172a" },
     },
     {
       selector: 'node[speaker = "Green"]',
-      style: { "background-color": b.bg, "color": "#fff" },
+      style: { "background-color": b.bg, "color": "#0f172a" },
     },
     {
       selector: 'node[speaker = "Moderator"]',
