@@ -334,7 +334,7 @@
 }
 
 .map-tree-item {
-  padding: 0.3rem 0.75rem 0.3rem 0;
+  padding: 0.35rem 0.75rem 0.35rem 0;
   border-bottom: 1px solid #f1f5f9;
 }
 
@@ -343,8 +343,8 @@
 }
 
 .map-tree-cell {
-  padding: 0.4rem 0.6rem;
-  border-radius: 0 6px 6px 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
