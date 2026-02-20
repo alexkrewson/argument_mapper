@@ -215,6 +215,41 @@ function pulseNode(el, color) {
   });
 }
 
+// Heights of the fixed overlays (header + tab bar, and footer input area).
+// We always reserve this space so nodes are never hidden behind them,
+// even when the UI is slid away.
+const HEADER_H = 90;   // matches .app-top-spacer height in CSS
+const FOOTER_H = 110;  // approximate .app-footer height
+const SIDE_PAD = 30;   // left/right breathing room
+
+function fitToSafeZone(cy) {
+  const eles = cy.elements();
+  if (eles.length === 0) return;
+  const bb = eles.boundingBox();
+  const W = cy.width();
+  const H = cy.height();
+  const safeW = W - 2 * SIDE_PAD;
+  const safeH = H - HEADER_H - FOOTER_H;
+  if (safeW <= 0 || safeH <= 0) return;
+
+  const zoom = Math.min(
+    safeW  / (bb.w + 60),
+    safeH  / (bb.h + 60),
+    2
+  );
+  const modelCx  = (bb.x1 + bb.x2) / 2;
+  const modelCy  = (bb.y1 + bb.y2) / 2;
+  const screenCx = SIDE_PAD + safeW / 2;
+  const screenCy = HEADER_H + safeH / 2;
+
+  cy.animate({
+    zoom,
+    pan: { x: screenCx - modelCx * zoom, y: screenCy - modelCy * zoom },
+    duration: 250,
+    easing: "ease-in-out",
+  });
+}
+
 function runLayout(cy, onDone) {
   const layout = cy.layout({
     name: "dagre",
@@ -224,11 +259,16 @@ function runLayout(cy, onDone) {
     padding: 40,
     animate: true,
     animationDuration: 300,
-    fit: true,
+    fit: false, // fitToSafeZone handles viewport after animation
   });
   layout.one("layoutstop", () => {
     applyEdgeCurves(cy);
-    if (onDone) onDone();
+    // Wait for node animations to settle, then fit to the safe zone
+    // (excluding the header and footer overlay areas).
+    setTimeout(() => {
+      fitToSafeZone(cy);
+      if (onDone) onDone();
+    }, 320);
   });
   layout.run();
 }
