@@ -552,8 +552,8 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         .filter((n) => newNodeIds.has(n.id()))
         .forEach((el) => {
           const spk = el.data("speaker");
-          const color = spk === "Blue"  ? theme.a.border
-                      : spk === "Green" ? theme.b.border
+          const color = spk === "Blue"  ? theme.a.bg
+                      : spk === "Green" ? theme.b.bg
                       : "#94a3b8";
           pulseNode(el, color);
         });

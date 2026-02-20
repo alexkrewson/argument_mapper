@@ -380,18 +380,18 @@ export default function App() {
         </button>
         {effectiveAnalysis && (() => {
           const gaugePct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? theme.a.border : effectiveAnalysis.leaning > 0.1 ? theme.b.border : "#1e293b";
+          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? theme.a.bg : effectiveAnalysis.leaning > 0.1 ? theme.b.bg : "#1e293b";
           return (
             <button
               className={`tab-btn tab-gauge-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
               onClick={() => setActiveTab("moderator")}
               title="AI Moderator Analysis"
             >
-              <span className="tab-gauge-label-a" style={{ color: theme.a.border }}>{theme.a.name}</span>
+              <span className="tab-gauge-label-a" style={{ color: theme.a.bg }}>{theme.a.name}</span>
               <span className="tab-gauge-inline-track">
                 <span className="tab-gauge-inline-marker" style={{ left: `${gaugePct}%`, backgroundColor: gaugeColor }} />
               </span>
-              <span className="tab-gauge-label-b" style={{ color: theme.b.border }}>{theme.b.name}</span>
+              <span className="tab-gauge-label-b" style={{ color: theme.b.bg }}>{theme.b.name}</span>
             </button>
           );
         })()}
@@ -468,7 +468,7 @@ export default function App() {
             return <p className="empty-message">No moderator analysis yet. Submit some arguments first.</p>;
           }
           const pct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const markerColor = effectiveAnalysis.leaning < -0.1 ? theme.a.border : effectiveAnalysis.leaning > 0.1 ? theme.b.border : "#1e293b";
+          const markerColor = effectiveAnalysis.leaning < -0.1 ? theme.a.bg : effectiveAnalysis.leaning > 0.1 ? theme.b.bg : "#1e293b";
           const leaningLabel = effectiveAnalysis.leaning < -0.1 ? `Leaning ${theme.a.name}` : effectiveAnalysis.leaning > 0.1 ? `Leaning ${theme.b.name}` : "Balanced";
           // Replace internal speaker IDs in AI-generated prose with theme display names
           const fixNames = (s) => typeof s === "string"
@@ -480,8 +480,8 @@ export default function App() {
                 <h4>Debate Leaning</h4>
                 <div className="gauge-popup-track-wrapper">
                   <div className="gauge-labels">
-                    <span className="gauge-label-a" style={{ color: theme.a.border }}>{theme.a.name}</span>
-                    <span className="gauge-label-b" style={{ color: theme.b.border }}>{theme.b.name}</span>
+                    <span className="gauge-label-a" style={{ color: theme.a.bg }}>{theme.a.name}</span>
+                    <span className="gauge-label-b" style={{ color: theme.b.bg }}>{theme.b.name}</span>
                   </div>
                   <div className="gauge-track gauge-track-large">
                     <div className="gauge-marker gauge-marker-large" style={{ left: `${pct}%`, backgroundColor: markerColor }} />
@@ -494,11 +494,11 @@ export default function App() {
               </div>
               <div className="popup-section">
                 <h4>{theme.a.name}'s Argumentative Style</h4>
-                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.a.border}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_a_style)}</p>
+                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.a.bg}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_a_style)}</p>
               </div>
               <div className="popup-section">
                 <h4>{theme.b.name}'s Argumentative Style</h4>
-                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.b.border}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_b_style)}</p>
+                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.b.bg}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_b_style)}</p>
               </div>
               {effectiveAnalysis.agreements?.length > 0 && (
                 <div className="popup-section">

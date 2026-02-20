@@ -85,8 +85,8 @@ function countDescendants(children) {
 
 function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, theme }) {
   const { node, crossLinkCount, children } = item;
-  const style = node.speaker === "Blue"  ? { bg: theme.a.bg, border: theme.a.border }
-              : node.speaker === "Green" ? { bg: theme.b.bg, border: theme.b.border }
+  const style = node.speaker === "Blue"  ? { bg: theme.a.bg, border: theme.a.bg }
+              : node.speaker === "Green" ? { bg: theme.b.bg, border: theme.b.bg }
               : MODERATOR_STYLE;
   const isFaded = fadedNodeIds?.has(node.id);
   const isNew = newNodeIds?.has(node.id);

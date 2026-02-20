@@ -36,8 +36,8 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
     }
   };
 
-  const speakerColor = theme?.a && currentSpeaker === "Blue" ? theme.a.border
-                     : theme?.b && currentSpeaker === "Green" ? theme.b.border
+  const speakerColor = theme?.a && currentSpeaker === "Blue" ? theme.a.bg
+                     : theme?.b && currentSpeaker === "Green" ? theme.b.bg
                      : currentSpeaker === "Blue" ? "#3b82f6" : "#22c55e";
   const speakerGlow = `${speakerColor}26`; // 15% alpha hex
   const activeColor = loading ? "#475569" : speakerColor;
