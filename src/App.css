@@ -1306,7 +1306,7 @@
   border-bottom-color: #334155;
 }
 [data-dark="true"] .tab-btn {
-  color: #64748b;
+  color: #94a3b8;
 }
 [data-dark="true"] .tab-btn:hover {
   color: #cbd5e1;
@@ -1442,7 +1442,7 @@
 
 [data-dark="true"] .skip-turn-btn {
   border-color: #334155;
-  color: #64748b;
+  color: #94a3b8;
 }
 [data-dark="true"] .skip-turn-btn:hover {
   background: #334155;
@@ -1450,7 +1450,7 @@
 }
 [data-dark="true"] .history-btn {
   border-color: #334155;
-  color: #64748b;
+  color: #94a3b8;
 }
 [data-dark="true"] .history-btn:hover:not(:disabled) {
   background: #334155;
@@ -1458,7 +1458,7 @@
 }
 
 [data-dark="true"] .settings-btn {
-  color: #64748b;
+  color: #94a3b8;
   border-color: #334155;
 }
 [data-dark="true"] .settings-btn:hover,
@@ -1495,7 +1495,7 @@
   color: #e2e8f0;
 }
 [data-dark="true"] .input-row textarea::placeholder {
-  color: #475569;
+  color: #94a3b8;
 }
 
 [data-dark="true"] .chat-log {
