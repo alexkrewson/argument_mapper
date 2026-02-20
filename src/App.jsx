@@ -160,13 +160,15 @@ export default function App() {
         newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
       }
 
-      // Intercept newly auto-set rating:"up" from Claude — strip them from the
+      // Intercept newly auto-set ratings from Claude — strip them from the
       // saved map and queue them as confirmation dialogs instead.
+      // "up" on other speaker's node = agreement; "down" on own node = self-retraction.
       const oldNodeRatings = new Map(argumentMap.argument_map.nodes.map((n) => [n.id, n.rating]));
       const detected = [];
       const strippedNodes = updatedMap.argument_map.nodes.map((n) => {
         if (n.rating === "up" && oldNodeRatings.get(n.id) !== "up") {
           detected.push({
+            type: "other",
             nodeId: n.id,
             content: n.content,
             nodeSpeaker: n.speaker,
@@ -174,6 +176,18 @@ export default function App() {
             agreedByText: n.metadata?.agreed_by?.text || null,
           });
           const { agreed_by, ...restMeta } = n.metadata || {};
+          return { ...n, rating: null, metadata: restMeta };
+        }
+        if (n.rating === "down" && oldNodeRatings.get(n.id) !== "down" && n.speaker === currentSpeaker) {
+          detected.push({
+            type: "self",
+            nodeId: n.id,
+            content: n.content,
+            nodeSpeaker: n.speaker,
+            concedingBy: currentSpeaker,
+            agreedByText: n.metadata?.conceded_by?.text || null,
+          });
+          const { conceded_by, ...restMeta } = n.metadata || {};
           return { ...n, rating: null, metadata: restMeta };
         }
         return n;
@@ -229,10 +243,21 @@ export default function App() {
   /** Concession queue handlers */
   const handleConfirmConcession = () => {
     const [item, ...rest] = concessionQueue;
-    // Apply rating:"up" directly to the current map, preserving Claude's agreedByText
     const inner = argumentMap.argument_map;
     const nodes = inner.nodes.map((node) => {
       if (node.id !== item.nodeId) return node;
+      if (item.type === "self") {
+        // Speaker retracting their own node
+        return {
+          ...node,
+          rating: "down",
+          metadata: {
+            ...node.metadata,
+            conceded_by: { speaker: item.concedingBy, ...(item.agreedByText ? { text: item.agreedByText } : {}) },
+          },
+        };
+      }
+      // Speaker agreeing with other speaker's node
       return {
         ...node,
         rating: "up",

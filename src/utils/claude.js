@@ -140,13 +140,19 @@ Goalpost moving detection:
 - Example: originally claiming "all X are Y," then under pressure claiming "most X are Y" or "I only meant some X."
 - Only flag clear cases. Omit the field or set to null if not applicable.
 
-Agreement detection:
+Agreement detection (agreeing with the other speaker):
 - When a speaker explicitly or implicitly agrees with an opposing speaker's node (e.g. "I agree that...", "You're right about...", "Fair point on...", or conceding a point), set "rating": "up" on that agreed-upon node.
 - Also set "metadata.agreed_by": { "speaker": "<the agreeing speaker>", "text": "<the original agreeing statement verbatim>" } on that node. The "speaker" is who agreed (the current speaker), and "text" is the exact words from their statement that express agreement.
-- Only set rating on nodes belonging to the OTHER speaker — a speaker cannot agree with their own nodes.
+- Only set rating "up" on nodes belonging to the OTHER speaker — a speaker cannot agree with their own nodes.
 - Preserve any existing rating values set by the user. Only add new "up" ratings for newly detected agreements. Do not overwrite existing agreed_by metadata.
-- Never set rating to "down". That value is reserved exclusively for user-triggered actions and must never be set by you.
-- If no agreement is detected, leave the rating field unchanged (null or its current value).`;
+- If no agreement is detected, leave the rating field unchanged (null or its current value).
+
+Self-concession detection (retracting own point):
+- When a speaker explicitly concedes that one of their OWN earlier nodes was wrong or invalid (e.g. "I was wrong about...", "I admit my point about X was incorrect", "I concede that argument"), set "rating": "down" on that own node.
+- Also set "metadata.conceded_by": { "speaker": "<current speaker>", "text": "<the verbatim words expressing self-concession>" } on that node.
+- Only set rating "down" on nodes belonging to the CURRENT speaker (same speaker as the statement being submitted). Never set "down" on the opposing speaker's nodes.
+- Only flag clear, explicit self-retractions — not normal qualification, updating, or clarification.
+- If no self-concession is detected, leave all ratings unchanged.`;
 
   const displayName = speaker === "Blue" ? speakerNames.a : speakerNames.b;
   const userMessage = `Current argument map:
