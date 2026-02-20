@@ -972,6 +972,141 @@
   cursor: not-allowed;
 }
 
+/* --- Concession Confirmation Modal --- */
+.concession-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  padding: 1rem;
+}
+
+.concession-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  max-width: 440px;
+  width: 100%;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.concession-modal-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.concession-modal-body {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.concession-speaker-chip {
+  display: inline-block;
+  padding: 0.05rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.concession-quote {
+  margin: 0;
+  padding: 0.6rem 0.85rem;
+  border-left: 3px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.5;
+}
+
+.concession-original {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+.concession-modal-actions {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 0.25rem;
+}
+
+.concession-btn-confirm {
+  flex: 1;
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #0f172a;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.concession-btn-confirm:hover {
+  background: #1e293b;
+}
+
+.concession-btn-dismiss {
+  padding: 0.55rem 1rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.concession-btn-dismiss:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+[data-dark="true"] .concession-modal {
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+[data-dark="true"] .concession-modal-body,
+[data-dark="true"] .concession-quote {
+  color: #f1f5f9;
+}
+[data-dark="true"] .concession-quote {
+  background: #0f172a;
+  border-left-color: #334155;
+}
+[data-dark="true"] .concession-original {
+  color: #64748b;
+}
+[data-dark="true"] .concession-btn-confirm {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+[data-dark="true"] .concession-btn-confirm:hover {
+  background: #fff;
+}
+[data-dark="true"] .concession-btn-dismiss {
+  border-color: #334155;
+  color: #92a1b5;
+}
+[data-dark="true"] .concession-btn-dismiss:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
 /* --- Node Detail Popup --- */
 .popup-backdrop {
   position: fixed;

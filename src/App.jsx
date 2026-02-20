@@ -15,6 +15,7 @@ import NodeList from "./components/NodeList";
 import MapTreeView from "./components/MapTreeView";
 import NodeDetailPopup from "./components/NodeDetailPopup";
 import SettingsPanel from "./components/SettingsPanel";
+import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
@@ -108,6 +109,7 @@ export default function App() {
 
   const [newNodeIds, setNewNodeIds] = useState(() => new Set());
   const newNodeTimerRef = useRef(null);
+  const [concessionQueue, setConcessionQueue] = useState([]); // Detected concessions awaiting user confirmation
 
   const chatLogRef = useRef(null);
   useEffect(() => {
@@ -158,9 +160,30 @@ export default function App() {
         newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
       }
 
-      // Push to history (enables undo/redo)
-      const cleanMap = sanitizeNodeContent(updatedMap, theme);
+      // Intercept newly auto-set rating:"up" from Claude — strip them from the
+      // saved map and queue them as confirmation dialogs instead.
+      const oldNodeRatings = new Map(argumentMap.argument_map.nodes.map((n) => [n.id, n.rating]));
+      const detected = [];
+      const strippedNodes = updatedMap.argument_map.nodes.map((n) => {
+        if (n.rating === "up" && oldNodeRatings.get(n.id) !== "up") {
+          detected.push({
+            nodeId: n.id,
+            content: n.content,
+            nodeSpeaker: n.speaker,
+            concedingBy: currentSpeaker,
+            agreedByText: n.metadata?.agreed_by?.text || null,
+          });
+          const { agreed_by, ...restMeta } = n.metadata || {};
+          return { ...n, rating: null, metadata: restMeta };
+        }
+        return n;
+      });
+
+      const strippedMap = { ...updatedMap, argument_map: { ...updatedMap.argument_map, nodes: strippedNodes } };
+      const cleanMap = sanitizeNodeContent(strippedMap, theme);
       pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
+
+      if (detected.length > 0) setConcessionQueue(detected);
 
       // Switch turns: User A → User B → User A → ...
       setCurrentSpeaker((prev) =>
@@ -201,6 +224,30 @@ export default function App() {
       }
     });
     pushHistory({ argument_map: { ...inner, nodes: updatedNodes } }, moderatorAnalysis);
+  };
+
+  /** Concession queue handlers */
+  const handleConfirmConcession = () => {
+    const [item, ...rest] = concessionQueue;
+    // Apply rating:"up" directly to the current map, preserving Claude's agreedByText
+    const inner = argumentMap.argument_map;
+    const nodes = inner.nodes.map((node) => {
+      if (node.id !== item.nodeId) return node;
+      return {
+        ...node,
+        rating: "up",
+        metadata: {
+          ...node.metadata,
+          agreed_by: { speaker: item.concedingBy, ...(item.agreedByText ? { text: item.agreedByText } : {}) },
+        },
+      };
+    });
+    pushHistory({ argument_map: { ...inner, nodes } }, moderatorAnalysis);
+    setConcessionQueue(rest);
+  };
+
+  const handleDismissConcession = () => {
+    setConcessionQueue((prev) => prev.slice(1));
   };
 
   /**
@@ -564,6 +611,16 @@ export default function App() {
           />
         );
       })()}
+
+      {/* Concession confirmation popup */}
+      {concessionQueue.length > 0 && (
+        <ConcessionConfirmModal
+          concession={concessionQueue[0]}
+          onConfirm={handleConfirmConcession}
+          onDismiss={handleDismissConcession}
+          theme={theme}
+        />
+      )}
 
       {/* Statement input at the bottom — hidden on moderator tab */}
       {activeTab !== "moderator" && (
