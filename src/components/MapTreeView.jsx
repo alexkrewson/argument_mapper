@@ -98,17 +98,23 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
   // Determine background and outline based on contradiction/walkback state
   let bgColor = style.bg;
   let outlineStyle;
+  let lightBg = false;
   if (isContradictionBorder) {
     bgColor = "#fee2e2";
     outlineStyle = "2px solid #dc2626";
+    lightBg = true;
   } else if (isWalkbackBorder) {
     bgColor = "#ffedd5";
     outlineStyle = "2px solid #f97316";
+    lightBg = true;
   } else if (isContradictionFaded) {
     bgColor = "#fee2e2";
+    lightBg = true;
   } else if (isWalkbackFaded) {
     bgColor = "#ffedd5";
+    lightBg = true;
   }
+  const textColor = lightBg ? "#1e293b" : "#fff";
 
   // Only apply opacity fading if NOT already getting colored background
   const hasColoredBg = isContradictionBorder || isWalkbackBorder || isContradictionFaded || isWalkbackFaded;
@@ -126,9 +132,9 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
         style={{
           marginLeft: `${depth * INDENT_PX}px`,
           background: bgColor,
-          borderLeft: `3px solid ${style.border}`,
           outline: outlineStyle,
           "--glow-color": style.border,
+          color: textColor,
         }}
         onClick={() => onNodeClick?.(node)}
       >

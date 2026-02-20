@@ -42,24 +42,23 @@ function buildStylesheet(theme) {
         shape: "roundrectangle",
         color: dark ? "#e2e8f0" : "#1e293b",
         "background-color": dark ? "#1e293b" : "#f8fafc",
-        "border-width": 2,
-        "border-color": dark ? "#475569" : "#94a3b8",
+        "border-width": 0,
         padding: "26px",
       },
     },
     // --- Node types ---
     {
       selector: 'node[type = "claim"]',
-      style: { "border-width": 3, "font-weight": "bold", "font-size": "13px" },
+      style: { "font-weight": "bold", "font-size": "13px" },
     },
     // --- Speaker colors (internal IDs are always "Blue"/"Green") ---
     {
       selector: 'node[speaker = "Blue"]',
-      style: { "background-color": a.bg, "border-color": a.border },
+      style: { "background-color": a.bg, "color": "#fff" },
     },
     {
       selector: 'node[speaker = "Green"]',
-      style: { "background-color": b.bg, "border-color": b.border },
+      style: { "background-color": b.bg, "color": "#fff" },
     },
     {
       selector: 'node[speaker = "Moderator"]',
