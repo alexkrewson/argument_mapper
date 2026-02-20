@@ -306,6 +306,7 @@
 .chat-area .empty-message {
   color: #0f172a;
   font-size: 0.85rem;
+  margin: auto;
 }
 
 /* Graph area fills the tab content area */
