@@ -25,6 +25,22 @@ const EMPTY_MAP = {
   argument_map: { title: "", description: "", nodes: [], edges: [] },
 };
 
+// Replace internal "Blue"/"Green" speaker names in node content with theme display names.
+function sanitizeNodeContent(map, theme) {
+  const inner = map.argument_map;
+  const a = theme.a.name, b = theme.b.name;
+  const fix = (s) => typeof s === "string"
+    ? s.replace(/\bBlue\b/g, a).replace(/\bGreen\b/g, b)
+    : s;
+  return {
+    ...map,
+    argument_map: {
+      ...inner,
+      nodes: inner.nodes.map((n) => ({ ...n, content: fix(n.content) })),
+    },
+  };
+}
+
 // Normalise AI-generated analysis: negate leaning (AI: negative=Blue, UI: negative=Blue on left)
 // and replace any legacy "User A"/"User B" the AI may still emit.
 function sanitizeAnalysis(analysis) {
@@ -121,7 +137,8 @@ export default function App() {
         apiKey,
         argumentMap,
         currentSpeaker,
-        statement
+        statement,
+        { a: theme.a.name, b: theme.b.name }
       );
 
       // Track original text for newly created nodes
@@ -142,7 +159,8 @@ export default function App() {
       }
 
       // Push to history (enables undo/redo)
-      pushHistory(updatedMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
+      const cleanMap = sanitizeNodeContent(updatedMap, theme);
+      pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
 
       // Switch turns: User A → User B → User A → ...
       setCurrentSpeaker((prev) =>
@@ -203,7 +221,7 @@ export default function App() {
     setError(null);
 
     try {
-      const { reply, updatedMap } = await chatWithModerator(apiKey, argumentMap, updatedHistory);
+      const { reply, updatedMap } = await chatWithModerator(apiKey, argumentMap, updatedHistory, { a: theme.a.name, b: theme.b.name });
       const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
       setChatMessages((prev) => [...prev, assistantMsg]);
       if (updatedMap) {
@@ -215,7 +233,7 @@ export default function App() {
           clearTimeout(newNodeTimerRef.current);
           newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
         }
-        pushHistory(updatedMap, moderatorAnalysis);
+        pushHistory(sanitizeNodeContent(updatedMap, theme), moderatorAnalysis);
       }
     } catch (err) {
       console.error("Error chatting with moderator:", err);

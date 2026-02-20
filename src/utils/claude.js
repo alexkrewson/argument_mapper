@@ -31,7 +31,7 @@ const API_URL = "https://api.anthropic.com/v1/messages";
  * @param {string} statement    — The raw statement the user typed
  * @returns {object}            — Updated map with new nodes/edges added
  */
-export async function updateArgumentMap(apiKey, currentMap, speaker, statement) {
+export async function updateArgumentMap(apiKey, currentMap, speaker, statement, speakerNames = { a: "Blue", b: "Green" }) {
   const systemPrompt = `You are an argument mapping assistant for a two-person debate. You analyze statements and maintain a structured argument map as JSON following the Argument Mapping Spec v1.0.
 
 Your job:
@@ -111,6 +111,7 @@ Tactics detection:
 - Valid tactic keys: ${TACTIC_KEYS.join(", ")}
 - Fallacies: straw_man, ad_hominem, no_true_scotsman, false_dilemma, slippery_slope, appeal_to_authority, red_herring, circular_reasoning, appeal_to_emotion, hasty_generalization
 - Good techniques: steel_man, evidence_based, logical_deduction, addresses_counterargument, cites_source
+- Rhetorical devices: analogy (tag any node whose original statement used a comparison or analogy to make a point; the content field must still express the argument in literal terms)
 - Re-evaluate ALL existing nodes for tactics each turn — new context may reveal fallacies in earlier statements. Update metadata.tactics arrays accordingly.
 - Keep all other existing node fields unchanged when updating tactics.
 - Use an empty array [] if no tactics apply to a node.
@@ -120,10 +121,11 @@ Rules:
 - Node IDs are "node_1", "node_2", etc. (incrementing). Edge IDs are "edge_1", "edge_2", etc.
 - Keep all existing nodes and edges unchanged (except for metadata.tactics which should be re-evaluated).
 - Set the "speaker" field on new nodes to the current speaker.
+- The "speaker" JSON field must always be "Blue" or "Green" (internal identifiers). However, when referring to speakers inside node content, summaries, or any prose text, use their display names: "${speakerNames.a}" for Blue and "${speakerNames.b}" for Green.
 - The first statement should set the title and description. Update them if the debate topic evolves.
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
 - Add 2-4 relevant tags per node.
-- Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible.
+- Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible. If the speaker uses an analogy, strip the analogy from the content entirely and state the underlying argument in plain, literal terms; tag the node with the "analogy" tactic.
 - Each node must have at most ONE outgoing edge (one parent). If a node could logically connect to multiple existing nodes, choose the single most appropriate parent. Do not create multiple edges from the same source node.
 
 Contradiction detection:
@@ -145,10 +147,11 @@ Agreement detection:
 - Preserve any existing rating values set by the user. Only add new "up" ratings for newly detected agreements. Do not overwrite existing agreed_by metadata.
 - If no agreement is detected, leave the rating field unchanged (null or its current value).`;
 
+  const displayName = speaker === "Blue" ? speakerNames.a : speakerNames.b;
   const userMessage = `Current argument map:
 ${JSON.stringify(currentMap, null, 2)}
 
-New statement from ${speaker}:
+New statement from ${displayName} (speaker: "${speaker}"):
 "${statement}"
 
 Return the updated map JSON.`;
@@ -207,7 +210,7 @@ Return the updated map JSON.`;
  * @param {Array}  chatHistory  — Array of { role: "user"|"assistant", content: string }
  * @returns {{ reply: string, updatedMap: object|null }}
  */
-export async function chatWithModerator(apiKey, currentMap, chatHistory) {
+export async function chatWithModerator(apiKey, currentMap, chatHistory, speakerNames = { a: "Blue", b: "Green" }) {
   const systemPrompt = `You are an AI debate moderator discussing an argument map with the user. You can explain your reasoning, discuss node classifications, answer questions about the map, and make edits when asked.
 
 Current argument map:
@@ -237,7 +240,8 @@ Rules:
 - Only modify the map when the user explicitly asks for changes (corrections, edits, restructuring).
 - When modifying, only change what was asked for. Keep everything else unchanged.
 - Maintain valid node/edge IDs and references.
-- When adding new nodes yourself (not on behalf of Blue or B), always set "speaker": "Moderator".`;
+- When adding new nodes yourself (not on behalf of Blue or Green), always set "speaker": "Moderator".
+- The "speaker" JSON field must always be "Blue" or "Green" (internal identifiers). When referring to speakers in your reply or in node content, use their display names: "${speakerNames.a}" for Blue and "${speakerNames.b}" for Green.`;
 
   // Build messages array from chat history
   const messages = chatHistory.map((msg) => ({
