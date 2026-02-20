@@ -262,6 +262,8 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
+  border: 2px solid #0f172a;
+  box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 
@@ -281,6 +283,7 @@
 
 /* --- List tab --- */
 .list-area {
+  position: relative;
   height: 100%;
   overflow-y: auto;
   overflow-x: auto;
@@ -534,6 +537,7 @@
 
 .claim-text {
   font-size: 0.85rem;
+  font-weight: bold;
   flex: 1;
   min-width: 0;
 }
@@ -1317,6 +1321,9 @@
 }
 [data-dark="true"] .tab-gauge-inline-track {
   background: #334155;
+}
+[data-dark="true"] .tab-gauge-inline-marker {
+  border-color: #f1f5f9;
 }
 
 [data-dark="true"] .app-footer {

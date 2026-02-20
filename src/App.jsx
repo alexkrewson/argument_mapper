@@ -483,7 +483,7 @@ export default function App() {
                     <span className="gauge-label-a" style={{ color: theme.a.bg }}>{theme.a.name}</span>
                     <span className="gauge-label-b" style={{ color: theme.b.bg }}>{theme.b.name}</span>
                   </div>
-                  <div className="gauge-track gauge-track-large">
+                  <div className="gauge-track gauge-track-large" style={{ background: `linear-gradient(to right, ${theme.a.bg}44, ${theme.dark ? '#1e293b' : '#f1f5f9'} 50%, ${theme.b.bg}44)` }}>
                     <div className="gauge-marker gauge-marker-large" style={{ left: `${pct}%`, backgroundColor: markerColor }} />
                   </div>
                   <div className="gauge-leaning-label" style={{ color: markerColor }}>

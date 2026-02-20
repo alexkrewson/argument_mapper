@@ -295,7 +295,14 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
   };
 
   if (nodes.length === 0) {
-    return <p className="empty-message" style={{ padding: "1rem 1.25rem" }}>No statements yet.</p>;
+    return (
+      <p className="empty-message" style={{
+        position: "absolute", top: "50%", left: "50%",
+        transform: "translate(-50%, -50%)",
+      }}>
+        No statements yet.
+      </p>
+    );
   }
 
   return (

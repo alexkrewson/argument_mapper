@@ -43,13 +43,14 @@ function buildStylesheet(theme) {
         color: dark ? "#e2e8f0" : "#1e293b",
         "background-color": dark ? "#1e293b" : "#f8fafc",
         "border-width": 0,
+        "font-weight": "bold",
         padding: "26px",
       },
     },
     // --- Node types ---
     {
       selector: 'node[type = "claim"]',
-      style: { "font-weight": "bold", "font-size": "13px" },
+      style: { "font-size": "13px" },
     },
     // --- Speaker colors (internal IDs are always "Blue"/"Green") ---
     {
