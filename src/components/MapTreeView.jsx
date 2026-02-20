@@ -8,13 +8,9 @@
 
 import { useMemo, useState } from "react";
 import { TACTICS } from "../utils/tactics.js";
-import { spk } from "../utils/speakers.js";
+import { speakerName, speakerBorder } from "../utils/speakers.js";
 
-const SPEAKER_STYLE = {
-  "Blue":  { bg: "#dbeafe", border: "#3b82f6" },
-  "Green": { bg: "#dcfce7", border: "#22c55e" },
-  "Moderator": { bg: "#ede9fe", border: "#8b5cf6" },
-};
+const MODERATOR_STYLE = { bg: "#ede9fe", border: "#94a3b8" };
 
 const INDENT_PX = 20;
 
@@ -87,10 +83,13 @@ function countDescendants(children) {
   return count;
 }
 
-function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds }) {
+function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, theme }) {
   const { node, crossLinkCount, children } = item;
-  const style = SPEAKER_STYLE[node.speaker] || { bg: "#f8fafc", border: "#94a3b8" };
+  const style = node.speaker === "Blue"  ? { bg: theme.a.bg, border: theme.a.border }
+              : node.speaker === "Green" ? { bg: theme.b.bg, border: theme.b.border }
+              : MODERATOR_STYLE;
   const isFaded = fadedNodeIds?.has(node.id);
+  const isNew = newNodeIds?.has(node.id);
   const isContradictionBorder = contradictionBorderIds?.has(node.id);
   const isWalkbackBorder = walkbackBorderIds?.has(node.id);
   const isContradictionFaded = !isContradictionBorder && contradictionFadedIds?.has(node.id);
@@ -123,12 +122,13 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
     <li className={`map-tree-item${shouldFadeOpacity ? " map-tree-item--faded" : ""}`}>
       {/* Card */}
       <div
-        className="map-tree-cell"
+        className={`map-tree-cell${isNew ? " map-tree-cell--new" : ""}`}
         style={{
           marginLeft: `${depth * INDENT_PX}px`,
           background: bgColor,
           borderLeft: `3px solid ${style.border}`,
           outline: outlineStyle,
+          "--glow-color": style.border,
         }}
         onClick={() => onNodeClick?.(node)}
       >
@@ -145,9 +145,9 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           )}
           <span
             className="speaker-badge"
-            style={{ backgroundColor: node.speaker === "Blue" ? "#3b82f6" : "#22c55e" }}
+            style={{ backgroundColor: speakerBorder(node.speaker, theme) }}
           >
-            {spk(node.speaker)}
+            {speakerName(node.speaker, theme)}
           </span>
           <span className="node-id-badge">{node.id}</span>
           <span className={`type-badge type-${node.type}`}>{node.type}</span>
@@ -257,6 +257,8 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
                   walkbackFadedIds={walkbackFadedIds}
                   contradictionBorderIds={contradictionBorderIds}
                   walkbackBorderIds={walkbackBorderIds}
+                  newNodeIds={newNodeIds}
+                  theme={theme}
                 />
               ))}
             </ul>
@@ -267,7 +269,7 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
   );
 }
 
-export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds }) {
+export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, theme }) {
   const trees = useMemo(() => buildTree(nodes, edges), [nodes, edges]);
   const [collapsed, setCollapsed] = useState(() => new Set());
 
@@ -304,6 +306,8 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
             walkbackFadedIds={walkbackFadedIds}
             contradictionBorderIds={contradictionBorderIds}
             walkbackBorderIds={walkbackBorderIds}
+            newNodeIds={newNodeIds}
+            theme={theme}
           />
         ))}
       </ul>

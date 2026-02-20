@@ -2,6 +2,17 @@
    App.css — All styles for the Argument Mapper
    =========================================== */
 
+/* --- New node glow pulse animation (list view) --- */
+@keyframes newNodeGlow {
+  0%   { box-shadow: 0 0 0 0 var(--glow-color); }
+  50%  { box-shadow: 0 0 14px 6px color-mix(in srgb, var(--glow-color) 45%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.map-tree-cell--new {
+  animation: newNodeGlow 3s ease-in-out forwards;
+}
+
 /* --- Layout: full-height app with header, main, footer --- */
 .app {
   display: flex;
@@ -12,7 +23,124 @@
   background: #f8fafc;
 }
 
-/* --- Header --- */
+/* --- Settings panel --- */
+.settings-wrap {
+  position: relative;
+  margin-left: auto;
+}
+
+.settings-btn {
+  background: none;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-size: 1rem;
+  color: #64748b;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.settings-btn:hover,
+.settings-btn--open {
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+.settings-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  padding: 0.5rem;
+  z-index: 70;
+  min-width: 190px;
+}
+
+.settings-section-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  padding: 0.25rem 0.5rem 0.4rem;
+}
+
+/* Add a thin separator above the second theme group */
+.settings-dropdown > div + div > .settings-section-label {
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.theme-option:hover    { background: #f8fafc; }
+.theme-option--active  { background: #f1f5f9; }
+
+.theme-swatches {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.theme-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
+}
+
+.theme-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #1e293b;
+  flex-shrink: 0;
+}
+
+.theme-names {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-left: auto;
+}
+
+/* --- Top bar: title row + tab bar slide together as one fixed overlay --- */
+.app-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  transition: transform 0.25s ease;
+}
+
+.app-top--hidden {
+  transform: translateY(-110%);
+}
+
+/* In-flow spacer that keeps main content below the fixed top bar.
+   Height = app-header (~54px) + tab-bar (~36px) ≈ 90px */
+.app-top-spacer {
+  flex-shrink: 0;
+  height: 90px;
+}
+
+/* --- Header row (inside app-top) --- */
 .app-header {
   display: flex;
   align-items: center;
@@ -20,7 +148,6 @@
   padding: 0.75rem 1.5rem;
   background: #fff;
   border-bottom: 1px solid #e2e8f0;
-  flex-shrink: 0;
 }
 
 .app-header h1 {
@@ -93,8 +220,8 @@
 }
 
 .tab-btn--active {
-  color: #8b5cf6;
-  border-bottom-color: #8b5cf6;
+  color: #1e293b;
+  border-bottom-color: #1e293b;
   font-weight: 600;
 }
 
@@ -156,6 +283,7 @@
 .list-area {
   height: 100%;
   overflow-y: auto;
+  overflow-x: auto;
 }
 
 .chat-area {
@@ -222,6 +350,7 @@
   gap: 0.3rem;
   cursor: pointer;
   transition: filter 0.12s;
+  min-width: 260px;
 }
 
 .map-tree-cell:hover {
@@ -289,6 +418,8 @@
 /* --- Node List --- */
 .node-list {
   padding: 1rem;
+  min-width: fit-content;
+  margin-bottom: 5rem; /* ensures clickable list-area background at bottom for UI toggle */
 }
 
 .node-list h3 {
@@ -344,7 +475,7 @@
 }
 
 .type-claim { background-color: #6366f1; }
-.type-premise { background-color: #8b5cf6; }
+.type-premise { background-color: #64748b; }
 .type-evidence { background-color: #0891b2; }
 .type-objection { background-color: #dc2626; }
 .type-rebuttal { background-color: #ea580c; }
@@ -353,7 +484,8 @@
 .confidence-badge {
   font-size: 0.6rem;
   padding: 0.05rem 0.3rem;
-  border-radius: 3px;
+  border-radius: 999px;
+  border: 1px solid #94a3b8;
   font-weight: 500;
   flex-shrink: 0;
 }
@@ -392,6 +524,12 @@
   background-color: #dcfce7;
   color: #166534;
   border: 1px solid #86efac;
+}
+
+.tactic-rhetorical {
+  background-color: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde047;
 }
 
 .claim-text {
@@ -624,11 +762,20 @@
   text-decoration: underline;
 }
 
-/* --- Footer / Statement Input --- */
+/* --- Footer / Statement Input (fixed overlay — slides out when hidden) --- */
 .app-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
   border-top: 1px solid #e2e8f0;
   background: #fff;
-  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.app-footer--hidden {
+  transform: translateY(110%);
 }
 
 .statement-input {
@@ -671,13 +818,13 @@
 }
 
 .mode-toggle.active {
-  background: #8b5cf6;
-  border-color: #8b5cf6;
+  background: #1e293b;
+  border-color: #1e293b;
   color: #fff;
 }
 
 .mode-toggle.active:hover {
-  background: #7c3aed;
+  background: #334155;
 }
 
 .speaker-label {
@@ -987,14 +1134,14 @@
 }
 
 .chat-message.assistant .chat-bubble {
-  background: #8b5cf6;
+  background: #334155;
   color: #fff;
   border-bottom-left-radius: 4px;
 }
 
 .chat-map-updated {
   font-size: 0.7rem;
-  color: #8b5cf6;
+  color: #64748b;
   font-weight: 500;
   margin-top: 0.2rem;
   padding-left: 0.25rem;
@@ -1138,6 +1285,293 @@
   font-size: 0.7rem;
   color: #94a3b8;
   font-style: italic;
+}
+
+/* --- Dark mode overrides ([data-dark="true"] on <html>) --- */
+[data-dark="true"] .app {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+[data-dark="true"] .app-header {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+[data-dark="true"] .app-header h1 {
+  color: #f1f5f9;
+}
+
+[data-dark="true"] .tab-bar {
+  background: #1e293b;
+  border-bottom-color: #334155;
+}
+[data-dark="true"] .tab-btn {
+  color: #64748b;
+}
+[data-dark="true"] .tab-btn:hover {
+  color: #cbd5e1;
+}
+[data-dark="true"] .tab-btn--active {
+  color: #e2e8f0;
+  border-bottom-color: #e2e8f0;
+}
+[data-dark="true"] .tab-gauge-inline-track {
+  background: #334155;
+}
+
+[data-dark="true"] .app-footer {
+  background: #1e293b;
+  border-top-color: #334155;
+}
+
+[data-dark="true"] .graph-area,
+[data-dark="true"] .argument-map {
+  background: #0f172a;
+}
+
+[data-dark="true"] .argument-map p {
+  color: #475569;
+}
+
+[data-dark="true"] .list-area {
+  background: #0f172a;
+}
+[data-dark="true"] .map-tree-item {
+  border-bottom-color: #1e293b;
+}
+[data-dark="true"] .map-tree-cell:hover {
+  filter: brightness(1.25);
+}
+[data-dark="true"] .map-tree-crosslink {
+  background: #1e293b;
+  border-color: #334155;
+  color: #64748b;
+}
+[data-dark="true"] .tree-toggle {
+  color: #475569;
+}
+[data-dark="true"] .tree-toggle:hover {
+  color: #94a3b8;
+}
+[data-dark="true"] .tree-collapsed-summary {
+  color: #475569;
+}
+
+[data-dark="true"] .node-list h3 {
+  color: #64748b;
+}
+[data-dark="true"] .node-list li {
+  border-bottom-color: #1e293b;
+}
+[data-dark="true"] .node-list li:hover {
+  background-color: #1e293b;
+}
+
+[data-dark="true"] .node-id-badge {
+  background-color: #0f172a;
+  color: #64748b;
+  border-color: #334155;
+}
+
+[data-dark="true"] .confidence-high {
+  background-color: #052e16;
+  color: #86efac;
+}
+[data-dark="true"] .confidence-medium {
+  background-color: #422006;
+  color: #fcd34d;
+}
+[data-dark="true"] .confidence-low {
+  background-color: #450a0a;
+  color: #fca5a5;
+}
+[data-dark="true"] .tactic-fallacy {
+  background-color: #450a0a;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+[data-dark="true"] .tactic-technique {
+  background-color: #052e16;
+  color: #86efac;
+  border-color: #14532d;
+}
+[data-dark="true"] .tactic-rhetorical {
+  background-color: #422006;
+  color: #fcd34d;
+  border-color: #713f12;
+}
+
+[data-dark="true"] .rate-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #64748b;
+}
+[data-dark="true"] .rate-btn:hover {
+  background: #334155;
+}
+[data-dark="true"] .rate-btn.active-up {
+  border-color: #34d399;
+  background: #052e16;
+}
+[data-dark="true"] .rate-btn.active-down {
+  border-color: #ef4444;
+  background: #450a0a;
+}
+[data-dark="true"] .rate-btn.rate-btn-unavailable:hover {
+  background: #1e293b;
+}
+
+[data-dark="true"] .concede-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+[data-dark="true"] .concede-btn:hover:not(:disabled) {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+[data-dark="true"] .concede-btn--active {
+  background: #064e3b;
+  border-color: #34d399;
+  color: #a7f3d0;
+}
+[data-dark="true"] .concede-btn--active:hover:not(:disabled) {
+  background: #065f46;
+}
+
+[data-dark="true"] .skip-turn-btn {
+  border-color: #334155;
+  color: #64748b;
+}
+[data-dark="true"] .skip-turn-btn:hover {
+  background: #334155;
+  color: #cbd5e1;
+}
+[data-dark="true"] .history-btn {
+  border-color: #334155;
+  color: #64748b;
+}
+[data-dark="true"] .history-btn:hover:not(:disabled) {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+[data-dark="true"] .settings-btn {
+  color: #64748b;
+  border-color: #334155;
+}
+[data-dark="true"] .settings-btn:hover,
+[data-dark="true"] .settings-btn--open {
+  color: #cbd5e1;
+  border-color: #475569;
+}
+[data-dark="true"] .settings-dropdown {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+[data-dark="true"] .settings-section-label {
+  color: #475569;
+}
+[data-dark="true"] .settings-dropdown > div + div > .settings-section-label {
+  border-top-color: #334155;
+}
+[data-dark="true"] .theme-option:hover {
+  background: #0f172a;
+}
+[data-dark="true"] .theme-option--active {
+  background: #0f172a;
+}
+[data-dark="true"] .theme-label {
+  color: #e2e8f0;
+}
+[data-dark="true"] .theme-names {
+  color: #475569;
+}
+
+[data-dark="true"] .input-row textarea {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+[data-dark="true"] .input-row textarea::placeholder {
+  color: #475569;
+}
+
+[data-dark="true"] .chat-log {
+  background: #1e293b;
+  border-color: #334155;
+}
+[data-dark="true"] .chat-area .empty-message {
+  color: #475569;
+}
+
+[data-dark="true"] .popup-card {
+  background: #1e293b;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+[data-dark="true"] .popup-close {
+  color: #475569;
+}
+[data-dark="true"] .popup-close:hover {
+  color: #e2e8f0;
+}
+[data-dark="true"] .popup-section h4 {
+  color: #475569;
+}
+[data-dark="true"] .popup-quote {
+  background: #0f172a;
+  color: #cbd5e1;
+}
+[data-dark="true"] .popup-summary {
+  color: #cbd5e1;
+}
+[data-dark="true"] .tactic-reason {
+  color: #64748b;
+}
+[data-dark="true"] .popup-tag {
+  background: #0f172a;
+  border-color: #334155;
+  color: #64748b;
+}
+
+[data-dark="true"] .inactive-banner {
+  background: #1e293b;
+  border-color: #334155;
+  color: #64748b;
+}
+[data-dark="true"] .inactive-banner-icon {
+  color: #475569;
+}
+[data-dark="true"] .inactive-banner-reason {
+  color: #475569;
+}
+
+[data-dark="true"] .gauge-track {
+  background: linear-gradient(to right, #1e3a5f, #1e293b 50%, #064e3b);
+}
+[data-dark="true"] .gauge-agreement-content {
+  color: #cbd5e1;
+}
+[data-dark="true"] .gauge-agreed-by {
+  color: #475569;
+}
+[data-dark="true"] .gauge-agreement-note {
+  color: #475569;
+}
+
+[data-dark="true"] .empty-message {
+  color: #475569;
+}
+
+[data-dark="true"] .mode-toggle {
+  background: #1e293b;
+  border-color: #334155;
+  color: #64748b;
+}
+[data-dark="true"] .mode-toggle:hover {
+  background: #334155;
+  color: #cbd5e1;
 }
 
 /* --- Generic button styles --- */

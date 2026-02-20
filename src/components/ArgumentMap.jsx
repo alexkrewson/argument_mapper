@@ -21,129 +21,109 @@ if (typeof cytoscape("layout", "dagre") === "undefined") {
   cytoscape.use(dagre);
 }
 
-const stylesheet = [
-  // --- Base node style ---
-  {
-    selector: "node",
-    style: {
-      label: "data(label)",
-      "text-wrap": "wrap",
-      "text-max-width": "200px",
-      "font-size": "12px",
-      "text-valign": "center",
-      "text-halign": "center",
-      "text-margin-y": 13,
-      width: "label",
-      "min-width": "160px",
-      height: "label",
-      shape: "roundrectangle",
-      "background-color": "#f8fafc",
-      "border-width": 2,
-      "border-color": "#94a3b8",
-      padding: "26px",
+function buildStylesheet(theme) {
+  const a = theme.a, b = theme.b;
+  const dark = !!theme.dark;
+  return [
+    // --- Base node style ---
+    {
+      selector: "node",
+      style: {
+        label: "data(label)",
+        "text-wrap": "wrap",
+        "text-max-width": "200px",
+        "font-size": "12px",
+        "text-valign": "center",
+        "text-halign": "center",
+        "text-margin-y": 13,
+        width: "label",
+        "min-width": "160px",
+        height: "label",
+        shape: "roundrectangle",
+        color: dark ? "#e2e8f0" : "#1e293b",
+        "background-color": dark ? "#1e293b" : "#f8fafc",
+        "border-width": 2,
+        "border-color": dark ? "#475569" : "#94a3b8",
+        padding: "26px",
+      },
     },
-  },
-  // --- Node types ---
-  {
-    selector: 'node[type = "claim"]',
-    style: {
-      "border-width": 3,
-      "font-weight": "bold",
-      "font-size": "13px",
+    // --- Node types ---
+    {
+      selector: 'node[type = "claim"]',
+      style: { "border-width": 3, "font-weight": "bold", "font-size": "13px" },
     },
-  },
-  // --- Speaker colors ---
-  {
-    selector: 'node[speaker = "Blue"]',
-    style: {
-      "background-color": "#dbeafe",
-      "border-color": "#3b82f6",
+    // --- Speaker colors (internal IDs are always "Blue"/"Green") ---
+    {
+      selector: 'node[speaker = "Blue"]',
+      style: { "background-color": a.bg, "border-color": a.border },
     },
-  },
-  {
-    selector: 'node[speaker = "Green"]',
-    style: {
-      "background-color": "#dcfce7",
-      "border-color": "#22c55e",
+    {
+      selector: 'node[speaker = "Green"]',
+      style: { "background-color": b.bg, "border-color": b.border },
     },
-  },
-  {
-    selector: 'node[speaker = "Moderator"]',
-    style: {
-      "background-color": "#ede9fe",
-      "border-color": "#8b5cf6",
+    {
+      selector: 'node[speaker = "Moderator"]',
+      style: { "background-color": dark ? "#2e1065" : "#ede9fe", "border-color": dark ? "#64748b" : "#94a3b8" },
     },
-  },
-  // --- Faded nodes (opacity — agreed-upon/retracted + their supporters) ---
-  {
-    selector: "node.faded",
-    style: { opacity: 0.25 },
-  },
-  {
-    selector: "edge.faded",
-    style: { opacity: 0.25 },
-  },
-  // --- Contradiction/walkback colored backgrounds (after speaker colors to override) ---
-  {
-    selector: "node.contradiction-faded",
-    style: { "background-color": "#fee2e2" },
-  },
-  {
-    selector: "node.walkback-faded",
-    style: { "background-color": "#ffedd5" },
-  },
-  // --- Contradiction borders: dashed red border + speaker-colored outline ring ---
-  {
-    selector: "node.contradiction-border",
-    style: {
-      "background-color": "#fee2e2",
-      "border-color": "#dc2626",
-      "border-style": "dashed",
-      "border-dash-pattern": [6, 4],
-      "border-width": 3,
-      opacity: 1,
+    // --- Faded nodes ---
+    { selector: "node.faded", style: { opacity: 0.25 } },
+    { selector: "edge.faded", style: { opacity: 0.25 } },
+    // --- Contradiction/walkback colored backgrounds ---
+    { selector: "node.contradiction-faded", style: { "background-color": dark ? "#450a0a" : "#fee2e2" } },
+    { selector: "node.walkback-faded",      style: { "background-color": dark ? "#431407" : "#ffedd5" } },
+    // --- Contradiction borders ---
+    {
+      selector: "node.contradiction-border",
+      style: {
+        "background-color": dark ? "#450a0a" : "#fee2e2",
+        "border-color": "#dc2626",
+        "border-style": "dashed",
+        "border-dash-pattern": [6, 4],
+        "border-width": 3,
+        opacity: 1,
+      },
     },
-  },
-  {
-    selector: 'node.contradiction-border[speaker = "Blue"]',
-    style: { "outline-color": "#3b82f6", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-  },
-  {
-    selector: 'node.contradiction-border[speaker = "Green"]',
-    style: { "outline-color": "#22c55e", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-  },
-  // --- Walkback borders: dashed orange border + speaker-colored outline ring ---
-  {
-    selector: "node.walkback-border",
-    style: {
-      "background-color": "#ffedd5",
-      "border-color": "#f97316",
-      "border-style": "dashed",
-      "border-dash-pattern": [6, 4],
-      "border-width": 3,
-      opacity: 1,
+    {
+      selector: 'node.contradiction-border[speaker = "Blue"]',
+      style: { "outline-color": a.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
     },
-  },
-  {
-    selector: 'node.walkback-border[speaker = "Blue"]',
-    style: { "outline-color": "#3b82f6", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-  },
-  {
-    selector: 'node.walkback-border[speaker = "Green"]',
-    style: { "outline-color": "#22c55e", "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-  },
-  // --- Base edge style --- uniform moderator purple, no arrows, no labels ---
-  {
-    selector: "edge",
-    style: {
-      "curve-style": "straight",
-      "target-arrow-shape": "none",
-      "source-arrow-shape": "none",
-      width: 2,
-      "line-color": "#8b5cf6",
+    {
+      selector: 'node.contradiction-border[speaker = "Green"]',
+      style: { "outline-color": b.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
     },
-  },
-];
+    // --- Walkback borders ---
+    {
+      selector: "node.walkback-border",
+      style: {
+        "background-color": dark ? "#431407" : "#ffedd5",
+        "border-color": "#f97316",
+        "border-style": "dashed",
+        "border-dash-pattern": [6, 4],
+        "border-width": 3,
+        opacity: 1,
+      },
+    },
+    {
+      selector: 'node.walkback-border[speaker = "Blue"]',
+      style: { "outline-color": a.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
+    },
+    {
+      selector: 'node.walkback-border[speaker = "Green"]',
+      style: { "outline-color": b.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
+    },
+    // --- Base edge style ---
+    {
+      selector: "edge",
+      style: {
+        "curve-style": "straight",
+        "target-arrow-shape": "none",
+        "source-arrow-shape": "none",
+        width: 2,
+        "line-color": "#94a3b8",
+      },
+    },
+  ];
+}
 
 /**
  * After layout, route edges as a clean tree-diagram (org-chart) style.
@@ -221,6 +201,21 @@ function applyEdgeCurves(cy) {
   });
 }
 
+function pulseNode(el, color) {
+  el.animate({
+    style: { "outline-color": color, "outline-width": 10, "outline-opacity": 0.75, "outline-offset": 3 },
+    duration: 1500,
+    easing: "ease-in-out",
+    complete: () => {
+      el.animate({
+        style: { "outline-width": 0, "outline-opacity": 0 },
+        duration: 1500,
+        easing: "ease-in-out",
+      });
+    },
+  });
+}
+
 function runLayout(cy, onDone) {
   const layout = cy.layout({
     name: "dagre",
@@ -239,9 +234,13 @@ function runLayout(cy, onDone) {
   layout.run();
 }
 
-export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds }) {
+export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, onToggleUI, theme }) {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
+  const onToggleUIRef = useRef(onToggleUI);
+  useEffect(() => { onToggleUIRef.current = onToggleUI; }, [onToggleUI]);
+  const themeRef = useRef(theme);
+  useEffect(() => { themeRef.current = theme; }, [theme]);
 
   // Initialize cytoscape once
   useEffect(() => {
@@ -249,7 +248,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
 
     const cy = cytoscape({
       container: containerRef.current,
-      style: stylesheet,
+      style: buildStylesheet(themeRef.current),
       userZoomingEnabled: true,
       userPanningEnabled: true,
       boxSelectionEnabled: false,
@@ -282,28 +281,162 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       },
     ]);
 
+    // ── Touch gesture state machine ────────────────────────────────────────
+    // States: idle | first-down | awaiting-second | second-down | drag-zoom
+    // Gestures:
+    //   single tap on background  → toggle header/footer (UI)
+    //   1-finger quick double-tap → zoom in ×2.5 centred on tap point
+    //   1-finger double-tap+hold → drag down=zoom-in, up=zoom-out
+    //   2-finger double-tap      → zoom out ×0.4
+    const DOUBLE_TAP_MS  = 300;  // window between two taps
+    const HOLD_MS        = 180;  // hold duration before drag-zoom activates
+    const ZOOM_SENS      = 0.015; // zoom factor per pixel dragged
+
+    const g = {
+      state: "idle",
+      tapDownTime: 0, lastLiftTime: 0,
+      tapClientX: 0,  tapClientY: 0,
+      holdTimer: null, singleTapTimer: null,
+      dragStartY: 0,  dragStartZoom: 1,
+    };
+
+    function rendPos(clientX, clientY) {
+      const r = containerRef.current.getBoundingClientRect();
+      return { x: clientX - r.left, y: clientY - r.top };
+    }
+
+    function zoomToPoint(newZoom, rx, ry) {
+      const z0 = cy.zoom(), p0 = cy.pan();
+      const gx = (rx - p0.x) / z0, gy = (ry - p0.y) / z0;
+      cy.animate({
+        zoom: newZoom,
+        pan: { x: rx - gx * newZoom, y: ry - gy * newZoom },
+        duration: 300, easing: "ease-in-out",
+      });
+    }
+
+    function onTouchStart(e) {
+      const now = Date.now();
+      const nf  = e.touches.length;
+      const dt  = now - g.lastLiftTime;
+
+      if (g.state === "awaiting-second" && dt < DOUBLE_TAP_MS) {
+        // ── Second tap detected ──
+        clearTimeout(g.singleTapTimer);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        if (nf === 1) {
+          g.state      = "second-down";
+          g.tapClientX = e.touches[0].clientX;
+          g.tapClientY = e.touches[0].clientY;
+          g.dragStartY = e.touches[0].clientY;
+          g.dragStartZoom = cy.zoom();
+          g.tapDownTime   = now;
+          g.holdTimer = setTimeout(() => { g.state = "drag-zoom"; }, HOLD_MS);
+        } else if (nf === 2) {
+          // Two-finger double-tap → zoom out
+          g.state = "idle";
+          cy.animate({ zoom: Math.max(cy.minZoom(), cy.zoom() * 0.4), duration: 300, easing: "ease-in-out" });
+        }
+      } else {
+        // ── First tap (or stale gap) ──
+        clearTimeout(g.singleTapTimer);
+        clearTimeout(g.holdTimer);
+        g.state       = "first-down";
+        g.tapDownTime = now;
+        if (nf === 1) {
+          g.tapClientX = e.touches[0].clientX;
+          g.tapClientY = e.touches[0].clientY;
+        }
+      }
+    }
+
+    function onTouchMove(e) {
+      if (g.state === "second-down") {
+        const dx = Math.abs(e.touches[0].clientX - g.tapClientX);
+        const dy = Math.abs(e.touches[0].clientY - g.tapClientY);
+        if (dx > 8 || dy > 8) { clearTimeout(g.holdTimer); g.state = "idle"; }
+      } else if (g.state === "drag-zoom") {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        const delta   = e.touches[0].clientY - g.dragStartY; // +down = zoom in
+        const newZoom = Math.max(cy.minZoom(), Math.min(cy.maxZoom(),
+          g.dragStartZoom * Math.exp(delta * ZOOM_SENS)));
+        const { x, y } = rendPos(g.tapClientX, g.tapClientY);
+        cy.zoom({ level: newZoom, renderedPosition: { x, y } });
+      }
+    }
+
+    function onTouchEnd(e) {
+      const now = Date.now();
+      if (g.state === "first-down") {
+        if (now - g.tapDownTime < DOUBLE_TAP_MS) {
+          // Quick lift — start window for second tap
+          g.state        = "awaiting-second";
+          g.lastLiftTime = now;
+          g.singleTapTimer = setTimeout(() => {
+            g.state = "idle";
+            // Single tap confirmed — toggle UI (touch path)
+            onToggleUIRef.current?.();
+          }, DOUBLE_TAP_MS);
+        } else {
+          g.state = "idle";
+        }
+      } else if (g.state === "second-down") {
+        clearTimeout(g.holdTimer);
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        g.state = "idle";
+        // Quick second tap — zoom in
+        const { x, y } = rendPos(g.tapClientX, g.tapClientY);
+        zoomToPoint(Math.min(cy.maxZoom(), cy.zoom() * 2.5), x, y);
+      } else if (g.state === "drag-zoom") {
+        g.state = "idle";
+      }
+    }
+
+    const el = containerRef.current;
+    el.addEventListener("touchstart", onTouchStart, { capture: true, passive: false });
+    el.addEventListener("touchmove",  onTouchMove,  { capture: true, passive: false });
+    el.addEventListener("touchend",   onTouchEnd,   { capture: true, passive: false });
+
     cyRef.current = cy;
 
     return () => {
+      el.removeEventListener("touchstart", onTouchStart, { capture: true });
+      el.removeEventListener("touchmove",  onTouchMove,  { capture: true });
+      el.removeEventListener("touchend",   onTouchEnd,   { capture: true });
       cy.destroy();
       cyRef.current = null;
     };
   }, []);
 
-  // Wire up node tap → onNodeClick callback
+  // Wire up node tap → onNodeClick; background mouse-click → toggleUI (desktop)
   useEffect(() => {
     const cy = cyRef.current;
-    if (!cy || !onNodeClick) return;
+    if (!cy) return;
 
-    const handler = (evt) => {
+    const nodeHandler = (evt) => {
       const data = evt.target.data();
-      // Find the full node object from props to include metadata
       const node = nodes.find((n) => n.id === data.id);
-      if (node) onNodeClick(node);
+      if (node) onNodeClick?.(node);
     };
-    cy.on("tap", "node", handler);
-    return () => cy.off("tap", "node", handler);
-  }, [onNodeClick, nodes]);
+    cy.on("tap", "node", nodeHandler);
+
+    // Desktop only: background tap toggles UI (touch is handled by native gesture machine)
+    const bgHandler = (evt) => {
+      if (evt.target === cy && !evt.originalEvent?.changedTouches?.length) {
+        onToggleUI?.();
+      }
+    };
+    cy.on("tap", bgHandler);
+
+    return () => {
+      cy.off("tap", "node", nodeHandler);
+      cy.off("tap", bgHandler);
+    };
+  }, [onNodeClick, onToggleUI, nodes]);
 
   // Update elements and re-run layout whenever nodes/edges change.
   // Uses a diff-based approach so existing nodes keep their positions and
@@ -404,6 +537,30 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       runLayout(cy);
     }
   }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds]);
+
+  // Theme stylesheet is baked in at init time (buildStylesheet(themeRef.current)).
+  // App.jsx passes key={themeKey} so this component remounts on every theme change,
+  // giving a fresh cy with the correct stylesheet — no in-place cy.style() call
+  // needed (which would trigger resetToDefault() and corrupt the renderer).
+
+  // Pulse new nodes after layout settles — kept separate so clearing newNodeIds
+  // doesn't re-trigger the layout above.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !newNodeIds?.size) return;
+    const timer = setTimeout(() => {
+      cy.nodes()
+        .filter((n) => newNodeIds.has(n.id()))
+        .forEach((el) => {
+          const spk = el.data("speaker");
+          const color = spk === "Blue"  ? theme.a.border
+                      : spk === "Green" ? theme.b.border
+                      : "#94a3b8";
+          pulseNode(el, color);
+        });
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [newNodeIds, theme]);
 
   return (
     <div className="argument-map">

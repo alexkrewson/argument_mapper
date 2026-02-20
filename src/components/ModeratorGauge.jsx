@@ -51,7 +51,7 @@ export default function ModeratorGauge({ analysis, onShowDetail }) {
   const pct = ((analysis.leaning + 1) / 2) * 100;
 
   // Dot color: blue when leaning A, gray when neutral, green when leaning B
-  let markerColor = "#8b5cf6"; // neutral purple
+  let markerColor = "#1e293b"; // neutral dark
   if (analysis.leaning < -0.1) markerColor = "#3b82f6"; // blue
   if (analysis.leaning > 0.1) markerColor = "#22c55e"; // green
 

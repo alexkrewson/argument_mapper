@@ -7,9 +7,9 @@
  */
 
 import { useState, useRef, useEffect } from "react";
-import { spk } from "../utils/speakers.js";
+import { speakerName } from "../utils/speakers.js";
 
-export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo }) {
+export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo, theme }) {
   const [text, setText] = useState("");
   const textareaRef = useRef(null);
 
@@ -36,10 +36,12 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
     }
   };
 
-  const speakerColor = currentSpeaker === "Blue" ? "#3b82f6" : "#22c55e";
-  const speakerGlow = currentSpeaker === "Blue" ? "rgba(59,130,246,0.15)" : "rgba(34,197,94,0.15)";
-  const activeColor = loading ? "#8b5cf6" : speakerColor;
-  const activeGlow  = loading ? "rgba(139,92,246,0.15)" : speakerGlow;
+  const speakerColor = theme?.a && currentSpeaker === "Blue" ? theme.a.border
+                     : theme?.b && currentSpeaker === "Green" ? theme.b.border
+                     : currentSpeaker === "Blue" ? "#3b82f6" : "#22c55e";
+  const speakerGlow = `${speakerColor}26`; // 15% alpha hex
+  const activeColor = loading ? "#475569" : speakerColor;
+  const activeGlow  = loading ? "rgba(71,85,105,0.15)" : speakerGlow;
 
   return (
     <form
@@ -48,10 +50,10 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
       onSubmit={handleSubmit}
     >
       <div className="input-header">
-        <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#8b5cf6" : speakerColor }}>
+        <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#475569" : speakerColor }}>
           {loading && loadingSpeaker ? (
-            <>Considering {spk(loadingSpeaker)}'s statement<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
-          ) : `${spk(currentSpeaker)}'s turn`}
+            <>Considering {speakerName(loadingSpeaker, theme)}'s statement<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
+          ) : `${speakerName(currentSpeaker, theme)}'s turn`}
         </div>
         {!loading && (
           <div className="turn-controls">
@@ -72,7 +74,7 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
           placeholder={
             directMode
               ? "Ask the AI moderator anything..."
-              : `${spk(currentSpeaker)}, say whatever you want...`
+              : `${speakerName(currentSpeaker, theme)}, say whatever you want...`
           }
           value={text}
           onChange={(e) => setText(e.target.value)}

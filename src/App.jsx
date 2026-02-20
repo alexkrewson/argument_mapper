@@ -14,8 +14,10 @@ import ArgumentMap from "./components/ArgumentMap";
 import NodeList from "./components/NodeList";
 import MapTreeView from "./components/MapTreeView";
 import NodeDetailPopup from "./components/NodeDetailPopup";
+import SettingsPanel from "./components/SettingsPanel";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
-import { spk } from "./utils/speakers.js";
+import { speakerName, speakerBorder } from "./utils/speakers.js";
+import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
 import "./App.css";
 
 // Initial empty map — spec v1.0 wrapper format
@@ -75,6 +77,22 @@ export default function App() {
   );
   const directMode = activeTab === "chat";
 
+  const [uiVisible, setUiVisible] = useState(true);
+  const toggleUI = useCallback(() => setUiVisible((v) => !v), []);
+
+  const [themeKey, setThemeKey] = useState(() => localStorage.getItem("theme") ?? DEFAULT_THEME_KEY);
+  const theme = useMemo(() => THEMES[themeKey] ?? THEMES[DEFAULT_THEME_KEY], [themeKey]);
+  const handleThemeChange = useCallback((key) => {
+    setThemeKey(key);
+    localStorage.setItem("theme", key);
+  }, []);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-dark", theme.dark ? "true" : "false");
+  }, [theme]);
+
+  const [newNodeIds, setNewNodeIds] = useState(() => new Set());
+  const newNodeTimerRef = useRef(null);
+
   const chatLogRef = useRef(null);
   useEffect(() => {
     if (chatLogRef.current) {
@@ -117,6 +135,10 @@ export default function App() {
           }
           return next;
         });
+        const ids = new Set(newNodes.map((n) => n.id));
+        setNewNodeIds(ids);
+        clearTimeout(newNodeTimerRef.current);
+        newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
       }
 
       // Push to history (enables undo/redo)
@@ -185,6 +207,14 @@ export default function App() {
       const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
       setChatMessages((prev) => [...prev, assistantMsg]);
       if (updatedMap) {
+        const oldIds = new Set(argumentMap.argument_map.nodes.map((n) => n.id));
+        const chatNewNodes = updatedMap.argument_map.nodes.filter((n) => !oldIds.has(n.id));
+        if (chatNewNodes.length > 0) {
+          const ids = new Set(chatNewNodes.map((n) => n.id));
+          setNewNodeIds(ids);
+          clearTimeout(newNodeTimerRef.current);
+          newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
+        }
         pushHistory(updatedMap, moderatorAnalysis);
       }
     } catch (err) {
@@ -323,12 +353,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>Argument Mapper</h1>
-      </header>
-
-      {/* Tab bar */}
-      <nav className="tab-bar">
+      {/* Fixed top bar: title + tabs slide together */}
+      <div className={`app-top${uiVisible ? "" : " app-top--hidden"}`}>
+        <header className="app-header">
+          <h1>Argument Mapper</h1>
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} />
+        </header>
+        <nav className="tab-bar">
         <button
           className={`tab-btn${activeTab === "map" ? " tab-btn--active" : ""}`}
           onClick={() => setActiveTab("map")}
@@ -349,28 +380,32 @@ export default function App() {
         </button>
         {effectiveAnalysis && (() => {
           const gaugePct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#8b5cf6";
+          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? theme.a.border : effectiveAnalysis.leaning > 0.1 ? theme.b.border : "#1e293b";
           return (
             <button
               className={`tab-btn tab-gauge-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
               onClick={() => setActiveTab("moderator")}
               title="AI Moderator Analysis"
             >
-              <span className="tab-gauge-label-a">Blue</span>
+              <span className="tab-gauge-label-a" style={{ color: theme.a.border }}>{theme.a.name}</span>
               <span className="tab-gauge-inline-track">
                 <span className="tab-gauge-inline-marker" style={{ left: `${gaugePct}%`, backgroundColor: gaugeColor }} />
               </span>
-              <span className="tab-gauge-label-b">Green</span>
+              <span className="tab-gauge-label-b" style={{ color: theme.b.border }}>{theme.b.name}</span>
             </button>
           );
         })()}
-      </nav>
+        </nav>
+      </div>
+      {/* In-flow spacer keeps content below the fixed top bar */}
+      <div className="app-top-spacer" aria-hidden="true" />
 
       {/* Main content: one tab at a time */}
       <main className="app-main">
         {activeTab === "map" && (
           <div className="graph-area">
             <ArgumentMap
+              key={themeKey}
               nodes={inner.nodes}
               edges={inner.edges}
               onNodeClick={handleNodeClick}
@@ -379,12 +414,15 @@ export default function App() {
               walkbackFadedIds={fadedInfo.walkbackFadedIds}
               contradictionBorderIds={fadedInfo.contradictionBorderIds}
               walkbackBorderIds={fadedInfo.walkbackBorderIds}
+              newNodeIds={newNodeIds}
+              onToggleUI={toggleUI}
+              theme={theme}
             />
           </div>
         )}
 
         {activeTab === "list" && (
-          <div className="list-area">
+          <div className="list-area" onClick={(e) => { if (e.target === e.currentTarget) toggleUI(); }}>
             <MapTreeView
               nodes={inner.nodes}
               edges={inner.edges}
@@ -397,6 +435,8 @@ export default function App() {
               walkbackFadedIds={fadedInfo.walkbackFadedIds}
               contradictionBorderIds={fadedInfo.contradictionBorderIds}
               walkbackBorderIds={fadedInfo.walkbackBorderIds}
+              newNodeIds={newNodeIds}
+              theme={theme}
             />
           </div>
         )}
@@ -412,7 +452,7 @@ export default function App() {
                     <div
                       className="chat-bubble"
                       style={msg.role === "user"
-                        ? { backgroundColor: msg.speaker === "Blue" ? "#3b82f6" : "#22c55e" }
+                        ? { backgroundColor: speakerBorder(msg.speaker, theme) }
                         : undefined}
                     >{msg.content}</div>
                     {msg.mapUpdated && <div className="chat-map-updated">Map updated</div>}
@@ -428,16 +468,20 @@ export default function App() {
             return <p className="empty-message">No moderator analysis yet. Submit some arguments first.</p>;
           }
           const pct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const markerColor = effectiveAnalysis.leaning < -0.1 ? "#3b82f6" : effectiveAnalysis.leaning > 0.1 ? "#22c55e" : "#8b5cf6";
-          const leaningLabel = effectiveAnalysis.leaning < -0.1 ? "Leaning A" : effectiveAnalysis.leaning > 0.1 ? "Leaning B" : "Balanced";
+          const markerColor = effectiveAnalysis.leaning < -0.1 ? theme.a.border : effectiveAnalysis.leaning > 0.1 ? theme.b.border : "#1e293b";
+          const leaningLabel = effectiveAnalysis.leaning < -0.1 ? `Leaning ${theme.a.name}` : effectiveAnalysis.leaning > 0.1 ? `Leaning ${theme.b.name}` : "Balanced";
+          // Replace internal speaker IDs in AI-generated prose with theme display names
+          const fixNames = (s) => typeof s === "string"
+            ? s.replace(/\bBlue\b/g, theme.a.name).replace(/\bGreen\b/g, theme.b.name)
+            : s;
           return (
             <div className="moderator-tab-content">
               <div className="popup-section">
                 <h4>Debate Leaning</h4>
                 <div className="gauge-popup-track-wrapper">
                   <div className="gauge-labels">
-                    <span className="gauge-label-a">Blue</span>
-                    <span className="gauge-label-b">Green</span>
+                    <span className="gauge-label-a" style={{ color: theme.a.border }}>{theme.a.name}</span>
+                    <span className="gauge-label-b" style={{ color: theme.b.border }}>{theme.b.name}</span>
                   </div>
                   <div className="gauge-track gauge-track-large">
                     <div className="gauge-marker gauge-marker-large" style={{ left: `${pct}%`, backgroundColor: markerColor }} />
@@ -446,15 +490,15 @@ export default function App() {
                     {leaningLabel} ({effectiveAnalysis.leaning > 0 ? "+" : ""}{effectiveAnalysis.leaning.toFixed(2)})
                   </div>
                 </div>
-                <p className="popup-summary" style={{ marginTop: "0.75rem" }}>{effectiveAnalysis.leaning_reason}</p>
+                <p className="popup-summary" style={{ marginTop: "0.75rem" }}>{fixNames(effectiveAnalysis.leaning_reason)}</p>
               </div>
               <div className="popup-section">
-                <h4>Blue's Argumentative Style</h4>
-                <p className="popup-summary" style={{ borderLeft: "3px solid #3b82f6", paddingLeft: "0.75rem" }}>{effectiveAnalysis.user_a_style}</p>
+                <h4>{theme.a.name}'s Argumentative Style</h4>
+                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.a.border}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_a_style)}</p>
               </div>
               <div className="popup-section">
-                <h4>Green's Argumentative Style</h4>
-                <p className="popup-summary" style={{ borderLeft: "3px solid #22c55e", paddingLeft: "0.75rem" }}>{effectiveAnalysis.user_b_style}</p>
+                <h4>{theme.b.name}'s Argumentative Style</h4>
+                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.b.border}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_b_style)}</p>
               </div>
               {effectiveAnalysis.agreements?.length > 0 && (
                 <div className="popup-section">
@@ -462,9 +506,9 @@ export default function App() {
                   <ul className="gauge-agreements-list">
                     {effectiveAnalysis.agreements.map((a) => (
                       <li key={a.nodeId} className="gauge-agreement-item">
-                        <span className="speaker-badge" style={{ backgroundColor: a.nodeSpeaker === "Blue" ? "#3b82f6" : "#22c55e" }}>{spk(a.nodeSpeaker)}</span>
+                        <span className="speaker-badge" style={{ backgroundColor: speakerBorder(a.nodeSpeaker, theme) }}>{speakerName(a.nodeSpeaker, theme)}</span>
                         <span className="gauge-agreement-content">{a.content}</span>
-                        {a.agreedBy && <span className="gauge-agreed-by">— agreed by {spk(a.agreedBy)}</span>}
+                        {a.agreedBy && <span className="gauge-agreed-by">— agreed by {speakerName(a.agreedBy, theme)}</span>}
                       </li>
                     ))}
                   </ul>
@@ -498,13 +542,14 @@ export default function App() {
             onRate={handleRate}
             currentSpeaker={currentSpeaker}
             loading={loading}
+            theme={theme}
           />
         );
       })()}
 
       {/* Statement input at the bottom — hidden on moderator tab */}
       {activeTab !== "moderator" && (
-        <footer className="app-footer">
+        <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
           <StatementInput
             currentSpeaker={currentSpeaker}
             speakerSummary={speakerSummary}
@@ -518,6 +563,7 @@ export default function App() {
             onRedo={handleRedo}
             canUndo={canUndo}
             canRedo={canRedo}
+            theme={theme}
           />
         </footer>
       )}

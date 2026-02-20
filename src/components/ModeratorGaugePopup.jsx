@@ -19,7 +19,7 @@ export default function ModeratorGaugePopup({ analysis, onClose }) {
   if (!analysis) return null;
 
   const pct = ((analysis.leaning + 1) / 2) * 100;
-  let markerColor = "#8b5cf6"; // neutral purple
+  let markerColor = "#1e293b"; // neutral dark
   if (analysis.leaning < -0.1) markerColor = "#3b82f6";
   if (analysis.leaning > 0.1) markerColor = "#22c55e";
 
