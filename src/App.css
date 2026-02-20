@@ -1606,31 +1606,6 @@ button {
    priority over earlier dark-mode overrides at equal specificity.
    ──────────────────────────────────────────────────────────────────────── */
 
-.map-tree-cell .node-id-badge {
-  background-color: var(--na-bg);
-  color: var(--na-text);
-  border-color: var(--na-border);
-}
-
-.map-tree-cell .type-badge,
-.map-tree-cell .type-badge.type-claim,
-.map-tree-cell .type-badge.type-premise,
-.map-tree-cell .type-badge.type-evidence,
-.map-tree-cell .type-badge.type-objection,
-.map-tree-cell .type-badge.type-rebuttal,
-.map-tree-cell .type-badge.type-clarification {
-  background-color: var(--na-bg);
-  color: var(--na-text);
-}
-
-.map-tree-cell .tactic-badge,
-.map-tree-cell .tactic-badge.tactic-fallacy,
-.map-tree-cell .tactic-badge.tactic-technique,
-.map-tree-cell .tactic-badge.tactic-rhetorical {
-  background-color: var(--na-bg);
-  color: var(--na-text);
-  border-color: var(--na-border);
-}
 
 .map-tree-cell .confidence-badge {
   border-color: var(--na-border);
