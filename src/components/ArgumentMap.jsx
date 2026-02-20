@@ -256,7 +256,7 @@ function runLayout(cy, onDone) {
     name: "dagre",
     rankDir: "BT",
     nodeSep: 80,
-    rankSep: 150,
+    rankSep: 75,
     padding: 40,
     animate: true,
     animationDuration: 300,

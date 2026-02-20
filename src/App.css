@@ -1613,7 +1613,7 @@ button {
 }
 
 .map-tree-cell .claim-text {
-  color: var(--na-text);
+  color: #0f172a;
 }
 
 .map-tree-cell .popup-tag {
