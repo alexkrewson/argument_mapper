@@ -1607,19 +1607,28 @@ button {
    ──────────────────────────────────────────────────────────────────────── */
 
 
-.map-tree-cell .confidence-badge {
-  border-color: var(--na-border);
-  color: var(--na-text);
-}
-
-.map-tree-cell .claim-text {
+/* Uniform white-chip treatment for all neutral metadata badges in list cells */
+.map-tree-cell .node-id-badge,
+.map-tree-cell .confidence-badge,
+.map-tree-cell .tactic-badge,
+.map-tree-cell .popup-tag {
+  background: rgba(255,255,255,0.88);
+  border-color: rgba(0,0,0,0.12);
   color: #0f172a;
 }
 
-.map-tree-cell .popup-tag {
-  background: var(--na-bg);
-  border-color: var(--na-border);
-  color: var(--na-text);
+/* Confidence: keep type-specific colored border + text over the white chip */
+.map-tree-cell .confidence-high   { color: #15803d; border-color: #15803d; }
+.map-tree-cell .confidence-medium { color: #a16207; border-color: #a16207; }
+.map-tree-cell .confidence-low    { color: #dc2626; border-color: #dc2626; }
+
+/* Tactic: keep type-specific colored border + text over the white chip */
+.map-tree-cell .tactic-fallacy    { color: #991b1b; border-color: #991b1b; }
+.map-tree-cell .tactic-technique  { color: #166534; border-color: #166534; }
+.map-tree-cell .tactic-rhetorical { color: #854d0e; border-color: #854d0e; }
+
+.map-tree-cell .claim-text {
+  color: #0f172a;
 }
 
 .map-tree-cell .agreement-indicator,
