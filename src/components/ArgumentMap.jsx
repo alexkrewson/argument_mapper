@@ -441,12 +441,40 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     el.addEventListener("touchmove",  onTouchMove,  { capture: true, passive: false });
     el.addEventListener("touchend",   onTouchEnd,   { capture: true, passive: false });
 
+    // ── Mouse double-click zoom (desktop) ──────────────────────────────────
+    // Double left-click  → zoom in  ×2.5 centred on cursor
+    // Double right-click → zoom out ×2.5 centred on cursor
+    // Use native DOM events in capture mode for reliability (same as touch).
+    function onDblClick(e) {
+      if (e.touches) return; // skip touch (handled above)
+      const r = el.getBoundingClientRect();
+      zoomToPoint(Math.min(cy.maxZoom(), cy.zoom() * 2.5), e.clientX - r.left, e.clientY - r.top);
+    }
+    el.addEventListener("dblclick", onDblClick, { capture: true });
+
+    let lastRightClickTime = 0;
+    function onContextMenu(e) {
+      e.preventDefault(); // suppress browser context menu
+      const now = Date.now();
+      if (now - lastRightClickTime < 400) {
+        // Double right-click → zoom out
+        const r = el.getBoundingClientRect();
+        zoomToPoint(Math.max(cy.minZoom(), cy.zoom() / 2.5), e.clientX - r.left, e.clientY - r.top);
+        lastRightClickTime = 0;
+      } else {
+        lastRightClickTime = now;
+      }
+    }
+    el.addEventListener("contextmenu", onContextMenu, { capture: true });
+
     cyRef.current = cy;
 
     return () => {
       el.removeEventListener("touchstart", onTouchStart, { capture: true });
       el.removeEventListener("touchmove",  onTouchMove,  { capture: true });
       el.removeEventListener("touchend",   onTouchEnd,   { capture: true });
+      el.removeEventListener("dblclick", onDblClick, { capture: true });
+      el.removeEventListener("contextmenu", onContextMenu, { capture: true });
       cy.destroy();
       cyRef.current = null;
     };

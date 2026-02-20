@@ -210,7 +210,7 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           <div className="agreement-indicator">
             <span className="agreement-indicator-icon">&#x2714;</span>
             {node.metadata?.agreed_by?.speaker
-              ? `${spk(node.metadata.agreed_by.speaker)} conceded ${spk(node.speaker)}'s point`
+              ? `${speakerName(node.metadata.agreed_by.speaker, theme)} conceded ${speakerName(node.speaker, theme)}'s point`
               : "Conceded"}
           </div>
         )}
