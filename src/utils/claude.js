@@ -59,7 +59,7 @@ JSON schema:
       "type": "claim|premise|objection|rebuttal|evidence|clarification",
       "content": "Neutral, concise summary (1 sentence preferred)",
       "speaker": "Blue|Green",
-      "rating": "up|down|null",
+      "rating": "up|null",
       "metadata": {
         "confidence": "high|medium|low",
         "tags": ["keyword1", "keyword2"],
@@ -145,6 +145,7 @@ Agreement detection:
 - Also set "metadata.agreed_by": { "speaker": "<the agreeing speaker>", "text": "<the original agreeing statement verbatim>" } on that node. The "speaker" is who agreed (the current speaker), and "text" is the exact words from their statement that express agreement.
 - Only set rating on nodes belonging to the OTHER speaker — a speaker cannot agree with their own nodes.
 - Preserve any existing rating values set by the user. Only add new "up" ratings for newly detected agreements. Do not overwrite existing agreed_by metadata.
+- Never set rating to "down". That value is reserved exclusively for user-triggered actions and must never be set by you.
 - If no agreement is detected, leave the rating field unchanged (null or its current value).`;
 
   const displayName = speaker === "Blue" ? speakerNames.a : speakerNames.b;
