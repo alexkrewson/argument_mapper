@@ -47,8 +47,8 @@ export const THEMES = {
   ember: {
     label: "Ember",
     dark: true,
-    a: { name: "Amber",   bg: "#3b1808", border: "#b87040" },
-    b: { name: "Teal",    bg: "#0b2d26", border: "#3d8c7a" },
+    a: { name: "Amber",   bg: "#b87040", border: "#7a4820" },
+    b: { name: "Teal",    bg: "#3d8c7a", border: "#255c50" },
   },
 };
 
