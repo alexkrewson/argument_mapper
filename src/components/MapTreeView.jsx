@@ -139,8 +139,8 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           // Colored speaker cards use white-based values; light contradiction/
           // walkback cards use dark-based values.
           "--na-text":   textColor,
-          "--na-bg":     lightBg ? "rgba(0,0,0,0.07)"    : "rgba(0,0,0,0.18)",
-          "--na-border": lightBg ? "rgba(0,0,0,0.15)"    : "rgba(255,255,255,0.25)",
+          "--na-bg":     lightBg ? "rgba(0,0,0,0.12)"    : "rgba(0,0,0,0.50)",
+          "--na-border": lightBg ? "rgba(0,0,0,0.20)"    : "rgba(255,255,255,0.35)",
         }}
         onClick={() => onNodeClick?.(node)}
       >
@@ -299,6 +299,7 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
       <p className="empty-message" style={{
         position: "absolute", top: "50%", left: "50%",
         transform: "translate(-50%, -50%)",
+        color: theme?.dark ? "#f1f5f9" : "#0f172a",
       }}>
         No statements yet.
       </p>

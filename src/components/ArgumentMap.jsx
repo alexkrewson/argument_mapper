@@ -307,7 +307,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         tpl: (data) => {
           const tacticSymbols = (data.tactics || [])
             .filter((key) => TACTICS[key])
-            .map((key) => `<span title="${TACTICS[key].name}" style="cursor:default;">${TACTICS[key].symbol}</span>`)
+            .map((key) => `<span title="${TACTICS[key].name}" style="cursor:default;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.25);border-radius:3px;padding:1px 4px;font-size:10px;">${TACTICS[key].symbol}</span>`)
             .join("");
           const typeBadge = data.type
             ? `<span class="type-badge type-${data.type}">${data.type}</span>`
@@ -315,7 +315,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
           return `<div style="display:flex;gap:3px;align-items:center;flex-wrap:nowrap;pointer-events:none;overflow:hidden;transform:translate(-26px,-26px);margin:6px 0 0 6px;opacity:${data.faded ? 0.25 : 1};">
             <span class="node-id-badge">${data.id}</span>
             ${typeBadge}
-            ${tacticSymbols ? `<span style="font-size:9px;">${tacticSymbols}</span>` : ''}
+            ${tacticSymbols ? `<span style="display:flex;gap:2px;">${tacticSymbols}</span>` : ''}
           </div>`;
         },
       },
@@ -607,7 +607,8 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       {nodes.length === 0 && (
         <p style={{
           position: "absolute", top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)", color: "#94a3b8"
+          transform: "translate(-50%, -50%)",
+          color: theme.dark ? "#f1f5f9" : "#0f172a",
         }}>
           No statements yet.
         </p>

@@ -304,7 +304,7 @@
 }
 
 .chat-area .empty-message {
-  color: #94a3b8;
+  color: #0f172a;
   font-size: 0.85rem;
 }
 
@@ -432,7 +432,7 @@
 }
 
 .node-list .empty-message {
-  color: #94a3b8;
+  color: #0f172a;
   font-size: 0.85rem;
 }
 
@@ -1510,7 +1510,7 @@
   border-color: #334155;
 }
 [data-dark="true"] .chat-area .empty-message {
-  color: #475569;
+  color: #f1f5f9;
 }
 
 [data-dark="true"] .popup-card {
@@ -1568,7 +1568,7 @@
 }
 
 [data-dark="true"] .empty-message {
-  color: #475569;
+  color: #f1f5f9;
 }
 
 [data-dark="true"] .mode-toggle {
@@ -1611,9 +1611,24 @@ button {
   border-color: var(--na-border);
 }
 
-.map-tree-cell .type-badge {
+.map-tree-cell .type-badge,
+.map-tree-cell .type-badge.type-claim,
+.map-tree-cell .type-badge.type-premise,
+.map-tree-cell .type-badge.type-evidence,
+.map-tree-cell .type-badge.type-objection,
+.map-tree-cell .type-badge.type-rebuttal,
+.map-tree-cell .type-badge.type-clarification {
   background-color: var(--na-bg);
   color: var(--na-text);
+}
+
+.map-tree-cell .tactic-badge,
+.map-tree-cell .tactic-badge.tactic-fallacy,
+.map-tree-cell .tactic-badge.tactic-technique,
+.map-tree-cell .tactic-badge.tactic-rhetorical {
+  background-color: var(--na-bg);
+  color: var(--na-text);
+  border-color: var(--na-border);
 }
 
 .map-tree-cell .confidence-badge {
