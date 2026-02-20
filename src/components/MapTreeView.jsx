@@ -135,6 +135,12 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           outline: outlineStyle,
           "--glow-color": style.border,
           color: textColor,
+          // Neutral-active CSS custom properties cascade to all child elements.
+          // Colored speaker cards use white-based values; light contradiction/
+          // walkback cards use dark-based values.
+          "--na-text":   textColor,
+          "--na-bg":     lightBg ? "rgba(0,0,0,0.07)"    : "rgba(0,0,0,0.18)",
+          "--na-border": lightBg ? "rgba(0,0,0,0.15)"    : "rgba(255,255,255,0.25)",
         }}
         onClick={() => onNodeClick?.(node)}
       >

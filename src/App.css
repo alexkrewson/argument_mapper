@@ -1591,3 +1591,68 @@ button {
   0%, 80%, 100% { transform: translateY(0); }
   40%           { transform: translateY(-4px); }
 }
+
+/* ─── Neutral-active elements inside list cells ───────────────────────────
+   CSS custom properties (--na-text, --na-bg, --na-border) are set on each
+   .map-tree-cell in JS. Placing these rules last gives them source-order
+   priority over earlier dark-mode overrides at equal specificity.
+   ──────────────────────────────────────────────────────────────────────── */
+
+.map-tree-cell .node-id-badge {
+  background-color: var(--na-bg);
+  color: var(--na-text);
+  border-color: var(--na-border);
+}
+
+.map-tree-cell .type-badge {
+  background-color: var(--na-bg);
+  color: var(--na-text);
+}
+
+.map-tree-cell .confidence-badge {
+  border-color: var(--na-border);
+  color: var(--na-text);
+}
+
+.map-tree-cell .claim-text {
+  color: var(--na-text);
+}
+
+.map-tree-cell .popup-tag {
+  background: var(--na-bg);
+  border-color: var(--na-border);
+  color: var(--na-text);
+}
+
+.map-tree-cell .agreement-indicator,
+.map-tree-cell .retracted-indicator,
+.map-tree-cell .inactive-indicator {
+  color: var(--na-text);
+  opacity: 0.8;
+}
+.map-tree-cell .agreement-indicator-icon {
+  color: var(--na-text);
+}
+
+.map-tree-cell .concede-btn {
+  background: transparent;
+  border-color: var(--na-border);
+  color: var(--na-text);
+  opacity: 0.7;
+}
+.map-tree-cell .concede-btn:hover:not(:disabled) {
+  background: var(--na-bg);
+  border-color: var(--na-border);
+  color: var(--na-text);
+  opacity: 1;
+}
+.map-tree-cell .concede-btn--active {
+  background: var(--na-bg);
+  border-color: var(--na-border);
+  color: var(--na-text);
+  opacity: 1;
+  font-weight: 600;
+}
+.map-tree-cell .concede-btn--active:hover:not(:disabled) {
+  background: var(--na-bg);
+}
