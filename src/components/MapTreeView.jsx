@@ -83,42 +83,27 @@ function countDescendants(children) {
   return count;
 }
 
-function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, theme }) {
+const nodeChipLabel = (id) => id.toUpperCase().replace("NODE_", "NODE #");
+
+function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, newNodeIds, theme, contradictedByMap, walkedBackByMap }) {
   const { node, crossLinkCount, children } = item;
   const style = node.speaker === "Blue"  ? { bg: theme.a.bg, border: theme.a.bg }
               : node.speaker === "Green" ? { bg: theme.b.bg, border: theme.b.bg }
               : MODERATOR_STYLE;
   const isFaded = fadedNodeIds?.has(node.id);
   const isNew = newNodeIds?.has(node.id);
-  const isContradictionBorder = contradictionBorderIds?.has(node.id);
-  const isWalkbackBorder = walkbackBorderIds?.has(node.id);
-  const isContradictionFaded = !isContradictionBorder && contradictionFadedIds?.has(node.id);
-  const isWalkbackFaded = !isWalkbackBorder && walkbackFadedIds?.has(node.id);
+  const isContradictionDownstream = contradictionFadedIds?.has(node.id);
+  const isWalkbackDownstream = walkbackFadedIds?.has(node.id);
 
-  // Determine background and outline based on contradiction/walkback state
-  let bgColor = style.bg;
-  let outlineStyle;
-  let lightBg = false;
-  if (isContradictionBorder) {
-    bgColor = "#fee2e2";
-    outlineStyle = "2px solid #dc2626";
-    lightBg = true;
-  } else if (isWalkbackBorder) {
-    bgColor = "#ffedd5";
-    outlineStyle = "2px solid #f97316";
-    lightBg = true;
-  } else if (isContradictionFaded) {
-    bgColor = "#fee2e2";
-    lightBg = true;
-  } else if (isWalkbackFaded) {
-    bgColor = "#ffedd5";
-    lightBg = true;
-  }
-  const textColor = lightBg ? "#1e293b" : "#fff";
+  const bgColor = style.bg;
+  const isLightBg = node.speaker === "Moderator";
+  const textColor = isLightBg ? "#1e293b" : "#fff";
+  const shouldFadeOpacity = isFaded;
 
-  // Only apply opacity fading if NOT already getting colored background
-  const hasColoredBg = isContradictionBorder || isWalkbackBorder || isContradictionFaded || isWalkbackFaded;
-  const shouldFadeOpacity = isFaded && !hasColoredBg;
+  const contradictsId      = node.metadata?.contradicts || null;
+  const contradictedById   = contradictedByMap?.get(node.id) || null;
+  const movesGoalpostsFrom = node.metadata?.moves_goalposts_from || null;
+  const walkedBackById     = walkedBackByMap?.get(node.id) || null;
 
   const tactics = (node.metadata?.tactics || []).filter((k) => TACTICS[k]);
   const hasChildren = children.length > 0;
@@ -132,15 +117,13 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
         style={{
           marginLeft: `${depth * INDENT_PX}px`,
           background: bgColor,
-          outline: outlineStyle,
           "--glow-color": style.border,
           color: textColor,
           // Neutral-active CSS custom properties cascade to all child elements.
-          // Colored speaker cards use white-based values; light contradiction/
-          // walkback cards use dark-based values.
+          // Moderator cards are light-bg; speaker cards are always color-bg.
           "--na-text":   textColor,
-          "--na-bg":     lightBg ? "rgba(0,0,0,0.12)"    : "rgba(0,0,0,0.50)",
-          "--na-border": lightBg ? "rgba(0,0,0,0.20)"    : "rgba(255,255,255,0.35)",
+          "--na-bg":     isLightBg ? "rgba(0,0,0,0.12)"    : "rgba(0,0,0,0.50)",
+          "--na-border": isLightBg ? "rgba(0,0,0,0.20)"    : "rgba(255,255,255,0.35)",
         }}
         onClick={() => onNodeClick?.(node)}
       >
@@ -177,6 +160,26 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
             </span>
           )}
         </div>
+
+        {/* Contradiction / goalpost chips — primary and downstream nodes */}
+        {contradictsId && (
+          <div className="node-flag-chip node-flag-chip--contradiction">⚠ CONTRADICTS {nodeChipLabel(contradictsId)}</div>
+        )}
+        {contradictedById && (
+          <div className="node-flag-chip node-flag-chip--contradiction">⚠ CONTRADICTED BY {nodeChipLabel(contradictedById)}</div>
+        )}
+        {movesGoalpostsFrom && (
+          <div className="node-flag-chip node-flag-chip--contradiction">⤳ MOVES GOALPOST OF {nodeChipLabel(movesGoalpostsFrom)}</div>
+        )}
+        {walkedBackById && (
+          <div className="node-flag-chip node-flag-chip--contradiction">⤳ GOALPOST MOVED BY {nodeChipLabel(walkedBackById)}</div>
+        )}
+        {isContradictionDownstream && (
+          <div className="node-flag-chip node-flag-chip--contradiction">⚠ DOWNSTREAM OF CONTRADICTION</div>
+        )}
+        {isWalkbackDownstream && (
+          <div className="node-flag-chip node-flag-chip--contradiction">⤳ DOWNSTREAM OF GOALPOST MOVE</div>
+        )}
 
         {/* Claim text */}
         <span className="claim-text">{node.content}</span>
@@ -267,10 +270,10 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
                   fadedNodeIds={fadedNodeIds}
                   contradictionFadedIds={contradictionFadedIds}
                   walkbackFadedIds={walkbackFadedIds}
-                  contradictionBorderIds={contradictionBorderIds}
-                  walkbackBorderIds={walkbackBorderIds}
                   newNodeIds={newNodeIds}
                   theme={theme}
+                  contradictedByMap={contradictedByMap}
+                  walkedBackByMap={walkedBackByMap}
                 />
               ))}
             </ul>
@@ -281,9 +284,25 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
   );
 }
 
-export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, theme }) {
+export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, newNodeIds, theme }) {
   const trees = useMemo(() => buildTree(nodes, edges), [nodes, edges]);
   const [collapsed, setCollapsed] = useState(() => new Set());
+
+  const contradictedByMap = useMemo(() => {
+    const map = new Map();
+    for (const node of nodes) {
+      if (node.metadata?.contradicts) map.set(node.metadata.contradicts, node.id);
+    }
+    return map;
+  }, [nodes]);
+
+  const walkedBackByMap = useMemo(() => {
+    const map = new Map();
+    for (const node of nodes) {
+      if (node.metadata?.moves_goalposts_from) map.set(node.metadata.moves_goalposts_from, node.id);
+    }
+    return map;
+  }, [nodes]);
 
   const onToggle = (nodeId) => {
     setCollapsed((prev) => {
@@ -324,10 +343,10 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
             fadedNodeIds={fadedNodeIds}
             contradictionFadedIds={contradictionFadedIds}
             walkbackFadedIds={walkbackFadedIds}
-            contradictionBorderIds={contradictionBorderIds}
-            walkbackBorderIds={walkbackBorderIds}
             newNodeIds={newNodeIds}
             theme={theme}
+            contradictedByMap={contradictedByMap}
+            walkedBackByMap={walkedBackByMap}
           />
         ))}
       </ul>

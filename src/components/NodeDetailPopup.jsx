@@ -3,33 +3,281 @@
  *
  * Displays: node ID, type, speaker, original text, AI summary,
  * tactic badges with explanations. Closes on X, backdrop click, or Escape.
+ *
+ * Also supports an edit mode (pencil icon in header) and create mode (isNew prop).
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { TACTICS } from "../utils/tactics.js";
-import { spk } from "../utils/speakers.js";
+import { speakerName, speakerBorder, speakerBackground } from "../utils/speakers.js";
 
-export default function NodeDetailPopup({ node, originalText, onClose, fadedNodeIds, nodes, onNodeClick, onRate, currentSpeaker, loading }) {
-  // Close on Escape key
+const NODE_TYPES = ["claim", "premise", "objection", "rebuttal", "evidence", "clarification"];
+
+export default function NodeDetailPopup({
+  node, isNew, originalText, onClose,
+  fadedNodeIds, nodes, edges,
+  onNodeClick, onRate, onSave,
+  currentSpeaker, loading, theme,
+}) {
+  const [editMode, setEditMode] = useState(!!isNew);
+
+  // Form state — initialised from node prop (blank for new nodes)
+  const [editContent,  setEditContent]  = useState(node?.content ?? "");
+  const [editType,     setEditType]     = useState(node?.type ?? "claim");
+  const [editParent,   setEditParent]   = useState(
+    () => edges?.find((e) => e.from === node?.id)?.to ?? ""
+  );
+  const [editTactics,     setEditTactics]     = useState(node?.metadata?.tactics ?? []);
+  const [editTags,        setEditTags]        = useState(node?.metadata?.tags ?? []);
+  const [tagInput,        setTagInput]        = useState("");
+  const [editContradicts, setEditContradicts] = useState(node?.metadata?.contradicts ?? "");
+  const [editGoalposts,   setEditGoalposts]   = useState(node?.metadata?.moves_goalposts_from ?? "");
+
+  // Escape: cancel edit, or close popup
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (editMode && !isNew) setEditMode(false);
+      else onClose();
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [onClose]);
+  }, [onClose, editMode, isNew]);
 
+  const toggleTactic = (key) =>
+    setEditTactics((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+
+  const addTag = () => {
+    const tag = tagInput.trim().replace(/,+$/, "");
+    if (tag && !editTags.includes(tag)) setEditTags((prev) => [...prev, tag]);
+    setTagInput("");
+  };
+
+  const handleSave = () => {
+    if (!editContent.trim()) return;
+    onSave?.(isNew ? null : node.id, {
+      content: editContent.trim(),
+      type: editType,
+      tactics: editTactics,
+      tags: editTags,
+      contradicts: editContradicts || null,
+      moves_goalposts_from: editGoalposts || null,
+    }, editParent || null);
+    if (!isNew) setEditMode(false);
+  };
+
+  // ── Edit / Create mode ────────────────────────────────────────────────
+  if (editMode) {
+    return (
+      <div className="popup-backdrop">
+        <div className="popup-card popup-card--edit" onClick={(e) => e.stopPropagation()}>
+
+          {/* Edit header */}
+          <div className="popup-header">
+            <span className="popup-edit-title">
+              {isNew ? "Add Node" : `Edit ${node.id}`}
+              {!isNew && (
+                <span
+                  className="speaker-badge"
+                  style={{ backgroundColor: speakerBorder(node.speaker, theme), marginLeft: "0.5rem" }}
+                >
+                  {speakerName(node.speaker, theme)}
+                </span>
+              )}
+            </span>
+            <div className="popup-edit-actions">
+              <button
+                className="popup-edit-cancel-btn"
+                onClick={isNew ? onClose : () => setEditMode(false)}
+              >
+                Cancel
+              </button>
+              <button className="popup-edit-save-btn" onClick={handleSave}>
+                {isNew ? "Add" : "Save"}
+              </button>
+            </div>
+          </div>
+
+          {/* Statement */}
+          <div className="popup-section">
+            <h4>Statement</h4>
+            <textarea
+              className="popup-edit-textarea"
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              placeholder="Enter the node statement…"
+              rows={3}
+              autoFocus
+            />
+          </div>
+
+          {/* Type */}
+          <div className="popup-section">
+            <h4>Type</h4>
+            <select
+              className="popup-edit-select"
+              value={editType}
+              onChange={(e) => setEditType(e.target.value)}
+            >
+              {NODE_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t.charAt(0).toUpperCase() + t.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Parent node */}
+          <div className="popup-section">
+            <h4>Parent Node</h4>
+            <select
+              className="popup-edit-select popup-edit-flag-select"
+              value={editParent}
+              onChange={(e) => setEditParent(e.target.value)}
+            >
+              <option value="">(none — root node)</option>
+              {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
+                <option key={n.id} value={n.id}>
+                  {n.id}: {n.content.length > 70 ? n.content.slice(0, 67) + "…" : n.content}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Tactics multi-select */}
+          <div className="popup-section">
+            <h4>Tactics</h4>
+            <div className="popup-edit-tactics">
+              {Object.entries(TACTICS).map(([key, tac]) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`tactic-toggle tactic-${tac.type}${editTactics.includes(key) ? " tactic-toggle--on" : ""}`}
+                  onClick={() => toggleTactic(key)}
+                >
+                  {tac.symbol} {tac.name}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Contradiction flag */}
+          <div className="popup-section">
+            <h4>Contradiction</h4>
+            <div className="popup-edit-flag-row">
+              <button
+                type="button"
+                className={`flag-toggle flag-toggle--contradiction${editContradicts ? " flag-toggle--on" : ""}`}
+                onClick={() => {
+                  if (editContradicts) {
+                    setEditContradicts("");
+                  } else {
+                    const firstOther = nodes?.find((n) => n.id !== (isNew ? null : node?.id));
+                    setEditContradicts(firstOther?.id ?? "");
+                  }
+                }}
+              >
+                ⚠️ Contradicts a node
+              </button>
+              {editContradicts && (
+                <select
+                  className="popup-edit-select popup-edit-flag-select"
+                  value={editContradicts}
+                  onChange={(e) => setEditContradicts(e.target.value)}
+                >
+                  {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.id}: {n.content.length > 70 ? n.content.slice(0, 67) + "…" : n.content}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
+          {/* Goalpost flag */}
+          <div className="popup-section">
+            <h4>Moves Goalposts</h4>
+            <div className="popup-edit-flag-row">
+              <button
+                type="button"
+                className={`flag-toggle flag-toggle--goalposts${editGoalposts ? " flag-toggle--on" : ""}`}
+                onClick={() => {
+                  if (editGoalposts) {
+                    setEditGoalposts("");
+                  } else {
+                    const firstOther = nodes?.find((n) => n.id !== (isNew ? null : node?.id));
+                    setEditGoalposts(firstOther?.id ?? "");
+                  }
+                }}
+              >
+                🥅 Moves the goalposts
+              </button>
+              {editGoalposts && (
+                <select
+                  className="popup-edit-select popup-edit-flag-select"
+                  value={editGoalposts}
+                  onChange={(e) => setEditGoalposts(e.target.value)}
+                >
+                  {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
+                    <option key={n.id} value={n.id}>
+                      {n.id}: {n.content.length > 70 ? n.content.slice(0, 67) + "…" : n.content}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+
+          {/* Tags */}
+          <div className="popup-section">
+            <h4>Tags</h4>
+            {editTags.length > 0 && (
+              <div className="popup-edit-tag-list">
+                {editTags.map((tag) => (
+                  <span key={tag} className="popup-edit-tag">
+                    {tag}
+                    <button
+                      type="button"
+                      className="popup-edit-tag-remove"
+                      onClick={() => setEditTags((prev) => prev.filter((t) => t !== tag))}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <input
+              className="popup-edit-input"
+              type="text"
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); }
+              }}
+              placeholder="Add tag — Enter or comma to confirm"
+            />
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // ── View mode ─────────────────────────────────────────────────────────
   if (!node) return null;
 
-  const speakerColor = node.speaker === "Blue" ? "#3b82f6" : node.speaker === "Green" ? "#22c55e" : "#8b5cf6";
-  const speakerBg = node.speaker === "Blue" ? "#eff6ff" : node.speaker === "Green" ? "#f0fdf4" : "#f5f3ff";
+  const speakerColor = speakerBorder(node.speaker, theme);
+  const speakerBg    = speakerBackground(node.speaker, theme);
   const tactics = node.metadata?.tactics?.filter((key) => TACTICS[key]) || [];
   const tacticReasons = node.metadata?.tactic_reasons || {};
   const contradictsId = node.metadata?.contradicts;
   const goalpostsId = node.metadata?.moves_goalposts_from;
   const contradictsNode = contradictsId ? nodes?.find((n) => n.id === contradictsId) : null;
   const goalpostsNode = goalpostsId ? nodes?.find((n) => n.id === goalpostsId) : null;
-  // Reverse lookups: nodes that flag THIS node
   const contradictedByNode = nodes?.find((n) => n.metadata?.contradicts === node.id) ?? null;
   const walkedBackByNode = nodes?.find((n) => n.metadata?.moves_goalposts_from === node.id) ?? null;
 
@@ -43,12 +291,9 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
             <span className={`type-badge type-${node.type}`}>{node.type}</span>
             <span
               className="speaker-badge"
-              style={{
-                backgroundColor:
-                  node.speaker === "Blue" ? "#3b82f6" : "#22c55e",
-              }}
+              style={{ backgroundColor: speakerColor }}
             >
-              {spk(node.speaker)}
+              {speakerName(node.speaker, theme)}
             </span>
             {node.metadata?.confidence && (
               <span className={`confidence-badge confidence-${node.metadata.confidence}`}>
@@ -56,28 +301,38 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
               </span>
             )}
           </div>
-          <button className="popup-close" onClick={onClose} aria-label="Close">
-            &times;
-          </button>
+          <div className="popup-header-actions">
+            {onSave && (
+              <button
+                className="popup-edit-btn"
+                onClick={() => setEditMode(true)}
+                title="Edit node"
+                aria-label="Edit node"
+              >
+                ✏
+              </button>
+            )}
+            <button className="popup-close" onClick={onClose} aria-label="Close">
+              &times;
+            </button>
+          </div>
         </div>
 
-        {/* Fading reason banner — only shown when this node is greyed out */}
+        {/* Fading reason banner */}
         {fadedNodeIds?.has(node.id) && node.rating === "up" && (
           <div className="agreement-banner">
             <span className="agreement-banner-icon">&#x2714;</span>
             <div>
               {node.metadata?.agreed_by?.text ? (
                 <>
-                  <strong>{spk(node.metadata.agreed_by.speaker)} conceded {spk(node.speaker)}'s point</strong>
+                  <strong>{speakerName(node.metadata.agreed_by.speaker, theme)} conceded {speakerName(node.speaker, theme)}'s point</strong>
                   <div className="agreement-by">implicit, from their submission</div>
                   <blockquote className="agreement-quote">
                     "{node.metadata.agreed_by.text}"
                   </blockquote>
                 </>
               ) : node.metadata?.agreed_by?.speaker ? (
-                <>
-                  <strong>{spk(node.metadata.agreed_by.speaker)} conceded {spk(node.speaker)}'s point</strong>
-                </>
+                <strong>{speakerName(node.metadata.agreed_by.speaker, theme)} conceded {speakerName(node.speaker, theme)}'s point</strong>
               ) : (
                 <strong>Conceded</strong>
               )}
@@ -90,7 +345,7 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
             <span className="flag-banner-icon">↩</span>
             <div className="flag-banner-body">
               <strong>Retracted</strong>
-              <div>{spk(node.speaker)} retracted this argument via concession</div>
+              <div>{speakerName(node.speaker, theme)} retracted this argument via concession</div>
             </div>
           </div>
         )}
@@ -107,59 +362,32 @@ export default function NodeDetailPopup({ node, originalText, onClose, fadedNode
           </div>
         )}
 
-        {/* Contradiction banner */}
+        {/* Contradiction / goalpost chips — prominent labels for the two directly involved nodes */}
         {contradictsNode && (
-          <div className="flag-banner flag-contradiction">
-            <span className="flag-banner-icon">⚠️</span>
-            <div className="flag-banner-body">
-              <strong>Contradicts an earlier statement</strong>
-              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(contradictsNode); }}>
-                <span className="node-id-badge">{contradictsNode.id}</span>
-                <span className="flag-banner-linked-text">{contradictsNode.content}</span>
-              </div>
-            </div>
+          <div className="flag-chip flag-chip--contradiction" onClick={() => { onClose(); onNodeClick?.(contradictsNode); }}>
+            <span className="flag-chip-label">⚠ Contradicts {contradictsNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-sub">{contradictsNode.content.length > 80 ? contradictsNode.content.slice(0, 77) + "…" : contradictsNode.content}</span>
           </div>
         )}
 
-        {/* Goalpost moving banner */}
-        {goalpostsNode && (
-          <div className="flag-banner flag-goalposts">
-            <span className="flag-banner-icon">🥅</span>
-            <div className="flag-banner-body">
-              <strong>Moves the goalposts</strong>
-              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(goalpostsNode); }}>
-                <span className="node-id-badge">{goalpostsNode.id}</span>
-                <span className="flag-banner-linked-text">{goalpostsNode.content}</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Reverse: this node is contradicted by a later statement */}
         {contradictedByNode && (
-          <div className="flag-banner flag-contradiction">
-            <span className="flag-banner-icon">⚠️</span>
-            <div className="flag-banner-body">
-              <strong>Contradicted by a later statement</strong>
-              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(contradictedByNode); }}>
-                <span className="node-id-badge">{contradictedByNode.id}</span>
-                <span className="flag-banner-linked-text">{contradictedByNode.content}</span>
-              </div>
-            </div>
+          <div className="flag-chip flag-chip--contradiction" onClick={() => { onClose(); onNodeClick?.(contradictedByNode); }}>
+            <span className="flag-chip-label">⚠ Contradicted by {contradictedByNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-sub">{contradictedByNode.content.length > 80 ? contradictedByNode.content.slice(0, 77) + "…" : contradictedByNode.content}</span>
           </div>
         )}
 
-        {/* Reverse: this node has its goalposts moved by a later statement */}
+        {goalpostsNode && (
+          <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(goalpostsNode); }}>
+            <span className="flag-chip-label">⤳ Moves Goalpost of {goalpostsNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-sub">{goalpostsNode.content.length > 80 ? goalpostsNode.content.slice(0, 77) + "…" : goalpostsNode.content}</span>
+          </div>
+        )}
+
         {walkedBackByNode && (
-          <div className="flag-banner flag-goalposts">
-            <span className="flag-banner-icon">🥅</span>
-            <div className="flag-banner-body">
-              <strong>Goalposts moved by a later statement</strong>
-              <div className="flag-banner-linked" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
-                <span className="node-id-badge">{walkedBackByNode.id}</span>
-                <span className="flag-banner-linked-text">{walkedBackByNode.content}</span>
-              </div>
-            </div>
+          <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
+            <span className="flag-chip-label">⤳ Goalpost Moved by {walkedBackByNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-sub">{walkedBackByNode.content.length > 80 ? walkedBackByNode.content.slice(0, 77) + "…" : walkedBackByNode.content}</span>
           </div>
         )}
 

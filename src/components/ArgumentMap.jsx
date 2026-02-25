@@ -24,6 +24,7 @@ if (typeof cytoscape("layout", "dagre") === "undefined") {
 function buildStylesheet(theme) {
   const a = theme.a, b = theme.b;
   const dark = !!theme.dark;
+  const lcars = !!theme.lcars;
   return [
     // --- Base node style ---
     {
@@ -31,17 +32,18 @@ function buildStylesheet(theme) {
       style: {
         label: "data(label)",
         "text-wrap": "wrap",
-        "text-max-width": "200px",
-        "font-size": "12px",
+        "text-max-width": "208px",
+        "font-size": lcars ? "11px" : "12px",
+        "font-family": lcars ? "Antonio, Arial Narrow, sans-serif" : undefined,
+        "text-transform": lcars ? "uppercase" : undefined,
         "text-valign": "center",
         "text-halign": "center",
-        "text-margin-y": 13,
-        width: "label",
-        "min-width": "160px",
+        "text-margin-y": 20,
+        width: 260,
         height: "label",
         shape: "roundrectangle",
-        color: "#0f172a",
-        "background-color": dark ? "#1e293b" : "#f8fafc",
+        color: lcars ? "#FF9900" : "#0f172a",
+        "background-color": lcars ? "#0a0900" : dark ? "#1e293b" : "#f8fafc",
         "border-width": 0,
         "font-weight": "bold",
         padding: "26px",
@@ -68,49 +70,6 @@ function buildStylesheet(theme) {
     // --- Faded nodes ---
     { selector: "node.faded", style: { opacity: 0.25 } },
     { selector: "edge.faded", style: { opacity: 0.25 } },
-    // --- Contradiction/walkback colored backgrounds ---
-    { selector: "node.contradiction-faded", style: { "background-color": dark ? "#450a0a" : "#fee2e2" } },
-    { selector: "node.walkback-faded",      style: { "background-color": dark ? "#431407" : "#ffedd5" } },
-    // --- Contradiction borders ---
-    {
-      selector: "node.contradiction-border",
-      style: {
-        "background-color": dark ? "#450a0a" : "#fee2e2",
-        "border-color": "#dc2626",
-        "border-style": "dashed",
-        "border-dash-pattern": [6, 4],
-        "border-width": 3,
-        opacity: 1,
-      },
-    },
-    {
-      selector: 'node.contradiction-border[speaker = "Blue"]',
-      style: { "outline-color": a.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-    },
-    {
-      selector: 'node.contradiction-border[speaker = "Green"]',
-      style: { "outline-color": b.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-    },
-    // --- Walkback borders ---
-    {
-      selector: "node.walkback-border",
-      style: {
-        "background-color": dark ? "#431407" : "#ffedd5",
-        "border-color": "#f97316",
-        "border-style": "dashed",
-        "border-dash-pattern": [6, 4],
-        "border-width": 3,
-        opacity: 1,
-      },
-    },
-    {
-      selector: 'node.walkback-border[speaker = "Blue"]',
-      style: { "outline-color": a.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-    },
-    {
-      selector: 'node.walkback-border[speaker = "Green"]',
-      style: { "outline-color": b.border, "outline-width": 3, "outline-style": "solid", "outline-offset": 3 },
-    },
     // --- Base edge style ---
     {
       selector: "edge",
@@ -119,7 +78,8 @@ function buildStylesheet(theme) {
         "target-arrow-shape": "none",
         "source-arrow-shape": "none",
         width: 2,
-        "line-color": "#94a3b8",
+        "line-color": lcars ? "#FF9900" : "#94a3b8",
+        opacity: lcars ? 0.35 : 1,
       },
     },
   ];
@@ -274,7 +234,7 @@ function runLayout(cy, onDone) {
   layout.run();
 }
 
-export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds, newNodeIds, onToggleUI, theme }) {
+export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, newNodeIds, onToggleUI, theme }) {
   const containerRef = useRef(null);
   const cyRef = useRef(null);
   const onToggleUIRef = useRef(onToggleUI);
@@ -297,29 +257,45 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       minZoom: 0.2,
     });
 
-    cy.nodeHtmlLabel([
-      {
-        query: "node",
-        halign: "left",
-        valign: "top",
-        halignBox: "right",
-        valignBox: "bottom",
-        tpl: (data) => {
-          const tacticSymbols = (data.tactics || [])
-            .filter((key) => TACTICS[key])
-            .map((key) => `<span title="${TACTICS[key].name}" style="cursor:default;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.25);border-radius:3px;padding:1px 4px;font-size:10px;">${TACTICS[key].symbol}</span>`)
-            .join("");
-          const typeBadge = data.type
-            ? `<span class="type-badge type-${data.type}">${data.type}</span>`
-            : "";
-          return `<div style="display:flex;gap:3px;align-items:center;flex-wrap:nowrap;pointer-events:none;overflow:hidden;transform:translate(-26px,-26px);margin:6px 0 0 6px;opacity:${data.faded ? 0.25 : 1};">
-            <span class="node-id-badge">${data.id}</span>
-            ${typeBadge}
-            ${tacticSymbols ? `<span style="display:flex;gap:2px;">${tacticSymbols}</span>` : ''}
-          </div>`;
-        },
+    const chipStyle = (color) =>
+      `background:${color};color:white;border-radius:3px;padding:2px 6px;font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:244px;`;
+    const fmtId = (id) => id.toUpperCase().replace("NODE_", "NODE #");
+
+    cy.nodeHtmlLabel([{
+      query: "node",
+      halign: "left",
+      valign: "top",
+      halignBox: "right",
+      valignBox: "top",
+      tpl: (data) => {
+        const tacticSymbols = (data.tactics || [])
+          .filter((key) => TACTICS[key])
+          .map((key) => `<span title="${TACTICS[key].name}" style="cursor:default;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.25);border-radius:3px;padding:1px 4px;font-size:10px;">${TACTICS[key].symbol}</span>`)
+          .join("");
+        const typeBadge = data.type
+          ? `<span class="type-badge type-${data.type}">${data.type}</span>`
+          : "";
+        // Chip badges: abbreviated so they always fit on one line with other badges.
+        // The plugin anchors the div's bottom near node-top (content fills upward),
+        // so wrapping to a second row would push the first row above the node boundary.
+        const cs = (color) => `background:${color};color:#fff;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;`;
+        const fmtShortId = (id) => "#" + id.replace(/^node_/i, "");
+        const chipBadges = [];
+        if (data.contradicts)             chipBadges.push(`<span title="CONTRADICTS ${fmtId(data.contradicts)}" style="${cs("#dc2626")}">⚠ C→${fmtShortId(data.contradicts)}</span>`);
+        if (data.contradictedBy)          chipBadges.push(`<span title="CONTRADICTED BY ${fmtId(data.contradictedBy)}" style="${cs("#dc2626")}">⚠ C←${fmtShortId(data.contradictedBy)}</span>`);
+        if (data.movesGoalpostsFrom)      chipBadges.push(`<span title="MOVES GOALPOST OF ${fmtId(data.movesGoalpostsFrom)}" style="${cs("#dc2626")}">⤳ G→${fmtShortId(data.movesGoalpostsFrom)}</span>`);
+        if (data.walkedBackBy)            chipBadges.push(`<span title="GOALPOST MOVED BY ${fmtId(data.walkedBackBy)}" style="${cs("#dc2626")}">⤳ G←${fmtShortId(data.walkedBackBy)}</span>`);
+        if (data.contradictionDownstream) chipBadges.push(`<span title="Downstream of a contradiction" style="${cs("#dc2626")}">⚠ ↓</span>`);
+        if (data.walkbackDownstream)      chipBadges.push(`<span title="Downstream of a goalpost move" style="${cs("#dc2626")}">⤳ ↓</span>`);
+
+        return `<div style="display:flex;gap:3px;align-items:center;pointer-events:none;max-width:252px;margin:4px 0 0 -19px;opacity:${data.faded ? 0.25 : 1};">
+          <span class="node-id-badge">${data.id}</span>
+          ${typeBadge}
+          ${tacticSymbols ? `<span style="display:flex;gap:2px;">${tacticSymbols}</span>` : ""}
+          ${chipBadges.join("")}
+        </div>`;
       },
-    ]);
+    }]);
 
     // ── Touch gesture state machine ────────────────────────────────────────
     // States: idle | first-down | awaiting-second | second-down | drag-zoom
@@ -514,16 +490,34 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     const cy = cyRef.current;
     if (!cy) return;
 
-    const nodeDataOf = (node) => ({
-      id: node.id,
-      label: node.content,
-      speaker: node.speaker,
-      type: node.type,
-      rating: node.rating,
-      tactics: node.metadata?.tactics || [],
-      contradicts: node.metadata?.contradicts || "",
-      movesGoalpostsFrom: node.metadata?.moves_goalposts_from || "",
-    });
+    // Build reverse maps so the chip tpl knows "who contradicts me?" and "who walked me back?"
+    const contradictedByMap = new Map();
+    const walkedBackByMap   = new Map();
+    for (const node of nodes) {
+      if (node.metadata?.contradicts)           contradictedByMap.set(node.metadata.contradicts,           node.id);
+      if (node.metadata?.moves_goalposts_from)  walkedBackByMap.set(node.metadata.moves_goalposts_from,   node.id);
+    }
+
+    const nodeDataOf = (node) => {
+      const contradicts       = node.metadata?.contradicts          || "";
+      const contradictedBy    = contradictedByMap.get(node.id)      || "";
+      const movesGoalpostsFrom = node.metadata?.moves_goalposts_from || "";
+      const walkedBackBy      = walkedBackByMap.get(node.id)        || "";
+      return {
+        id: node.id,
+        label: node.content,
+        speaker: node.speaker,
+        type: node.type,
+        rating: node.rating,
+        tactics: node.metadata?.tactics || [],
+        contradicts,
+        contradictedBy,
+        movesGoalpostsFrom,
+        walkedBackBy,
+        contradictionDownstream: contradictionFadedIds?.has(node.id) || false,
+        walkbackDownstream:      walkbackFadedIds?.has(node.id)      || false,
+      };
+    };
     const edgeDataOf = (edge) => ({
       id: edge.id,
       source: edge.from,
@@ -573,7 +567,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     });
 
     // Apply visual classes from props (computed in App.jsx fadedInfo)
-    cy.nodes().removeClass("faded contradiction-faded walkback-faded contradiction-border walkback-border");
+    cy.nodes().removeClass("faded");
     cy.edges().removeClass("faded");
 
     // Opacity fading (thumbs-up agreed / thumbs-down retracted)
@@ -583,28 +577,12 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       cy.edges().filter((e) => fadedNodeIds.has(e.source().id()) && fadedNodeIds.has(e.target().id())).addClass("faded");
     }
 
-    // Contradiction colored backgrounds and borders
-    if (contradictionBorderIds?.size) {
-      cy.nodes().filter((n) => contradictionBorderIds.has(n.id())).addClass("contradiction-border");
-    }
-    if (contradictionFadedIds?.size) {
-      cy.nodes().filter((n) => contradictionFadedIds.has(n.id()) && !contradictionBorderIds?.has(n.id())).addClass("contradiction-faded");
-    }
-
-    // Walkback colored backgrounds and borders
-    if (walkbackBorderIds?.size) {
-      cy.nodes().filter((n) => walkbackBorderIds.has(n.id())).addClass("walkback-border");
-    }
-    if (walkbackFadedIds?.size) {
-      cy.nodes().filter((n) => walkbackFadedIds.has(n.id()) && !walkbackBorderIds?.has(n.id())).addClass("walkback-faded");
-    }
-
     // Always run a full fresh layout so dagre re-centers and symmetrically
     // repositions all nodes whenever the graph structure changes.
     if (cy.nodes().length > 0) {
       runLayout(cy);
     }
-  }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds]);
+  }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds]);
 
   // Theme stylesheet is baked in at init time (buildStylesheet(themeRef.current)).
   // App.jsx passes key={themeKey} so this component remounts on every theme change,
@@ -636,7 +614,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         <p style={{
           position: "absolute", top: "50%", left: "50%",
           transform: "translate(-50%, -50%)",
-          color: theme.dark ? "#f1f5f9" : "#0f172a",
+          color: theme.lcars ? "#FF9900" : theme.dark ? "#f1f5f9" : "#0f172a",
         }}>
           No statements yet.
         </p>

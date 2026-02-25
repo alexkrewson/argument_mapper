@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from "react";
 import { speakerName } from "../utils/speakers.js";
 
-export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo, theme }) {
+export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo, onAddNode, onReviewChanges, changeLogCount, theme }) {
   const [text, setText] = useState("");
   const textareaRef = useRef(null);
 
@@ -60,9 +60,14 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
             <button className="skip-turn-btn" onClick={onSkipTurn} type="button">Skip Turn</button>
             <button className="history-btn" onClick={onUndo} disabled={!canUndo} type="button" title="Undo">↩</button>
             <button className="history-btn" onClick={onRedo} disabled={!canRedo} type="button" title="Redo">↪</button>
+            {changeLogCount > 0 && (
+              <button className="review-changes-btn" onClick={onReviewChanges} type="button">
+                Review AI Changes ({changeLogCount})
+              </button>
+            )}
           </div>
         )}
-        {!loading && speakerSummary && (
+        {!loading && (
           <span className="speaker-summary">— {speakerSummary}</span>
         )}
       </div>
@@ -87,9 +92,22 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
           disabled={loading}
           rows={3}
         />
-        <button type="submit" disabled={loading || !text.trim()}>
-          {loading ? "Thinking..." : "Submit"}
-        </button>
+        <div className="input-btn-col">
+          {!directMode && (
+            <button
+              type="button"
+              className="add-node-btn"
+              onClick={onAddNode}
+              disabled={loading}
+              title="Manually add a node to the map"
+            >
+              + Node
+            </button>
+          )}
+          <button type="submit" disabled={loading || !text.trim()}>
+            {loading ? "Thinking..." : "Submit"}
+          </button>
+        </div>
       </div>
     </form>
   );

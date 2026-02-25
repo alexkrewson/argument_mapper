@@ -16,6 +16,7 @@ import MapTreeView from "./components/MapTreeView";
 import NodeDetailPopup from "./components/NodeDetailPopup";
 import SettingsPanel from "./components/SettingsPanel";
 import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
+import AIChangeLogModal from "./components/AIChangeLogModal";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
@@ -25,6 +26,59 @@ import "./App.css";
 const EMPTY_MAP = {
   argument_map: { title: "", description: "", nodes: [], edges: [] },
 };
+
+// Compute a diff between two maps: what nodes/edges the AI added, modified, or removed.
+function computeMapDiff(oldInner, newInner) {
+  const changes = [];
+  const oldNodeMap = new Map(oldInner.nodes.map((n) => [n.id, n]));
+  const newNodeMap = new Map(newInner.nodes.map((n) => [n.id, n]));
+  for (const n of newInner.nodes) {
+    if (!oldNodeMap.has(n.id)) {
+      changes.push({ type: "added", nodeId: n.id, nodeType: n.type, content: n.content, speaker: n.speaker });
+    } else {
+      const old = oldNodeMap.get(n.id);
+      if (old.content !== n.content) {
+        changes.push({ type: "modified", nodeId: n.id, nodeType: n.type, before: old.content, after: n.content });
+      }
+      // Contradiction flag changes
+      const oldContradicts = old.metadata?.contradicts ?? null;
+      const newContradicts = n.metadata?.contradicts ?? null;
+      if (newContradicts && newContradicts !== oldContradicts) {
+        changes.push({ type: "contradicts_set", nodeId: n.id, targetId: newContradicts });
+      } else if (!newContradicts && oldContradicts) {
+        changes.push({ type: "contradicts_cleared", nodeId: n.id, targetId: oldContradicts });
+      }
+      // Goalpost-moving flag changes
+      const oldGoalposts = old.metadata?.moves_goalposts_from ?? null;
+      const newGoalposts = n.metadata?.moves_goalposts_from ?? null;
+      if (newGoalposts && newGoalposts !== oldGoalposts) {
+        changes.push({ type: "goalposts_set", nodeId: n.id, targetId: newGoalposts });
+      } else if (!newGoalposts && oldGoalposts) {
+        changes.push({ type: "goalposts_cleared", nodeId: n.id, targetId: oldGoalposts });
+      }
+    }
+  }
+  for (const n of oldInner.nodes) {
+    if (!newNodeMap.has(n.id)) {
+      changes.push({ type: "removed", nodeId: n.id, nodeType: n.type, content: n.content });
+    }
+  }
+  const oldEdgeIds = new Set(oldInner.edges.map((e) => e.id));
+  for (const e of newInner.edges) {
+    if (!oldEdgeIds.has(e.id)) {
+      changes.push({ type: "edge_added", from: e.from, to: e.to, relationship: e.relationship });
+    }
+  }
+  return changes;
+}
+
+// Returns all nodes that have no incoming edges (roots of the tree).
+function findRootNodes(nodes, edges) {
+  // Root = a node that never supports another node (never appears as edge.from).
+  // These are the top-level claims sitting at the top of the hierarchy.
+  const hasOutgoing = new Set(edges.map((e) => e.from));
+  return nodes.filter((n) => !hasOutgoing.has(n.id));
+}
 
 // Replace internal "Blue"/"Green" speaker names in node content with theme display names.
 function sanitizeNodeContent(map, theme) {
@@ -104,12 +158,16 @@ export default function App() {
     localStorage.setItem("theme", key);
   }, []);
   useEffect(() => {
-    document.documentElement.setAttribute("data-dark", theme.dark ? "true" : "false");
+    document.documentElement.setAttribute("data-dark",  theme.dark  ? "true" : "false");
+    document.documentElement.setAttribute("data-lcars", theme.lcars ? "true" : "false");
   }, [theme]);
 
   const [newNodeIds, setNewNodeIds] = useState(() => new Set());
   const newNodeTimerRef = useRef(null);
   const [concessionQueue, setConcessionQueue] = useState([]); // Detected concessions awaiting user confirmation
+  const [addNodeOpen, setAddNodeOpen] = useState(false); // Whether the "Add Node" create modal is open
+  const [aiChangeLog, setAiChangeLog] = useState([]); // Log of all AI-made changes
+  const [showChangeLog, setShowChangeLog] = useState(false); // Whether the changelog modal is open
 
   const chatLogRef = useRef(null);
   useEffect(() => {
@@ -195,6 +253,39 @@ export default function App() {
 
       const strippedMap = { ...updatedMap, argument_map: { ...updatedMap.argument_map, nodes: strippedNodes } };
       const cleanMap = sanitizeNodeContent(strippedMap, theme);
+
+      // Log what the AI changed in this turn (including any detected concessions)
+      const aiChanges = computeMapDiff(argumentMap.argument_map, cleanMap.argument_map);
+      for (const c of detected) {
+        aiChanges.push({
+          type: c.type === "self" ? "concession_self" : "concession_other",
+          nodeId: c.nodeId,
+          nodeSpeaker: c.nodeSpeaker,
+          concedingBy: c.concedingBy,
+        });
+      }
+      if (aiChanges.length > 0) {
+        setAiChangeLog((prev) => [...prev, {
+          id: Date.now(),
+          speaker: currentSpeaker,
+          statement,
+          changes: aiChanges,
+        }]);
+      }
+
+      // Guard: detect multiple root nodes (nodes with no incoming edges).
+      // The map must always have exactly one root. If Claude accidentally created
+      // a second disconnected root, warn the user — they can undo and rephrase.
+      if (argumentMap.argument_map.nodes.length > 0) {
+        const roots = findRootNodes(cleanMap.argument_map.nodes, cleanMap.argument_map.edges);
+        if (roots.length > 1) {
+          setError(
+            `Warning: Claude created ${roots.length} disconnected root nodes (${roots.map((r) => r.id).join(", ")}). ` +
+            `The map should have exactly one root. Consider undoing this turn and rephrasing.`
+          );
+        }
+      }
+
       pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
 
       if (detected.length > 0) setConcessionQueue(detected);
@@ -276,6 +367,93 @@ export default function App() {
   };
 
   /**
+   * Manual node edit — updates an existing node's fields and optionally re-parents it.
+   * No API call; pushes directly to history.
+   */
+  const handleNodeSave = (nodeId, data, newParentId) => {
+    const inner = argumentMap.argument_map;
+
+    const updatedNodes = inner.nodes.map((n) => {
+      if (n.id !== nodeId) return n;
+      const meta = { ...n.metadata, tactics: data.tactics, tags: data.tags };
+      if (data.contradicts) meta.contradicts = data.contradicts;
+      else delete meta.contradicts;
+      if (data.moves_goalposts_from) meta.moves_goalposts_from = data.moves_goalposts_from;
+      else delete meta.moves_goalposts_from;
+      return { ...n, content: data.content, type: data.type, metadata: meta };
+    });
+
+    // Re-parent: replace existing outgoing edge if parent changed
+    const oldEdge = inner.edges.find((e) => e.from === nodeId);
+    const oldParentId = oldEdge?.to ?? null;
+    let updatedEdges = inner.edges;
+    if (newParentId !== oldParentId) {
+      updatedEdges = inner.edges.filter((e) => e.from !== nodeId);
+      if (newParentId) {
+        const edgeNums = inner.edges.map((e) => parseInt(e.id.replace("edge_", ""), 10)).filter(Boolean);
+        const nextEdgeNum = edgeNums.length > 0 ? Math.max(...edgeNums) + 1 : 1;
+        updatedEdges = [...updatedEdges, {
+          id: `edge_${nextEdgeNum}`,
+          from: nodeId,
+          to: newParentId,
+          relationship: oldEdge?.relationship ?? "supports",
+        }];
+      }
+    }
+
+    pushHistory({ argument_map: { ...inner, nodes: updatedNodes, edges: updatedEdges } }, moderatorAnalysis);
+    // Keep popup open on the updated node
+    setSelectedNode(updatedNodes.find((n) => n.id === nodeId) ?? null);
+  };
+
+  /**
+   * Manual node creation — adds a brand-new node (attributed to currentSpeaker).
+   * No API call; pushes directly to history.
+   */
+  const handleAddNode = (_nodeId, data, parentId) => {
+    const inner = argumentMap.argument_map;
+
+    const nodeNums = inner.nodes.map((n) => parseInt(n.id.replace("node_", ""), 10)).filter(Boolean);
+    const nextNodeNum = nodeNums.length > 0 ? Math.max(...nodeNums) + 1 : 1;
+    const newNodeId = `node_${nextNodeNum}`;
+
+    const newNode = {
+      id: newNodeId,
+      type: data.type || "claim",
+      content: data.content,
+      speaker: currentSpeaker,
+      rating: null,
+      metadata: {
+        confidence: "medium",
+        tags: data.tags ?? [],
+        tactics: data.tactics ?? [],
+        tactic_reasons: {},
+        ...(data.contradicts ? { contradicts: data.contradicts } : {}),
+        ...(data.moves_goalposts_from ? { moves_goalposts_from: data.moves_goalposts_from } : {}),
+      },
+    };
+
+    let updatedEdges = inner.edges;
+    if (parentId) {
+      const edgeNums = inner.edges.map((e) => parseInt(e.id.replace("edge_", ""), 10)).filter(Boolean);
+      const nextEdgeNum = edgeNums.length > 0 ? Math.max(...edgeNums) + 1 : 1;
+      updatedEdges = [...updatedEdges, {
+        id: `edge_${nextEdgeNum}`,
+        from: newNodeId,
+        to: parentId,
+        relationship: "supports",
+      }];
+    }
+
+    pushHistory(
+      { argument_map: { ...inner, nodes: [...inner.nodes, newNode], edges: updatedEdges } },
+      moderatorAnalysis
+    );
+    setOriginalTexts((prev) => ({ ...prev, [newNodeId]: "(manually added)" }));
+    setAddNodeOpen(false);
+  };
+
+  /**
    * Called when a user sends a chat message to the AI moderator.
    * Maintains conversation history and optionally updates the map.
    */
@@ -305,7 +483,17 @@ export default function App() {
           clearTimeout(newNodeTimerRef.current);
           newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
         }
-        pushHistory(sanitizeNodeContent(updatedMap, theme), moderatorAnalysis);
+        const sanitizedChatMap = sanitizeNodeContent(updatedMap, theme);
+        const chatChanges = computeMapDiff(argumentMap.argument_map, sanitizedChatMap.argument_map);
+        if (chatChanges.length > 0) {
+          setAiChangeLog((prev) => [...prev, {
+            id: Date.now(),
+            speaker: "Moderator",
+            statement: message,
+            changes: chatChanges,
+          }]);
+        }
+        pushHistory(sanitizedChatMap, moderatorAnalysis);
       }
     } catch (err) {
       console.error("Error chatting with moderator:", err);
@@ -431,11 +619,14 @@ export default function App() {
     };
   }, [moderatorAnalysis, inner.nodes, fadedInfo]);
 
-  // Derive a concise position summary for each speaker from their first claim node
+  // Derive a concise position summary for each speaker from their most recent active claim.
+  // Falls back to any claim, then any node, then a placeholder if no nodes yet.
   const getSpeakerSummary = (speaker) => {
-    const node = inner.nodes.find((n) => n.speaker === speaker && n.type === "claim")
-      ?? inner.nodes.find((n) => n.speaker === speaker);
-    if (!node) return null;
+    const nodes = [...inner.nodes].reverse();
+    const node = nodes.find((n) => n.speaker === speaker && n.type === "claim" && !fadedInfo.fadedNodeIds.has(n.id))
+      ?? nodes.find((n) => n.speaker === speaker && n.type === "claim")
+      ?? nodes.find((n) => n.speaker === speaker);
+    if (!node) return "Position Summary Pending";
     const text = node.content;
     return text.length > 60 ? text.slice(0, 57) + "..." : text;
   };
@@ -443,9 +634,15 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* LCARS left-edge spine — fixed orange strip connecting header & footer elbows */}
+      {theme.lcars && <div className="lcars-spine" />}
+
       {/* Fixed top bar: title + tabs slide together */}
       <div className={`app-top${uiVisible ? "" : " app-top--hidden"}`}>
-        <header className="app-header">
+        <div className="app-top-body">
+          {theme.lcars && <div className="lcars-rail" />}
+          <div className="app-top-content">
+          <header className="app-header">
           <h1>Argument Mapper</h1>
           <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} />
         </header>
@@ -486,6 +683,8 @@ export default function App() {
           );
         })()}
         </nav>
+          </div>{/* app-top-content */}
+        </div>{/* app-top-body */}
       </div>
       {/* In-flow spacer keeps content below the fixed top bar */}
       <div className="app-top-spacer" aria-hidden="true" />
@@ -623,19 +822,35 @@ export default function App() {
         const liveNode = inner.nodes.find((n) => n.id === selectedNode.id) || selectedNode;
         return (
           <NodeDetailPopup
+            key={liveNode.id}
             node={liveNode}
             originalText={originalTexts[liveNode.id]}
             onClose={() => setSelectedNode(null)}
             fadedNodeIds={fadedInfo.fadedNodeIds}
             nodes={inner.nodes}
+            edges={inner.edges}
             onNodeClick={handleNodeClick}
             onRate={handleRate}
+            onSave={handleNodeSave}
             currentSpeaker={currentSpeaker}
             loading={loading}
             theme={theme}
           />
         );
       })()}
+
+      {/* Add Node modal — create mode */}
+      {addNodeOpen && (
+        <NodeDetailPopup
+          isNew
+          onClose={() => setAddNodeOpen(false)}
+          nodes={inner.nodes}
+          edges={inner.edges}
+          onSave={handleAddNode}
+          currentSpeaker={currentSpeaker}
+          theme={theme}
+        />
+      )}
 
       {/* Concession confirmation popup */}
       {concessionQueue.length > 0 && (
@@ -647,9 +862,19 @@ export default function App() {
         />
       )}
 
+      {/* AI Change Log modal */}
+      {showChangeLog && (
+        <AIChangeLogModal
+          log={aiChangeLog}
+          onClose={() => setShowChangeLog(false)}
+          theme={theme}
+        />
+      )}
+
       {/* Statement input at the bottom — hidden on moderator tab */}
       {activeTab !== "moderator" && (
         <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
+          {theme.lcars && <div className="lcars-rail lcars-rail--footer" />}
           <StatementInput
             currentSpeaker={currentSpeaker}
             speakerSummary={speakerSummary}
@@ -663,6 +888,9 @@ export default function App() {
             onRedo={handleRedo}
             canUndo={canUndo}
             canRedo={canRedo}
+            onAddNode={() => setAddNodeOpen(true)}
+            onReviewChanges={() => setShowChangeLog(true)}
+            changeLogCount={aiChangeLog.length}
             theme={theme}
           />
         </footer>

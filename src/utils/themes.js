@@ -52,9 +52,16 @@ export const THEMES = {
   ember: {
     label: "Ember",
     dark: true,
-    a: { name: "Amber",   bg: "#b87040", border: "#7a4820" },
-    b: { name: "Teal",    bg: "#3d8c7a", border: "#255c50" },
+    a: { name: "Amber",          bg: "#b87040", border: "#7a4820" },
+    b: { name: "Teal",           bg: "#3d8c7a", border: "#255c50" },
   },
+  // lcars: {
+  //   label: "LCARS",
+  //   dark: true,
+  //   lcars: true,
+  //   a: { name: "Callisto Orange", bg: "#FF9900", border: "#CC7700" },
+  //   b: { name: "Melrose",         bg: "#9999CC", border: "#6666AA" },
+  // },
 };
 
 export const DEFAULT_THEME_KEY = "classic";

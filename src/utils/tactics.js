@@ -23,6 +23,9 @@ export const TACTICS = {
   logical_deduction:          { symbol: "🧠", name: "Logical Deduction",          type: "technique" },
   addresses_counterargument:  { symbol: "🤝", name: "Addresses Counterargument",  type: "technique" },
   cites_source:               { symbol: "📚", name: "Cites Source",               type: "technique" },
+
+  // Rhetorical devices
+  analogy:                    { symbol: "🔀", name: "Analogy",                    type: "rhetorical" },
 };
 
 /** All valid tactic keys, for use in prompts */
