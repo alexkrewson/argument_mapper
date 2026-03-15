@@ -2,7 +2,6 @@
  * App.jsx — Main application component.
  *
  * Manages all state and ties the components together:
- * - API key (entered by user at runtime)
  * - Argument map (nodes + edges, updated by Claude)
  * - Turn tracking (alternates between User A and User B)
  * - Loading state (while waiting for Claude's response)

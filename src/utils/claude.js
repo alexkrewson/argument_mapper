@@ -32,7 +32,6 @@ async function getAuthHeaders() {
 /**
  * Sends the current map + a new statement to Claude and gets back an updated map.
  *
- * @param {string} apiKey       — The user's Anthropic API key
  * @param {object} currentMap   — Current map state (full wrapper with argument_map)
  * @param {string} speaker      — "Blue" or "Green"
  * @param {string} statement    — The raw statement the user typed
@@ -214,7 +213,6 @@ Return the updated map JSON.`;
  * Chat with the AI moderator about the argument map.
  * Supports back-and-forth conversation with optional map updates.
  *
- * @param {string} apiKey       — The user's Anthropic API key
  * @param {object} currentMap   — Current map state (full wrapper with argument_map)
  * @param {Array}  chatHistory  — Array of { role: "user"|"assistant", content: string }
  * @returns {{ reply: string, updatedMap: object|null }}

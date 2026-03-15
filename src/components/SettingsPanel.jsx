@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { THEMES } from "../utils/themes.js";
+import { supabase } from "../utils/supabase";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange }) {
+export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -28,12 +29,28 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange }) {
 
       {open && (
         <div className="settings-dropdown">
+          <div>
+            <div className="settings-section-label">Account</div>
+            {user ? (
+              <>
+                <div className="settings-user-email">{user.email}</div>
+                <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <button className="theme-option" onClick={() => { onOpenAuth(); setOpen(false); }}>
+                Sign in / Sign up
+              </button>
+            )}
+          </div>
+          <div className="settings-section-label settings-section-label--themes">Themes</div>
           {[false, true].map((isDark) => {
             const entries = Object.entries(THEMES).filter(([, t]) => !!t.dark === isDark);
             if (entries.length === 0) return null;
             return (
               <div key={String(isDark)}>
-                <div className="settings-section-label">
+                <div className="settings-section-label settings-section-label--sub">
                   {isDark ? "🌙 Dark" : "☀ Light"}
                 </div>
                 {entries.map(([key, theme]) => (
