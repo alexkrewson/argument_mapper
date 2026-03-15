@@ -15,17 +15,14 @@
  */
 
 import { TACTIC_KEYS } from "./tactics.js";
-import { supabase } from "./supabase.js";
 
 // Calls the Supabase Edge Function proxy — the API key never touches the browser.
 const API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-proxy`;
 
-async function getAuthHeaders() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error("You must be logged in to use this feature.");
+function getAuthHeaders() {
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${session.access_token}`,
+    "Authorization": `Bearer ${import.meta.env.VITE_PROXY_SECRET}`,
   };
 }
 
@@ -172,7 +169,7 @@ Return the updated map JSON.`;
 
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: await getAuthHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 8000,
@@ -258,7 +255,7 @@ Rules:
 
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: await getAuthHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 4096,

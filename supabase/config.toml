@@ -1,0 +1,4 @@
+project_id = "rctaosokjpwdkuewmvyc"
+
+[functions.claude-proxy]
+verify_jwt = false

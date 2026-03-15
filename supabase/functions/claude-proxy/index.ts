@@ -1,5 +1,3 @@
-import { createClient } from "jsr:@supabase/supabase-js@2";
-
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 Deno.serve(async (req) => {
@@ -18,22 +16,10 @@ Deno.serve(async (req) => {
     return new Response("Method not allowed", { status: 405 });
   }
 
-  // Verify the user is authenticated
+  // Verify the shared proxy secret
+  const proxySecret = Deno.env.get("PROXY_SECRET");
   const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-  );
-
-  const { data: { user }, error } = await supabase.auth.getUser(
-    authHeader.replace("Bearer ", ""),
-  );
-
-  if (error || !user) {
+  if (!proxySecret || !authHeader || authHeader !== `Bearer ${proxySecret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 
