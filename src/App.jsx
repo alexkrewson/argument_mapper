@@ -19,6 +19,7 @@ import AIChangeLogModal from "./components/AIChangeLogModal";
 import AuthModal from "./components/AuthModal";
 import DebateHistory from "./components/DebateHistory";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
+import { TACTICS } from "./utils/tactics.js";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
 import { supabase } from "./utils/supabase";
@@ -149,7 +150,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState(
     () => window.innerWidth < 640 ? "list" : "map"
   );
-  const directMode = activeTab === "chat";
+  const directMode = activeTab === "moderator";
 
   const [uiVisible, setUiVisible] = useState(true);
   const toggleUI = useCallback(() => setUiVisible((v) => !v), []);
@@ -701,28 +702,11 @@ export default function App() {
           List
         </button>
         <button
-          className={`tab-btn${activeTab === "chat" ? " tab-btn--active" : ""}`}
-          onClick={() => setActiveTab("chat")}
+          className={`tab-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("moderator")}
         >
-          Chat
+          Moderator
         </button>
-        {effectiveAnalysis && (() => {
-          const gaugePct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const gaugeColor = effectiveAnalysis.leaning < -0.1 ? theme.a.bg : effectiveAnalysis.leaning > 0.1 ? theme.b.bg : "#1e293b";
-          return (
-            <button
-              className={`tab-btn tab-gauge-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
-              onClick={() => setActiveTab("moderator")}
-              title="AI Moderator Analysis"
-            >
-              <span className="tab-gauge-label-a" style={{ color: theme.a.bg }}>{theme.a.name}</span>
-              <span className="tab-gauge-inline-track">
-                <span className="tab-gauge-inline-marker" style={{ left: `${gaugePct}%`, backgroundColor: gaugeColor }} />
-              </span>
-              <span className="tab-gauge-label-b" style={{ color: theme.b.bg }}>{theme.b.name}</span>
-            </button>
-          );
-        })()}
         {user && (
           <button
             className={`tab-btn${activeTab === "history" ? " tab-btn--active" : ""}`}
@@ -769,35 +753,9 @@ export default function App() {
               onNodeClick={handleNodeClick}
               loading={loading}
               fadedNodeIds={fadedInfo.fadedNodeIds}
-              contradictionFadedIds={fadedInfo.contradictionFadedIds}
-              walkbackFadedIds={fadedInfo.walkbackFadedIds}
-              contradictionBorderIds={fadedInfo.contradictionBorderIds}
-              walkbackBorderIds={fadedInfo.walkbackBorderIds}
               newNodeIds={newNodeIds}
               theme={theme}
             />
-          </div>
-        )}
-
-        {activeTab === "chat" && (
-          <div className="chat-area">
-            {chatMessages.length === 0 ? (
-              <p className="empty-message">Ask the AI moderator anything about the argument map.</p>
-            ) : (
-              <div className="chat-log" ref={chatLogRef}>
-                {chatMessages.map((msg, i) => (
-                  <div key={i} className={`chat-message ${msg.role}`}>
-                    <div
-                      className="chat-bubble"
-                      style={msg.role === "user"
-                        ? { backgroundColor: speakerBorder(msg.speaker, theme) }
-                        : undefined}
-                    >{msg.content}</div>
-                    {msg.mapUpdated && <div className="chat-map-updated">Map updated</div>}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         )}
 
@@ -806,57 +764,91 @@ export default function App() {
         )}
 
         {activeTab === "moderator" && (() => {
-          if (!effectiveAnalysis) {
-            return <p className="empty-message">No moderator analysis yet. Submit some arguments first.</p>;
-          }
-          const pct = ((effectiveAnalysis.leaning + 1) / 2) * 100;
-          const markerColor = effectiveAnalysis.leaning < -0.1 ? theme.a.bg : effectiveAnalysis.leaning > 0.1 ? theme.b.bg : "#1e293b";
-          const leaningLabel = effectiveAnalysis.leaning < -0.1 ? `Leaning ${theme.a.name}` : effectiveAnalysis.leaning > 0.1 ? `Leaning ${theme.b.name}` : "Balanced";
-          // Replace internal speaker IDs in AI-generated prose with theme display names
           const fixNames = (s) => typeof s === "string"
             ? s.replace(/\bBlue\b/g, theme.a.name).replace(/\bGreen\b/g, theme.b.name)
             : s;
+          const buildEvents = (internalSpeaker) => {
+            const events = [];
+            for (const node of inner.nodes) {
+              if (node.speaker === internalSpeaker) {
+                if (node.metadata?.contradicts)
+                  events.push({ cls: "bad", text: `Contradicted own position: ${node.metadata.contradicts} ⚠ ${node.id}` });
+                if (node.metadata?.moves_goalposts_from)
+                  events.push({ cls: "bad", text: `Moved goalposts: ${node.metadata.moves_goalposts_from} ⤳ ${node.id}` });
+                if (node.rating === "down") {
+                  const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
+                  events.push({ cls: "neutral", text: `↩ Retracted own argument: "${snip}"` });
+                }
+                if (node.rating === "up" && node.metadata?.agreed_by?.speaker && node.metadata.agreed_by.speaker !== internalSpeaker) {
+                  const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
+                  events.push({ cls: "good", text: `✓ Opponent agreed with your point: "${snip}"` });
+                }
+                for (const key of (node.metadata?.tactics || [])) {
+                  const t = TACTICS[key];
+                  if (t) events.push({ cls: t.type === "fallacy" ? "bad" : "good", text: `${t.symbol} ${t.name} (${node.id})` });
+                }
+              } else {
+                if (node.metadata?.agreed_by?.speaker === internalSpeaker) {
+                  const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
+                  events.push({ cls: "neutral", text: `✓ Conceded opposing point: "${snip}"` });
+                }
+              }
+            }
+            return events;
+          };
+          const eventsA = buildEvents("Blue");
+          const eventsB = buildEvents("Green");
           return (
-            <div className="moderator-tab-content">
-              <div className="popup-section">
-                <h4>Debate Leaning</h4>
-                <div className="gauge-popup-track-wrapper">
-                  <div className="gauge-labels">
-                    <span className="gauge-label-a" style={{ color: theme.a.bg }}>{theme.a.name}</span>
-                    <span className="gauge-label-b" style={{ color: theme.b.bg }}>{theme.b.name}</span>
-                  </div>
-                  <div className="gauge-track gauge-track-large" style={{ background: `linear-gradient(to right, ${theme.a.bg}44, ${theme.dark ? '#1e293b' : '#f1f5f9'} 50%, ${theme.b.bg}44)` }}>
-                    <div className="gauge-marker gauge-marker-large" style={{ left: `${pct}%`, backgroundColor: markerColor }} />
-                  </div>
-                  <div className="gauge-leaning-label" style={{ color: markerColor }}>
-                    {leaningLabel} ({effectiveAnalysis.leaning > 0 ? "+" : ""}{effectiveAnalysis.leaning.toFixed(2)})
-                  </div>
+            <div className="moderator-combined">
+              {/* Top half: side-by-side speaker breakdowns */}
+              <div className="moderator-speakers">
+                <div className="moderator-speaker" style={{ borderRight: `2px solid ${theme.a.bg}33` }}>
+                  <div className="moderator-speaker-name" style={{ color: theme.a.bg }}>{theme.a.name}</div>
+                  {effectiveAnalysis
+                    ? <p className="moderator-speaker-style">{fixNames(effectiveAnalysis.user_a_style)}</p>
+                    : <p className="moderator-speaker-empty">No analysis yet.</p>}
+                  {eventsA.length > 0 && (
+                    <ul className="moderator-events">
+                      {eventsA.map((ev, i) => (
+                        <li key={i} className={`moderator-event moderator-event--${ev.cls}`}>{ev.text}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
-                <p className="popup-summary" style={{ marginTop: "0.75rem" }}>{fixNames(effectiveAnalysis.leaning_reason)}</p>
+                <div className="moderator-speaker">
+                  <div className="moderator-speaker-name" style={{ color: theme.b.bg }}>{theme.b.name}</div>
+                  {effectiveAnalysis
+                    ? <p className="moderator-speaker-style">{fixNames(effectiveAnalysis.user_b_style)}</p>
+                    : <p className="moderator-speaker-empty">No analysis yet.</p>}
+                  {eventsB.length > 0 && (
+                    <ul className="moderator-events">
+                      {eventsB.map((ev, i) => (
+                        <li key={i} className={`moderator-event moderator-event--${ev.cls}`}>{ev.text}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
-              <div className="popup-section">
-                <h4>{theme.a.name}'s Argumentative Style</h4>
-                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.a.bg}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_a_style)}</p>
-              </div>
-              <div className="popup-section">
-                <h4>{theme.b.name}'s Argumentative Style</h4>
-                <p className="popup-summary" style={{ borderLeft: `3px solid ${theme.b.bg}`, paddingLeft: "0.75rem" }}>{fixNames(effectiveAnalysis.user_b_style)}</p>
-              </div>
-              {effectiveAnalysis.agreements?.length > 0 && (
-                <div className="popup-section">
-                  <h4>Points of Agreement</h4>
-                  <ul className="gauge-agreements-list">
-                    {effectiveAnalysis.agreements.map((a) => (
-                      <li key={a.nodeId} className="gauge-agreement-item">
-                        <span className="speaker-badge" style={{ backgroundColor: speakerBorder(a.nodeSpeaker, theme) }}>{speakerName(a.nodeSpeaker, theme)}</span>
-                        <span className="gauge-agreement-content">{a.content}</span>
-                        {a.agreedBy && <span className="gauge-agreed-by">— agreed by {speakerName(a.agreedBy, theme)}</span>}
-                      </li>
+              {/* Bottom half: chat */}
+              <div className="moderator-chat">
+                {chatMessages.length === 0 ? (
+                  <p className="empty-message">Ask the AI moderator anything about the argument map.</p>
+                ) : (
+                  <div className="chat-log" ref={chatLogRef}>
+                    {chatMessages.map((msg, i) => (
+                      <div key={i} className={`chat-message ${msg.role}`}>
+                        <div
+                          className="chat-bubble"
+                          style={msg.role === "user"
+                            ? { backgroundColor: speakerBorder(msg.speaker, theme) }
+                            : undefined}
+                        >{msg.content}</div>
+                        {msg.mapUpdated && <div className="chat-map-updated">Map updated</div>}
+                      </div>
                     ))}
-                  </ul>
-                  <p className="gauge-agreement-note">Each agreement shifts the gauge by 0.1 toward the agreed-upon speaker.</p>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })()}
@@ -924,8 +916,8 @@ export default function App() {
         />
       )}
 
-      {/* Statement input at the bottom — hidden on moderator and history tabs */}
-      {activeTab !== "moderator" && activeTab !== "history" && (
+      {/* Statement input at the bottom — hidden on history tab only */}
+      {activeTab !== "history" && (
         <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
           {theme.lcars && <div className="lcars-rail lcars-rail--footer" />}
           <StatementInput

@@ -1,5 +1,5 @@
-1) after a contradiction or walkback, all downstream arguments including the instigators of the walkbacks and contradictions should fade.
+1) in the list tab, when a branch has been conceded and faded, it looks like the transparency increases as the depth of in that branch increases. The children are more transparent than the parents. I think the entire branch should be the same transparency.
 
-2) active color for "Map", "List", and "Chat" should be moderator purple.
+2) the little red badge that is on the nodes affected by the goalpoast moving or a contradiction. I want all nodes, including the ones immediately involved in the contradiction/goalpost, to have the same badges and only the same. I want it to be format <upstream contradicted/goalpost node> <attention icon> <downstream contradicted/goalpost node>.
 
-3) highlight and left border color on "original text" in popup should coordinate with the color of that user
+3) in the Moderator tab, can you also list all of the notable events each user has been involved in, such as causing a goalpost/contradicion, conceding to the other user's argument being correct, conceding to their own argument being incorrect,  positive and negative tactics detected. and if the other user concedes that their point is correct.

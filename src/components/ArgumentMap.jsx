@@ -280,13 +280,13 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         // so wrapping to a second row would push the first row above the node boundary.
         const cs = (color) => `background:${color};color:#fff;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;`;
         const fmtShortId = (id) => "#" + id.replace(/^node_/i, "");
-        const chipBadges = [];
-        if (data.contradicts)             chipBadges.push(`<span title="CONTRADICTS ${fmtId(data.contradicts)}" style="${cs("#dc2626")}">⚠ C→${fmtShortId(data.contradicts)}</span>`);
-        if (data.contradictedBy)          chipBadges.push(`<span title="CONTRADICTED BY ${fmtId(data.contradictedBy)}" style="${cs("#dc2626")}">⚠ C←${fmtShortId(data.contradictedBy)}</span>`);
-        if (data.movesGoalpostsFrom)      chipBadges.push(`<span title="MOVES GOALPOST OF ${fmtId(data.movesGoalpostsFrom)}" style="${cs("#dc2626")}">⤳ G→${fmtShortId(data.movesGoalpostsFrom)}</span>`);
-        if (data.walkedBackBy)            chipBadges.push(`<span title="GOALPOST MOVED BY ${fmtId(data.walkedBackBy)}" style="${cs("#dc2626")}">⤳ G←${fmtShortId(data.walkedBackBy)}</span>`);
-        if (data.contradictionDownstream) chipBadges.push(`<span title="Downstream of a contradiction" style="${cs("#dc2626")}">⚠ ↓</span>`);
-        if (data.walkbackDownstream)      chipBadges.push(`<span title="Downstream of a goalpost move" style="${cs("#dc2626")}">⤳ ↓</span>`);
+        const chipBadges = (data.flagPairs || []).map((pair) => {
+          const label = `${fmtShortId(pair.upstream)} ⚠️ ${fmtShortId(pair.downstream)}`;
+          const title = pair.type === "contradiction"
+            ? `Contradiction: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`
+            : `Goalpost move: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`;
+          return `<span title="${title}" style="${cs("#dc2626")}">${label}</span>`;
+        });
 
         return `<div style="display:flex;gap:3px;align-items:center;pointer-events:none;max-width:252px;margin:4px 0 0 -19px;opacity:${data.faded ? 0.25 : 1};">
           <span class="node-id-badge">${data.id}</span>
@@ -490,34 +490,54 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     const cy = cyRef.current;
     if (!cy) return;
 
-    // Build reverse maps so the chip tpl knows "who contradicts me?" and "who walked me back?"
-    const contradictedByMap = new Map();
-    const walkedBackByMap   = new Map();
+    // Build flagPairsMap: nodeId → [{type, upstream, downstream}] for all affected nodes.
+    const predecessorMap = new Map();
+    for (const edge of edges) {
+      if (!predecessorMap.has(edge.to)) predecessorMap.set(edge.to, new Set());
+      predecessorMap.get(edge.to).add(edge.from);
+    }
+    function bfsBack(startId) {
+      const visited = new Set([startId]);
+      const queue = [startId];
+      while (queue.length > 0) {
+        const current = queue.shift();
+        for (const predId of predecessorMap.get(current) || []) {
+          if (!visited.has(predId)) { visited.add(predId); queue.push(predId); }
+        }
+      }
+      return visited;
+    }
+    const flagPairsMap = new Map();
+    const addPair = (nodeId, pair) => {
+      if (!flagPairsMap.has(nodeId)) flagPairsMap.set(nodeId, []);
+      const existing = flagPairsMap.get(nodeId);
+      if (!existing.some(p => p.upstream === pair.upstream && p.downstream === pair.downstream && p.type === pair.type))
+        existing.push(pair);
+    };
     for (const node of nodes) {
-      if (node.metadata?.contradicts)           contradictedByMap.set(node.metadata.contradicts,           node.id);
-      if (node.metadata?.moves_goalposts_from)  walkedBackByMap.set(node.metadata.moves_goalposts_from,   node.id);
+      if (node.metadata?.contradicts) {
+        const pair = { type: "contradiction", upstream: node.metadata.contradicts, downstream: node.id };
+        addPair(pair.upstream, pair); addPair(pair.downstream, pair);
+        for (const predId of bfsBack(pair.upstream))
+          if (predId !== pair.upstream && predId !== pair.downstream) addPair(predId, pair);
+      }
+      if (node.metadata?.moves_goalposts_from) {
+        const pair = { type: "goalpost", upstream: node.metadata.moves_goalposts_from, downstream: node.id };
+        addPair(pair.upstream, pair); addPair(pair.downstream, pair);
+        for (const predId of bfsBack(pair.upstream))
+          if (predId !== pair.upstream && predId !== pair.downstream) addPair(predId, pair);
+      }
     }
 
-    const nodeDataOf = (node) => {
-      const contradicts       = node.metadata?.contradicts          || "";
-      const contradictedBy    = contradictedByMap.get(node.id)      || "";
-      const movesGoalpostsFrom = node.metadata?.moves_goalposts_from || "";
-      const walkedBackBy      = walkedBackByMap.get(node.id)        || "";
-      return {
-        id: node.id,
-        label: node.content,
-        speaker: node.speaker,
-        type: node.type,
-        rating: node.rating,
-        tactics: node.metadata?.tactics || [],
-        contradicts,
-        contradictedBy,
-        movesGoalpostsFrom,
-        walkedBackBy,
-        contradictionDownstream: contradictionFadedIds?.has(node.id) || false,
-        walkbackDownstream:      walkbackFadedIds?.has(node.id)      || false,
-      };
-    };
+    const nodeDataOf = (node) => ({
+      id: node.id,
+      label: node.content,
+      speaker: node.speaker,
+      type: node.type,
+      rating: node.rating,
+      tactics: node.metadata?.tactics || [],
+      flagPairs: flagPairsMap.get(node.id) || [],
+    });
     const edgeDataOf = (edge) => ({
       id: edge.id,
       source: edge.from,

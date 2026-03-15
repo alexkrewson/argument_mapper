@@ -85,25 +85,20 @@ function countDescendants(children) {
 
 const nodeChipLabel = (id) => id.toUpperCase().replace("NODE_", "NODE #");
 
-function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, newNodeIds, theme, contradictedByMap, walkedBackByMap }) {
+function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, newNodeIds, theme, flagPairsMap }) {
   const { node, crossLinkCount, children } = item;
   const style = node.speaker === "Blue"  ? { bg: theme.a.bg, border: theme.a.bg }
               : node.speaker === "Green" ? { bg: theme.b.bg, border: theme.b.bg }
               : MODERATOR_STYLE;
   const isFaded = fadedNodeIds?.has(node.id);
   const isNew = newNodeIds?.has(node.id);
-  const isContradictionDownstream = contradictionFadedIds?.has(node.id);
-  const isWalkbackDownstream = walkbackFadedIds?.has(node.id);
 
   const bgColor = style.bg;
   const isLightBg = node.speaker === "Moderator";
   const textColor = isLightBg ? "#1e293b" : "#fff";
   const shouldFadeOpacity = isFaded;
 
-  const contradictsId      = node.metadata?.contradicts || null;
-  const contradictedById   = contradictedByMap?.get(node.id) || null;
-  const movesGoalpostsFrom = node.metadata?.moves_goalposts_from || null;
-  const walkedBackById     = walkedBackByMap?.get(node.id) || null;
+  const flagPairs = flagPairsMap?.get(node.id) || [];
 
   const tactics = (node.metadata?.tactics || []).filter((k) => TACTICS[k]);
   const hasChildren = children.length > 0;
@@ -161,25 +156,12 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           )}
         </div>
 
-        {/* Contradiction / goalpost chips — primary and downstream nodes */}
-        {contradictsId && (
-          <div className="node-flag-chip node-flag-chip--contradiction">⚠ CONTRADICTS {nodeChipLabel(contradictsId)}</div>
-        )}
-        {contradictedById && (
-          <div className="node-flag-chip node-flag-chip--contradiction">⚠ CONTRADICTED BY {nodeChipLabel(contradictedById)}</div>
-        )}
-        {movesGoalpostsFrom && (
-          <div className="node-flag-chip node-flag-chip--contradiction">⤳ MOVES GOALPOST OF {nodeChipLabel(movesGoalpostsFrom)}</div>
-        )}
-        {walkedBackById && (
-          <div className="node-flag-chip node-flag-chip--contradiction">⤳ GOALPOST MOVED BY {nodeChipLabel(walkedBackById)}</div>
-        )}
-        {isContradictionDownstream && (
-          <div className="node-flag-chip node-flag-chip--contradiction">⚠ DOWNSTREAM OF CONTRADICTION</div>
-        )}
-        {isWalkbackDownstream && (
-          <div className="node-flag-chip node-flag-chip--contradiction">⤳ DOWNSTREAM OF GOALPOST MOVE</div>
-        )}
+        {/* Contradiction / goalpost chips */}
+        {flagPairs.map((pair, i) => (
+          <div key={i} className="node-flag-chip node-flag-chip--contradiction">
+            {nodeChipLabel(pair.upstream)} ⚠️ {nodeChipLabel(pair.downstream)}
+          </div>
+        ))}
 
         {/* Claim text */}
         <span className="claim-text">{node.content}</span>
@@ -268,12 +250,9 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
                   onNodeClick={onNodeClick}
                   loading={loading}
                   fadedNodeIds={fadedNodeIds}
-                  contradictionFadedIds={contradictionFadedIds}
-                  walkbackFadedIds={walkbackFadedIds}
                   newNodeIds={newNodeIds}
                   theme={theme}
-                  contradictedByMap={contradictedByMap}
-                  walkedBackByMap={walkedBackByMap}
+                  flagPairsMap={flagPairsMap}
                 />
               ))}
             </ul>
@@ -284,25 +263,56 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
   );
 }
 
-export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, contradictionFadedIds, walkbackFadedIds, newNodeIds, theme }) {
+export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, newNodeIds, theme }) {
   const trees = useMemo(() => buildTree(nodes, edges), [nodes, edges]);
   const [collapsed, setCollapsed] = useState(() => new Set());
 
-  const contradictedByMap = useMemo(() => {
+  // Build a map of nodeId → [{type, upstream, downstream}] for all nodes involved
+  // in a contradiction or goalpost-move pair (both direct participants and upstream predecessors).
+  const flagPairsMap = useMemo(() => {
+    const predecessorMap = new Map();
+    for (const edge of edges) {
+      if (!predecessorMap.has(edge.to)) predecessorMap.set(edge.to, new Set());
+      predecessorMap.get(edge.to).add(edge.from);
+    }
+    function bfsBack(startId) {
+      const visited = new Set([startId]);
+      const queue = [startId];
+      while (queue.length > 0) {
+        const current = queue.shift();
+        for (const predId of predecessorMap.get(current) || []) {
+          if (!visited.has(predId)) { visited.add(predId); queue.push(predId); }
+        }
+      }
+      return visited;
+    }
     const map = new Map();
+    const addPair = (nodeId, pair) => {
+      if (!map.has(nodeId)) map.set(nodeId, []);
+      const existing = map.get(nodeId);
+      if (!existing.some(p => p.upstream === pair.upstream && p.downstream === pair.downstream && p.type === pair.type))
+        existing.push(pair);
+    };
     for (const node of nodes) {
-      if (node.metadata?.contradicts) map.set(node.metadata.contradicts, node.id);
+      if (node.metadata?.contradicts) {
+        const pair = { type: "contradiction", upstream: node.metadata.contradicts, downstream: node.id };
+        addPair(pair.upstream, pair);
+        addPair(pair.downstream, pair);
+        for (const predId of bfsBack(pair.upstream)) {
+          if (predId !== pair.upstream && predId !== pair.downstream) addPair(predId, pair);
+        }
+      }
+      if (node.metadata?.moves_goalposts_from) {
+        const pair = { type: "goalpost", upstream: node.metadata.moves_goalposts_from, downstream: node.id };
+        addPair(pair.upstream, pair);
+        addPair(pair.downstream, pair);
+        for (const predId of bfsBack(pair.upstream)) {
+          if (predId !== pair.upstream && predId !== pair.downstream) addPair(predId, pair);
+        }
+      }
     }
     return map;
-  }, [nodes]);
-
-  const walkedBackByMap = useMemo(() => {
-    const map = new Map();
-    for (const node of nodes) {
-      if (node.metadata?.moves_goalposts_from) map.set(node.metadata.moves_goalposts_from, node.id);
-    }
-    return map;
-  }, [nodes]);
+  }, [nodes, edges]);
 
   const onToggle = (nodeId) => {
     setCollapsed((prev) => {
@@ -341,12 +351,9 @@ export default function MapTreeView({ nodes, edges, currentSpeaker, onRate, onNo
             onNodeClick={onNodeClick}
             loading={loading}
             fadedNodeIds={fadedNodeIds}
-            contradictionFadedIds={contradictionFadedIds}
-            walkbackFadedIds={walkbackFadedIds}
             newNodeIds={newNodeIds}
             theme={theme}
-            contradictedByMap={contradictedByMap}
-            walkedBackByMap={walkedBackByMap}
+            flagPairsMap={flagPairsMap}
           />
         ))}
       </ul>
