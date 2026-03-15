@@ -1,5 +1,5 @@
 /**
- * claude.js — Helper for calling the Claude API directly from the browser.
+ * claude.js — Helper for calling the Claude API via a Supabase Edge Function proxy.
  *
  * We send the current argument map (as JSON) plus the new statement to Claude,
  * and ask it to return an updated map following the Argument Mapping Spec v1.0.
@@ -15,12 +15,19 @@
  */
 
 import { TACTIC_KEYS } from "./tactics.js";
+import { supabase } from "./supabase.js";
 
-// The Anthropic Messages API endpoint.
-// NOTE: This calls the API directly from the browser. In production you'd proxy
-// through a backend to keep keys secret — but for this MVP, the user pastes
-// their own key at runtime.
-const API_URL = "https://api.anthropic.com/v1/messages";
+// Calls the Supabase Edge Function proxy — the API key never touches the browser.
+const API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-proxy`;
+
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("You must be logged in to use this feature.");
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${session.access_token}`,
+  };
+}
 
 /**
  * Sends the current map + a new statement to Claude and gets back an updated map.
@@ -31,7 +38,7 @@ const API_URL = "https://api.anthropic.com/v1/messages";
  * @param {string} statement    — The raw statement the user typed
  * @returns {object}            — Updated map with new nodes/edges added
  */
-export async function updateArgumentMap(apiKey, currentMap, speaker, statement, speakerNames = { a: "Blue", b: "Green" }) {
+export async function updateArgumentMap(currentMap, speaker, statement, speakerNames = { a: "Blue", b: "Green" }) {
   const systemPrompt = `You are an argument mapping assistant for a two-person debate. You analyze statements and maintain a structured argument map as JSON following the Argument Mapping Spec v1.0.
 
 Your job:
@@ -164,15 +171,9 @@ New statement from ${displayName} (speaker: "${speaker}"):
 
 Return the updated map JSON.`;
 
-  // Call the Anthropic Messages API using fetch.
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
+    headers: await getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 8000,
@@ -218,7 +219,7 @@ Return the updated map JSON.`;
  * @param {Array}  chatHistory  — Array of { role: "user"|"assistant", content: string }
  * @returns {{ reply: string, updatedMap: object|null }}
  */
-export async function chatWithModerator(apiKey, currentMap, chatHistory, speakerNames = { a: "Blue", b: "Green" }) {
+export async function chatWithModerator(currentMap, chatHistory, speakerNames = { a: "Blue", b: "Green" }) {
   const systemPrompt = `You are an AI debate moderator discussing an argument map with the user. You can explain your reasoning, discuss node classifications, answer questions about the map, and make edits when asked.
 
 Current argument map:
@@ -259,12 +260,7 @@ Rules:
 
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
+    headers: await getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 4096,

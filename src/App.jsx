@@ -17,9 +17,13 @@ import NodeDetailPopup from "./components/NodeDetailPopup";
 import SettingsPanel from "./components/SettingsPanel";
 import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
 import AIChangeLogModal from "./components/AIChangeLogModal";
+import AuthModal from "./components/AuthModal";
+import DebateHistory from "./components/DebateHistory";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
+import { supabase } from "./utils/supabase";
+import { useAuth } from "./hooks/useAuth";
 import "./App.css";
 
 // Initial empty map — spec v1.0 wrapper format
@@ -115,14 +119,14 @@ function historyReducer(state, action) {
     }
     case "undo": return state.index > 0 ? { ...state, index: state.index - 1 } : state;
     case "redo": return state.index < state.entries.length - 1 ? { ...state, index: state.index + 1 } : state;
+    case "load": return { entries: [action.entry], index: 0 };
     default: return state;
   }
 }
 
 export default function App() {
   // --- State ---
-  // API key from .env (VITE_ prefix required by Vite)
-  const apiKey = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
+  const { user } = useAuth();
   const [{ entries: histEntries, index: histIndex }, dispatchHistory] = useReducer(
     historyReducer,
     { entries: [{ map: EMPTY_MAP, analysis: null }], index: 0 }
@@ -168,6 +172,10 @@ export default function App() {
   const [addNodeOpen, setAddNodeOpen] = useState(false); // Whether the "Add Node" create modal is open
   const [aiChangeLog, setAiChangeLog] = useState([]); // Log of all AI-made changes
   const [showChangeLog, setShowChangeLog] = useState(false); // Whether the changelog modal is open
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
+  const currentDebateIdRef = useRef(null); // Supabase row id of current debate (ref avoids stale closure)
+  const skipNextSaveRef = useRef(false);   // Set true after loading a debate to skip the immediate re-save
 
   const chatLogRef = useRef(null);
   useEffect(() => {
@@ -176,17 +184,52 @@ export default function App() {
     }
   }, [chatMessages]);
 
+  // Auto-save: fires 1.5s after any map change, if user is logged in and map has nodes
+  useEffect(() => {
+    if (!user || inner.nodes.length === 0) return;
+    if (skipNextSaveRef.current) { skipNextSaveRef.current = false; return; }
+    const entry = histEntries[histIndex];
+    const autoTitle = inner.title ||
+      inner.nodes.find((n) => n.type === "claim")?.content?.slice(0, 60) ||
+      `Debate — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    const timer = setTimeout(async () => {
+      setSaveStatus("saving");
+      try {
+        const row = { title: autoTitle, map_data: entry, theme_key: themeKey, speaker_a: theme.a.name, speaker_b: theme.b.name, user_id: user.id };
+        if (currentDebateIdRef.current) {
+          const { error } = await supabase.from("debates").update(row).eq("id", currentDebateIdRef.current);
+          if (error) throw error;
+        } else {
+          const { data, error } = await supabase.from("debates").insert(row).select().single();
+          if (error) throw error;
+          currentDebateIdRef.current = data.id;
+        }
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(null), 2000);
+      } catch (err) {
+        console.error("Auto-save failed:", err);
+        setSaveStatus(null);
+      }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [histEntries, histIndex, user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleLoadDebate = (debate) => {
+    skipNextSaveRef.current = true;
+    dispatchHistory({ type: "load", entry: debate.map_data });
+    currentDebateIdRef.current = debate.id;
+    if (debate.theme_key) handleThemeChange(debate.theme_key);
+    setAiChangeLog([]);
+    setChatMessages([]);
+    setOriginalTexts({});
+    setActiveTab("map");
+  };
+
   /**
    * Called when a user submits a new statement.
    * Sends it to Claude along with the current map, gets back an updated map.
    */
   const handleSubmit = async (statement) => {
-    // Guard: need an API key to call Claude
-    if (!apiKey) {
-      setError("Please enter your API key first.");
-      return;
-    }
-
     setLoading(true);
     setLoadingSpeaker(currentSpeaker);
     setError(null);
@@ -194,7 +237,6 @@ export default function App() {
     try {
       // Call Claude to process the statement and update the map
       const updatedMap = await updateArgumentMap(
-        apiKey,
         argumentMap,
         currentSpeaker,
         statement,
@@ -458,11 +500,6 @@ export default function App() {
    * Maintains conversation history and optionally updates the map.
    */
   const handleChatMessage = async (message) => {
-    if (!apiKey) {
-      setError("Please enter your API key first.");
-      return;
-    }
-
     const userMsg = { role: "user", content: message, speaker: currentSpeaker };
     const updatedHistory = [...chatMessages, userMsg];
     setChatMessages(updatedHistory);
@@ -471,7 +508,7 @@ export default function App() {
     setError(null);
 
     try {
-      const { reply, updatedMap } = await chatWithModerator(apiKey, argumentMap, updatedHistory, { a: theme.a.name, b: theme.b.name });
+      const { reply, updatedMap } = await chatWithModerator(argumentMap, updatedHistory, { a: theme.a.name, b: theme.b.name });
       const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
       setChatMessages((prev) => [...prev, assistantMsg]);
       if (updatedMap) {
@@ -644,7 +681,12 @@ export default function App() {
           <div className="app-top-content">
           <header className="app-header">
           <h1>Argument Mapper</h1>
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} />
+          {saveStatus && (
+            <span className={`save-status save-status--${saveStatus}`}>
+              {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
+            </span>
+          )}
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} />
         </header>
         <nav className="tab-bar">
         <button
@@ -682,6 +724,14 @@ export default function App() {
             </button>
           );
         })()}
+        {user && (
+          <button
+            className={`tab-btn${activeTab === "history" ? " tab-btn--active" : ""}`}
+            onClick={() => setActiveTab("history")}
+          >
+            History
+          </button>
+        )}
         </nav>
           </div>{/* app-top-content */}
         </div>{/* app-top-body */}
@@ -750,6 +800,10 @@ export default function App() {
               </div>
             )}
           </div>
+        )}
+
+        {activeTab === "history" && (
+          <DebateHistory user={user} onLoadDebate={handleLoadDebate} />
         )}
 
         {activeTab === "moderator" && (() => {
@@ -871,8 +925,8 @@ export default function App() {
         />
       )}
 
-      {/* Statement input at the bottom — hidden on moderator tab */}
-      {activeTab !== "moderator" && (
+      {/* Statement input at the bottom — hidden on moderator and history tabs */}
+      {activeTab !== "moderator" && activeTab !== "history" && (
         <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
           {theme.lcars && <div className="lcars-rail lcars-rail--footer" />}
           <StatementInput
@@ -895,6 +949,9 @@ export default function App() {
           />
         </footer>
       )}
+
+      {/* Auth modal */}
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
   );
 }
