@@ -12,6 +12,23 @@ import cytoscape from "cytoscape";
 import nodeHtmlLabel from "cytoscape-node-html-label";
 import dagre from "cytoscape-dagre";
 import { TACTICS } from "../utils/tactics.js";
+import { fmtNodeId } from "../utils/format.js";
+
+// Layout constants (px).
+// BADGE_BASE_TOP = top/left inset for badges inside the node (the "margin" rule).
+// NODE_WIDTH     = Cytoscape node width (matches stylesheet width: 260).
+// BADGE_AVAIL    = usable badge row width (node minus left+right inset).
+const BADGE_ROW_PX   = 16;   // rendered badge row height (fixed via height:16px on all badges)
+const BADGE_BASE_TOP = 4;    // top & left inset for badge area
+const NODE_WIDTH     = 260;  // must match stylesheet width
+const BADGE_AVAIL    = NODE_WIDTH - 2 * BADGE_BASE_TOP;  // 252px
+
+function estimateBadgeRows(tactics, flagPairs) {
+  // Primary row: fixed badges (~110px) + tactic icons inline, wrapping as needed
+  const primaryRows = Math.ceil((110 + (tactics?.length ?? 0) * 29) / BADGE_AVAIL);
+  const chipRows    = flagPairs?.length ? Math.ceil(flagPairs.length * 104 / BADGE_AVAIL) : 0;
+  return primaryRows + chipRows;
+}
 
 // Register extensions once
 if (typeof cytoscape("core", "nodeHtmlLabel") === "undefined") {
@@ -38,15 +55,15 @@ function buildStylesheet(theme) {
         "text-transform": lcars ? "uppercase" : undefined,
         "text-valign": "center",
         "text-halign": "center",
-        "text-margin-y": 20,
+        "text-margin-y": "data(textMarginY)",
         width: 260,
-        height: "label",
+        height: "data(nodeHeight)",
         shape: "roundrectangle",
         color: lcars ? "#FF9900" : "#0f172a",
         "background-color": lcars ? "#0a0900" : dark ? "#1e293b" : "#f8fafc",
         "border-width": 0,
         "font-weight": "bold",
-        padding: "26px",
+        padding: "4px",
       },
     },
     // --- Node types ---
@@ -206,7 +223,7 @@ function fitToSafeZone(cy) {
   cy.animate({
     zoom,
     pan: { x: screenCx - modelCx * zoom, y: screenCy - modelCy * zoom },
-    duration: 250,
+    duration: 200,
     easing: "ease-in-out",
   });
 }
@@ -219,7 +236,7 @@ function runLayout(cy, onDone) {
     rankSep: 75,
     padding: 40,
     animate: true,
-    animationDuration: 300,
+    animationDuration: 200,
     fit: false, // fitToSafeZone handles viewport after animation
   });
   layout.one("layoutstop", () => {
@@ -229,7 +246,7 @@ function runLayout(cy, onDone) {
     setTimeout(() => {
       fitToSafeZone(cy);
       if (onDone) onDone();
-    }, 320);
+    }, 220);
   });
   layout.run();
 }
@@ -241,6 +258,61 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   useEffect(() => { onToggleUIRef.current = onToggleUI; }, [onToggleUI]);
   const themeRef = useRef(theme);
   useEffect(() => { themeRef.current = theme; }, [theme]);
+
+  // tplRef holds the badge template function. It's updated on every render so
+  // that HMR-patched code takes effect immediately without needing a remount.
+  const tplRef = useRef(null);
+  {
+    const fmtId = fmtNodeId;
+    const cs = (color) => `background:${color};color:#fff;border-radius:3px;padding:0 5px;font-size:9px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;border:1.5px solid rgba(0,0,0,0.4);display:inline-flex;align-items:center;height:16px;box-sizing:border-box;`;
+    const rowStyle = `display:flex;gap:3px;align-items:center;flex-wrap:wrap;`;
+    tplRef.current = (data) => {
+      const theme = themeRef.current;
+      // Plugin: translate(0%,-100%) translate(node.left, node.top)
+      // With an absolutely-positioned child, _node collapses to zero height so
+      // translate(0%,-100%) = translate(0,0). _node's origin lands at (node.left, node.top).
+      // The badge div with position:absolute;top/left:BADGE_BASE_TOP is therefore
+      // always exactly BADGE_BASE_TOP inside the node's top-left corner — no dependency
+      // on matching BADGE_ROW_PX to actual CSS-rendered row height.
+      const GAP = 2; // flex gap between rows
+
+      const spkName  = data.speaker === "Blue"  ? theme.a.name
+                     : data.speaker === "Green" ? theme.b.name : "Mod";
+      const spkColor = data.speaker === "Blue"  ? theme.a.border
+                     : data.speaker === "Green" ? theme.b.border : "#64748b";
+
+      // Row 1 (primary) — node id + speaker + type + tactic icons, wrapping as needed
+      const nodeNum = data.id.replace(/^node_/i, "");
+      const tacticHtml = (data.tactics || [])
+        .filter((key) => TACTICS[key])
+        .map((key) => {
+          const tbc = TACTICS[key].type === "fallacy" ? "#dc2626" : TACTICS[key].type === "technique" ? "#16a34a" : "#d97706";
+          return `<span title="${TACTICS[key].name}" style="cursor:help;pointer-events:auto;background:rgba(0,0,0,0.45);border:2px solid ${tbc};border-radius:3px;padding:0 4px;font-size:10px;display:inline-flex;align-items:center;height:16px;box-sizing:border-box;">${TACTICS[key].symbol}</span>`;
+        })
+        .join("");
+      const primaryRow = `<div style="${rowStyle}">
+        <span style="${cs("#334155")}">${nodeNum}</span>
+        <span style="${cs(spkColor)}">${spkName}</span>
+        ${data.type ? `<span class="type-badge type-${data.type}">${data.type.charAt(0).toUpperCase() + data.type.slice(1)}</span>` : ""}
+        ${tacticHtml}
+      </div>`;
+
+      // Row 2 (chips)
+      const chipHtml = (data.flagPairs || []).map((pair) => {
+        const num = (id) => id.replace(/^node_/i, "");
+        const label = `${num(pair.upstream)} ⚠️ ${num(pair.downstream)}`;
+        const title = pair.type === "contradiction"
+          ? `Contradiction: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`
+          : `Goalpost move: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`;
+        return `<span title="${title}" style="${cs("#dc2626")}">${label}</span>`;
+      }).join("");
+      const chipRow = chipHtml ? `<div style="${rowStyle}">${chipHtml}</div>` : "";
+
+      return `<div style="position:absolute;top:${BADGE_BASE_TOP}px;left:${BADGE_BASE_TOP}px;display:flex;flex-direction:column;gap:${GAP}px;pointer-events:none;width:${BADGE_AVAIL}px;opacity:${data.faded ? 0.25 : 1};">
+        ${primaryRow}${chipRow}
+      </div>`;
+    };
+  }
 
   // Initialize cytoscape once
   useEffect(() => {
@@ -257,44 +329,14 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       minZoom: 0.2,
     });
 
-    const chipStyle = (color) =>
-      `background:${color};color:white;border-radius:3px;padding:2px 6px;font-size:9px;font-weight:800;letter-spacing:0.07em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:244px;`;
-    const fmtId = (id) => id.toUpperCase().replace("NODE_", "NODE #");
-
     cy.nodeHtmlLabel([{
       query: "node",
       halign: "left",
       valign: "top",
       halignBox: "right",
       valignBox: "top",
-      tpl: (data) => {
-        const tacticSymbols = (data.tactics || [])
-          .filter((key) => TACTICS[key])
-          .map((key) => `<span title="${TACTICS[key].name}" style="cursor:default;background:rgba(0,0,0,0.45);border:1px solid rgba(255,255,255,0.25);border-radius:3px;padding:1px 4px;font-size:10px;">${TACTICS[key].symbol}</span>`)
-          .join("");
-        const typeBadge = data.type
-          ? `<span class="type-badge type-${data.type}">${data.type}</span>`
-          : "";
-        // Chip badges: abbreviated so they always fit on one line with other badges.
-        // The plugin anchors the div's bottom near node-top (content fills upward),
-        // so wrapping to a second row would push the first row above the node boundary.
-        const cs = (color) => `background:${color};color:#fff;border-radius:3px;padding:1px 5px;font-size:9px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;`;
-        const fmtShortId = (id) => "#" + id.replace(/^node_/i, "");
-        const chipBadges = (data.flagPairs || []).map((pair) => {
-          const label = `${fmtShortId(pair.upstream)} ⚠️ ${fmtShortId(pair.downstream)}`;
-          const title = pair.type === "contradiction"
-            ? `Contradiction: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`
-            : `Goalpost move: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`;
-          return `<span title="${title}" style="${cs("#dc2626")}">${label}</span>`;
-        });
-
-        return `<div style="display:flex;gap:3px;align-items:center;pointer-events:none;max-width:252px;margin:4px 0 0 -19px;opacity:${data.faded ? 0.25 : 1};">
-          <span class="node-id-badge">${data.id}</span>
-          ${typeBadge}
-          ${tacticSymbols ? `<span style="display:flex;gap:2px;">${tacticSymbols}</span>` : ""}
-          ${chipBadges.join("")}
-        </div>`;
-      },
+      // Delegate to tplRef so HMR code changes take effect without remount.
+      tpl: (data) => tplRef.current(data),
     }]);
 
     // ── Touch gesture state machine ────────────────────────────────────────
@@ -529,15 +571,34 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       }
     }
 
-    const nodeDataOf = (node) => ({
-      id: node.id,
-      label: node.content,
-      speaker: node.speaker,
-      type: node.type,
-      rating: node.rating,
-      tactics: node.metadata?.tactics || [],
-      flagPairs: flagPairsMap.get(node.id) || [],
-    });
+    const nodeDataOf = (node) => {
+      const tactics   = node.metadata?.tactics || [];
+      const flagPairs = flagPairsMap.get(node.id) || [];
+      const badgeRows = estimateBadgeRows(tactics, flagPairs);
+      // Summary placement rule: gap(badge_bottom → text_top) = gap(text_bottom → node_bottom)
+      //   Both gaps = BADGE_BASE_TOP (matches left/top badge inset for visual unity).
+      //   text_centre = (badge_bottom + nodeHeight) / 2
+      //   → textMarginY = (BADGE_BASE_TOP + _badgeH) / 2
+      //   nodeHeight = badge_bottom + 4×BADGE_BASE_TOP + textLines×14
+      //             = (BADGE_BASE_TOP + _badgeH) + 4×BADGE_BASE_TOP + textLines×14
+      //   → gap above text = gap below text = 2×BADGE_BASE_TOP = 8px
+      const _badgeH     = badgeRows * BADGE_ROW_PX + Math.max(0, badgeRows - 1) * 2;
+      const textLines   = Math.max(1, Math.ceil(node.content.length * 8 / 208));
+      const nodeHeight  = Math.max(44, BADGE_BASE_TOP + _badgeH + 4 * BADGE_BASE_TOP + textLines * 14);
+      const textMarginY = Math.round((BADGE_BASE_TOP + _badgeH) / 2);
+      return {
+        id: node.id,
+        label: node.content,
+        speaker: node.speaker,
+        type: node.type,
+        rating: node.rating,
+        tactics,
+        flagPairs,
+        badgeRows,
+        nodeHeight,
+        textMarginY,
+      };
+    };
     const edgeDataOf = (edge) => ({
       id: edge.id,
       source: edge.from,

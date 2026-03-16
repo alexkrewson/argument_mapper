@@ -7,6 +7,7 @@
 
 import { TACTICS } from "../utils/tactics.js";
 import { spk } from "../utils/speakers.js";
+import { fmtNodeNum } from "../utils/format.js";
 
 export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds }) {
   if (nodes.length === 0) {
@@ -35,7 +36,7 @@ export default function NodeList({ nodes, currentSpeaker, onRate, onNodeClick, l
               >
                 {spk(node.speaker)}
               </span>
-              <span className="node-id-badge">{node.id}</span>
+              <span className="node-id-badge">{fmtNodeNum(node.id)}</span>
               <span className={`type-badge type-${node.type}`}>
                 {node.type}
               </span>

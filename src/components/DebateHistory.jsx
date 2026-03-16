@@ -9,7 +9,8 @@ export default function DebateHistory({ user, onLoadDebate }) {
   const [debates, setDebates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [confirmLoad, setConfirmLoad] = useState(null); // debate to load after confirm
+  const [confirmLoad, setConfirmLoad] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // debate to delete after confirm
 
   useEffect(() => {
     if (!user) return;
@@ -28,6 +29,7 @@ export default function DebateHistory({ user, onLoadDebate }) {
   const handleDelete = async (id) => {
     const { error } = await supabase.from("debates").delete().eq("id", id);
     if (!error) setDebates((prev) => prev.filter((d) => d.id !== id));
+    setConfirmDelete(null);
   };
 
   if (loading) {
@@ -65,12 +67,30 @@ export default function DebateHistory({ user, onLoadDebate }) {
           </div>
         </div>
       )}
+      {confirmDelete && (
+        <div className="concession-overlay">
+          <div className="concession-modal">
+            <div className="concession-modal-header">Delete forever?</div>
+            <p className="concession-modal-body">Are you sure you want to delete this conversation forever?</p>
+            <div className="concession-modal-actions">
+              <button className="concession-btn-confirm" onClick={() => handleDelete(confirmDelete)}>
+                Delete
+              </button>
+              <button className="concession-btn-dismiss" onClick={() => setConfirmDelete(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {debates.map((d) => {
         const nodeCount = d.map_data?.map?.argument_map?.nodes?.length ?? 0;
         return (
           <div className="history-row" key={d.id}>
             <div className="history-row-info">
-              <span className="history-row-title">{d.title}</span>
+              <span className="history-row-title history-row-title--clickable" onClick={() => setConfirmLoad(d)}>
+                {d.title}
+              </span>
               <span className="history-row-meta">
                 {formatDate(d.updated_at)}
                 {d.speaker_a && d.speaker_b && ` · ${d.speaker_a} vs ${d.speaker_b}`}
@@ -78,8 +98,7 @@ export default function DebateHistory({ user, onLoadDebate }) {
               </span>
             </div>
             <div className="history-row-actions">
-              <button className="history-load-btn" onClick={() => setConfirmLoad(d)}>Load</button>
-              <button className="history-delete-btn" onClick={() => handleDelete(d.id)} title="Delete">✕</button>
+              <button className="history-delete-btn" onClick={() => setConfirmDelete(d.id)} title="Delete">✕</button>
             </div>
           </div>
         );

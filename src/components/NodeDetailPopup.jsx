@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { TACTICS } from "../utils/tactics.js";
 import { speakerName, speakerBorder, speakerBackground } from "../utils/speakers.js";
+import { fmtNodeId, fmtNodeNum } from "../utils/format.js";
 
 const NODE_TYPES = ["claim", "premise", "objection", "rebuttal", "evidence", "clarification"];
 
@@ -77,7 +78,7 @@ export default function NodeDetailPopup({
           {/* Edit header */}
           <div className="popup-header">
             <span className="popup-edit-title">
-              {isNew ? "Add Node" : `Edit ${node.id}`}
+              {isNew ? "Add Node" : `Edit ${fmtNodeId(node.id)}`}
               {!isNew && (
                 <span
                   className="speaker-badge"
@@ -140,7 +141,7 @@ export default function NodeDetailPopup({
               <option value="">(none — root node)</option>
               {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
                 <option key={n.id} value={n.id}>
-                  {n.id}: {n.content.length > 70 ? n.content.slice(0, 67) + "…" : n.content}
+                  {fmtNodeId(n.id)}: {n.content.length > 60 ? n.content.slice(0, 57) + "…" : n.content}
                 </option>
               ))}
             </select>
@@ -189,7 +190,7 @@ export default function NodeDetailPopup({
                 >
                   {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
                     <option key={n.id} value={n.id}>
-                      {n.id}: {n.content.length > 70 ? n.content.slice(0, 67) + "…" : n.content}
+                      {fmtNodeId(n.id)}: {n.content.length > 60 ? n.content.slice(0, 57) + "…" : n.content}
                     </option>
                   ))}
                 </select>
@@ -223,7 +224,7 @@ export default function NodeDetailPopup({
                 >
                   {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
                     <option key={n.id} value={n.id}>
-                      {n.id}: {n.content.length > 70 ? n.content.slice(0, 67) + "…" : n.content}
+                      {fmtNodeId(n.id)}: {n.content.length > 60 ? n.content.slice(0, 57) + "…" : n.content}
                     </option>
                   ))}
                 </select>
@@ -287,19 +288,28 @@ export default function NodeDetailPopup({
         {/* Header */}
         <div className="popup-header">
           <div className="node-badges">
-            <span className="node-id-badge">{node.id}</span>
-            <span className={`type-badge type-${node.type}`}>{node.type}</span>
-            <span
-              className="speaker-badge"
-              style={{ backgroundColor: speakerColor }}
-            >
+            <span className="node-id-badge">{fmtNodeNum(node.id)}</span>
+            <span className="speaker-badge" style={{ backgroundColor: speakerColor }}>
               {speakerName(node.speaker, theme)}
             </span>
-            {node.metadata?.confidence && (
-              <span className={`confidence-badge confidence-${node.metadata.confidence}`}>
-                {node.metadata.confidence}
-              </span>
+            <span className={`type-badge type-${node.type}`}>{node.type.charAt(0).toUpperCase() + node.type.slice(1)}</span>
+            {contradictsNode && (
+              <span className="node-flag-chip node-flag-chip--contradiction">⚠ {fmtNodeId(contradictsNode.id)}</span>
             )}
+            {contradictedByNode && (
+              <span className="node-flag-chip node-flag-chip--contradiction">⚠↙ {fmtNodeId(contradictedByNode.id)}</span>
+            )}
+            {goalpostsNode && (
+              <span className="node-flag-chip node-flag-chip--goalposts">⤳ {fmtNodeId(goalpostsNode.id)}</span>
+            )}
+            {walkedBackByNode && (
+              <span className="node-flag-chip node-flag-chip--goalposts">⤳↙ {fmtNodeId(walkedBackByNode.id)}</span>
+            )}
+            {tactics.map((key) => (
+              <span key={key} className={`tactic-badge tactic-${TACTICS[key].type}`} title={TACTICS[key].name}>
+                {TACTICS[key].symbol}
+              </span>
+            ))}
           </div>
           <div className="popup-header-actions">
             {onSave && (
@@ -365,28 +375,28 @@ export default function NodeDetailPopup({
         {/* Contradiction / goalpost chips — prominent labels for the two directly involved nodes */}
         {contradictsNode && (
           <div className="flag-chip flag-chip--contradiction" onClick={() => { onClose(); onNodeClick?.(contradictsNode); }}>
-            <span className="flag-chip-label">⚠ Contradicts {contradictsNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-label">⚠ Contradicts {fmtNodeId(contradictsNode.id)}</span>
             <span className="flag-chip-sub">{contradictsNode.content.length > 80 ? contradictsNode.content.slice(0, 77) + "…" : contradictsNode.content}</span>
           </div>
         )}
 
         {contradictedByNode && (
           <div className="flag-chip flag-chip--contradiction" onClick={() => { onClose(); onNodeClick?.(contradictedByNode); }}>
-            <span className="flag-chip-label">⚠ Contradicted by {contradictedByNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-label">⚠ Contradicted by {fmtNodeId(contradictedByNode.id)}</span>
             <span className="flag-chip-sub">{contradictedByNode.content.length > 80 ? contradictedByNode.content.slice(0, 77) + "…" : contradictedByNode.content}</span>
           </div>
         )}
 
         {goalpostsNode && (
           <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(goalpostsNode); }}>
-            <span className="flag-chip-label">⤳ Moves Goalpost of {goalpostsNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-label">⤳ Moves Goalpost of {fmtNodeId(goalpostsNode.id)}</span>
             <span className="flag-chip-sub">{goalpostsNode.content.length > 80 ? goalpostsNode.content.slice(0, 77) + "…" : goalpostsNode.content}</span>
           </div>
         )}
 
         {walkedBackByNode && (
           <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
-            <span className="flag-chip-label">⤳ Goalpost Moved by {walkedBackByNode.id.toUpperCase().replace("NODE_", "Node #")}</span>
+            <span className="flag-chip-label">⤳ Goalpost Moved by {fmtNodeId(walkedBackByNode.id)}</span>
             <span className="flag-chip-sub">{walkedBackByNode.content.length > 80 ? walkedBackByNode.content.slice(0, 77) + "…" : walkedBackByNode.content}</span>
           </div>
         )}

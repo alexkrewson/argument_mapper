@@ -358,6 +358,7 @@
 .argument-map {
   width: 100%;
   height: 100%;
+  will-change: transform;
 }
 
 .argument-map.empty {
@@ -402,8 +403,11 @@
 
 /* Contradiction / goalpost chips on list-view node cards */
 .node-flag-chip {
-  display: inline-block;
-  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  box-sizing: border-box;
+  padding: 0 5px;
   border-radius: 3px;
   font-size: 9px;
   font-weight: 800;
@@ -414,6 +418,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  border: 1.5px solid rgba(0,0,0,0.4);
 }
 .node-flag-chip--contradiction { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--goalposts     { background: rgba(185, 28, 28, 0.9); }
@@ -516,23 +521,34 @@
 }
 
 .speaker-badge {
-  font-size: 0.65rem;
+  font-size: 9px;
   color: #fff;
-  padding: 0.1rem 0.4rem;
+  padding: 0 5px;
   border-radius: 3px;
-  font-weight: 600;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  border: 1.5px solid rgba(0,0,0,0.4);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  box-sizing: border-box;
 }
 
 .type-badge {
   font-size: 0.6rem;
-  padding: 0.1rem 0.35rem;
+  padding: 0 0.35rem;
   border-radius: 3px;
   font-weight: 600;
-  text-transform: uppercase;
   flex-shrink: 0;
   color: #fff;
   background-color: #64748b;
+  border: 1.5px solid rgba(0,0,0,0.4);
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  box-sizing: border-box;
 }
 
 .type-claim { background-color: #6366f1; }
@@ -567,31 +583,25 @@
 }
 
 .tactic-badge {
-  font-size: 0.6rem;
-  padding: 0.1rem 0.35rem;
+  font-size: 10px;
+  padding: 0 4px;
   border-radius: 3px;
   font-weight: 500;
   flex-shrink: 0;
   white-space: nowrap;
+  background: rgba(0,0,0,0.45);
+  border: 2px solid rgba(255,255,255,0.25);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  box-sizing: border-box;
 }
 
-.tactic-fallacy {
-  background-color: #fee2e2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
-}
+.tactic-fallacy   { border-color: #dc2626; }
+.tactic-technique { border-color: #16a34a; }
+.tactic-rhetorical { border-color: #d97706; }
 
-.tactic-technique {
-  background-color: #dcfce7;
-  color: #166534;
-  border: 1px solid #86efac;
-}
-
-.tactic-rhetorical {
-  background-color: #fef9c3;
-  color: #854d0e;
-  border: 1px solid #fde047;
-}
 
 .claim-text {
   font-size: 0.85rem;
@@ -719,6 +729,7 @@
   margin-bottom: 1rem;
   cursor: pointer;
   transition: filter 0.12s;
+  border: 2px solid rgba(0,0,0,0.4);
 }
 .flag-chip:hover {
   filter: brightness(0.9);
@@ -877,20 +888,65 @@
   transform: translateY(110%);
 }
 
+/* --- Sign-in nudge banner --- */
+.save-nudge {
+  position: fixed;
+  bottom: calc(var(--footer-h, 80px) + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 58;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: #1e293b;
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+.save-nudge-signin {
+  background: #f1f5f9;
+  color: #0f172a;
+  border: none;
+  border-radius: 5px;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.save-nudge-signin:hover { background: #fff; }
+.save-nudge-dismiss {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0 0.1rem;
+  line-height: 1;
+}
+.save-nudge-dismiss:hover { color: #f1f5f9; }
+
 .statement-input {
   padding: 0.75rem 1.5rem;
 }
 
 .node-id-badge {
-  font-size: 0.6rem;
-  padding: 0.1rem 0.3rem;
+  font-size: 9px;
+  padding: 0 5px;
   border-radius: 3px;
-  font-weight: 600;
-  font-family: monospace;
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  background-color: #334155;
+  color: #fff;
+  border: 1.5px solid rgba(0,0,0,0.4);
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  box-sizing: border-box;
 }
 
 .input-header {
@@ -930,6 +986,45 @@
   font-size: 0.85rem;
   font-weight: 600;
   margin-bottom: 0;
+}
+
+.name-edit-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.name-edit-input {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid;
+  outline: none;
+  padding: 0 2px;
+  max-width: 18ch;
+}
+
+.name-edit-input::placeholder {
+  opacity: 0.45;
+  font-weight: 400;
+}
+
+.name-refresh-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 0.95rem;
+  line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.15s, transform 0.2s;
+}
+
+.name-refresh-btn:hover {
+  opacity: 1;
+  transform: rotate(180deg);
 }
 
 .turn-controls {
@@ -1604,11 +1699,6 @@
   background-color: #1e293b;
 }
 
-[data-dark="true"] .node-id-badge {
-  background-color: #0f172a;
-  color: #64748b;
-  border-color: #334155;
-}
 
 [data-dark="true"] .confidence-high {
   background-color: #052e16;
@@ -1621,21 +1711,6 @@
 [data-dark="true"] .confidence-low {
   background-color: #450a0a;
   color: #fca5a5;
-}
-[data-dark="true"] .tactic-fallacy {
-  background-color: #450a0a;
-  color: #fca5a5;
-  border-color: #7f1d1d;
-}
-[data-dark="true"] .tactic-technique {
-  background-color: #052e16;
-  color: #86efac;
-  border-color: #14532d;
-}
-[data-dark="true"] .tactic-rhetorical {
-  background-color: #422006;
-  color: #fcd34d;
-  border-color: #713f12;
 }
 
 [data-dark="true"] .rate-btn {
@@ -1860,10 +1935,8 @@ button {
    ──────────────────────────────────────────────────────────────────────── */
 
 
-/* Uniform white-chip treatment for all neutral metadata badges in list cells */
-.map-tree-cell .node-id-badge,
+/* Uniform white-chip treatment for confidence and tags in list cells */
 .map-tree-cell .confidence-badge,
-.map-tree-cell .tactic-badge,
 .map-tree-cell .popup-tag {
   background: rgba(255,255,255,0.88);
   border-color: rgba(0,0,0,0.12);
@@ -1875,13 +1948,10 @@ button {
 .map-tree-cell .confidence-medium { color: #a16207; border-color: #a16207; }
 .map-tree-cell .confidence-low    { color: #dc2626; border-color: #dc2626; }
 
-/* Tactic: keep type-specific colored border + text over the white chip */
-.map-tree-cell .tactic-fallacy    { color: #991b1b; border-color: #991b1b; }
-.map-tree-cell .tactic-technique  { color: #166534; border-color: #166534; }
-.map-tree-cell .tactic-rhetorical { color: #854d0e; border-color: #854d0e; }
 
 .map-tree-cell .claim-text {
   color: #0f172a;
+  margin-top: 0.2rem;
 }
 
 .map-tree-cell .agreement-indicator,
@@ -2092,7 +2162,7 @@ button {
   border-radius: 4px;
   font-weight: 500;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 2px solid transparent;
   opacity: 0.4;
   transition: opacity 0.12s;
   white-space: nowrap;
@@ -2100,6 +2170,10 @@ button {
 }
 .tactic-toggle:hover { opacity: 0.75; }
 .tactic-toggle--on   { opacity: 1; }
+
+.tactic-toggle.tactic-fallacy   { border-color: #dc2626; }
+.tactic-toggle.tactic-technique { border-color: #16a34a; }
+.tactic-toggle.tactic-rhetorical { border-color: #d97706; }
 
 /* Flag toggles (contradiction / goalpost) in edit form */
 .popup-edit-flag-row {
@@ -2625,9 +2699,7 @@ button {
   letter-spacing: 0.05em;
   color: #000;
 }
-[data-lcars="true"] .map-tree-cell .node-id-badge,
 [data-lcars="true"] .map-tree-cell .confidence-badge,
-[data-lcars="true"] .map-tree-cell .tactic-badge,
 [data-lcars="true"] .map-tree-cell .popup-tag {
   background: rgba(0,0,0,0.45);
   border-color: rgba(255,153,0,0.35);
@@ -3118,6 +3190,12 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.history-row-title--clickable {
+  cursor: pointer;
+}
+.history-row-title--clickable:hover {
+  text-decoration: underline;
+}
 
 .history-row-meta {
   font-size: 0.75rem;
@@ -3129,19 +3207,6 @@ button {
   gap: 0.4rem;
   flex-shrink: 0;
 }
-
-.history-load-btn {
-  background: none;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
-  cursor: pointer;
-  padding: 0.3rem 0.75rem;
-  font-size: 0.8rem;
-  color: #0f172a;
-  font-weight: 500;
-  transition: background 0.1s, border-color 0.15s;
-}
-.history-load-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
 
 .history-delete-btn {
   background: none;
@@ -3187,8 +3252,6 @@ button {
 [data-dark="true"] .history-row { background: #1e293b; border-color: #334155; }
 [data-dark="true"] .history-row-title { color: #f1f5f9; }
 [data-dark="true"] .history-row-meta { color: #92a1b5; }
-[data-dark="true"] .history-load-btn { color: #f1f5f9; border-color: #334155; }
-[data-dark="true"] .history-load-btn:hover { background: #334155; border-color: #64748b; }
 [data-dark="true"] .history-empty,
 [data-dark="true"] .history-loading { color: #92a1b5; }
 

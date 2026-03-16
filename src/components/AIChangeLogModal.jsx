@@ -7,6 +7,7 @@
 
 import { useEffect } from "react";
 import { speakerBorder, speakerName } from "../utils/speakers.js";
+import { fmtNodeId } from "../utils/format.js";
 
 export default function AIChangeLogModal({ log, onClose, theme }) {
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function AIChangeLogModal({ log, onClose, theme }) {
                       {c.type === "added" && (
                         <>
                           <span className="changelog-icon changelog-icon--added">+</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className={`type-badge type-${c.nodeType}`}>{c.nodeType}</span>
                           <span className="changelog-content">
                             "{c.content.length > 70 ? c.content.slice(0, 67) + "…" : c.content}"
@@ -58,7 +59,7 @@ export default function AIChangeLogModal({ log, onClose, theme }) {
                       {c.type === "modified" && (
                         <>
                           <span className="changelog-icon changelog-icon--modified">~</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className="changelog-modified">
                             <span className="changelog-before">
                               "{c.before.length > 40 ? c.before.slice(0, 37) + "…" : c.before}"
@@ -73,7 +74,7 @@ export default function AIChangeLogModal({ log, onClose, theme }) {
                       {c.type === "removed" && (
                         <>
                           <span className="changelog-icon changelog-icon--removed">−</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className={`type-badge type-${c.nodeType}`}>{c.nodeType}</span>
                           <span className="changelog-content">removed</span>
                         </>
@@ -82,46 +83,46 @@ export default function AIChangeLogModal({ log, onClose, theme }) {
                         <>
                           <span className="changelog-icon changelog-icon--edge">→</span>
                           <span className="changelog-content">
-                            <span className="node-id-badge">{c.from}</span>
+                            <span className="node-id-badge">{fmtNodeId(c.from)}</span>
                             {" "}{c.relationship}{" "}
-                            <span className="node-id-badge">{c.to}</span>
+                            <span className="node-id-badge">{fmtNodeId(c.to)}</span>
                           </span>
                         </>
                       )}
                       {c.type === "contradicts_set" && (
                         <>
                           <span className="changelog-icon changelog-icon--contradiction">⚠</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className="changelog-content">contradicts</span>
-                          <span className="node-id-badge">{c.targetId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.targetId)}</span>
                         </>
                       )}
                       {c.type === "contradicts_cleared" && (
                         <>
                           <span className="changelog-icon changelog-icon--contradiction">⚠</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
-                          <span className="changelog-content">contradiction cleared (was {c.targetId})</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
+                          <span className="changelog-content">contradiction cleared (was {fmtNodeId(c.targetId)})</span>
                         </>
                       )}
                       {c.type === "goalposts_set" && (
                         <>
                           <span className="changelog-icon changelog-icon--goalposts">⤳</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className="changelog-content">moves goalposts from</span>
-                          <span className="node-id-badge">{c.targetId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.targetId)}</span>
                         </>
                       )}
                       {c.type === "goalposts_cleared" && (
                         <>
                           <span className="changelog-icon changelog-icon--goalposts">⤳</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
-                          <span className="changelog-content">goalpost flag cleared (was {c.targetId})</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
+                          <span className="changelog-content">goalpost flag cleared (was {fmtNodeId(c.targetId)})</span>
                         </>
                       )}
                       {c.type === "concession_other" && (
                         <>
                           <span className="changelog-icon changelog-icon--concession-other">✓</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className="changelog-content">
                             {speakerName(c.concedingBy, theme)} conceded {speakerName(c.nodeSpeaker, theme)}'s point
                           </span>
@@ -130,7 +131,7 @@ export default function AIChangeLogModal({ log, onClose, theme }) {
                       {c.type === "concession_self" && (
                         <>
                           <span className="changelog-icon changelog-icon--concession-self">↩</span>
-                          <span className="node-id-badge">{c.nodeId}</span>
+                          <span className="node-id-badge">{fmtNodeId(c.nodeId)}</span>
                           <span className="changelog-content">
                             {speakerName(c.concedingBy, theme)} retracted their own argument
                           </span>

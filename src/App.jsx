@@ -21,7 +21,9 @@ import DebateHistory from "./components/DebateHistory";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
 import { TACTICS } from "./utils/tactics.js";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
+import { fmtNodeId } from "./utils/format.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
+import { randomName } from "./utils/names.js";
 import { supabase } from "./utils/supabase";
 import { useAuth } from "./hooks/useAuth";
 import "./App.css";
@@ -132,6 +134,7 @@ export default function App() {
     { entries: [{ map: EMPTY_MAP, analysis: null }], index: 0 }
   );
   const argumentMap = histEntries[histIndex].map;
+  const inner = argumentMap.argument_map;
   const moderatorAnalysis = histEntries[histIndex].analysis;
   const canUndo = histIndex > 0;
   const canRedo = histIndex < histEntries.length - 1;
@@ -157,6 +160,20 @@ export default function App() {
 
   const [themeKey, setThemeKey] = useState(() => localStorage.getItem("theme") ?? DEFAULT_THEME_KEY);
   const theme = useMemo(() => THEMES[themeKey] ?? THEMES[DEFAULT_THEME_KEY], [themeKey]);
+
+  const [playerNames, setPlayerNames] = useState(() => {
+    const a = randomName();
+    return { a, b: randomName(a) };
+  });
+  const [hasSubmitted, setHasSubmitted] = useState({ a: false, b: false });
+
+  // resolvedTheme: same as theme but with player-chosen names overriding the defaults
+  const resolvedTheme = useMemo(() => ({
+    ...theme,
+    a: { ...theme.a, name: playerNames.a || theme.a.name },
+    b: { ...theme.b, name: playerNames.b || theme.b.name },
+  }), [theme, playerNames]);
+
   const handleThemeChange = useCallback((key) => {
     setThemeKey(key);
     localStorage.setItem("theme", key);
@@ -173,6 +190,7 @@ export default function App() {
   const [aiChangeLog, setAiChangeLog] = useState([]); // Log of all AI-made changes
   const [showChangeLog, setShowChangeLog] = useState(false); // Whether the changelog modal is open
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
   const currentDebateIdRef = useRef(null); // Supabase row id of current debate (ref avoids stale closure)
   const skipNextSaveRef = useRef(false);   // Set true after loading a debate to skip the immediate re-save
@@ -183,6 +201,14 @@ export default function App() {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Warn before closing if user is not signed in and has unsaved nodes
+  useEffect(() => {
+    if (user || inner.nodes.length === 0) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [user, inner.nodes.length]);
 
   // Auto-save: fires 1.5s after any map change, if user is logged in and map has nodes
   useEffect(() => {
@@ -195,7 +221,7 @@ export default function App() {
     const timer = setTimeout(async () => {
       setSaveStatus("saving");
       try {
-        const row = { title: autoTitle, map_data: entry, theme_key: themeKey, speaker_a: theme.a.name, speaker_b: theme.b.name, user_id: user.id };
+        const row = { title: autoTitle, map_data: entry, theme_key: themeKey, speaker_a: resolvedTheme.a.name, speaker_b: resolvedTheme.b.name, user_id: user.id };
         if (currentDebateIdRef.current) {
           const { error } = await supabase.from("debates").update(row).eq("id", currentDebateIdRef.current);
           if (error) throw error;
@@ -219,6 +245,13 @@ export default function App() {
     dispatchHistory({ type: "load", entry: debate.map_data });
     currentDebateIdRef.current = debate.id;
     if (debate.theme_key) handleThemeChange(debate.theme_key);
+    if (debate.speaker_a || debate.speaker_b) {
+      setPlayerNames((prev) => ({
+        a: debate.speaker_a || prev.a,
+        b: debate.speaker_b || prev.b,
+      }));
+      setHasSubmitted({ a: true, b: true });
+    }
     setAiChangeLog([]);
     setChatMessages([]);
     setOriginalTexts({});
@@ -240,7 +273,7 @@ export default function App() {
         argumentMap,
         currentSpeaker,
         statement,
-        { a: theme.a.name, b: theme.b.name }
+        { a: resolvedTheme.a.name, b: resolvedTheme.b.name }
       );
 
       // Track original text for newly created nodes
@@ -294,7 +327,7 @@ export default function App() {
       });
 
       const strippedMap = { ...updatedMap, argument_map: { ...updatedMap.argument_map, nodes: strippedNodes } };
-      const cleanMap = sanitizeNodeContent(strippedMap, theme);
+      const cleanMap = sanitizeNodeContent(strippedMap, resolvedTheme);
 
       // Log what the AI changed in this turn (including any detected concessions)
       const aiChanges = computeMapDiff(argumentMap.argument_map, cleanMap.argument_map);
@@ -322,7 +355,7 @@ export default function App() {
         const roots = findRootNodes(cleanMap.argument_map.nodes, cleanMap.argument_map.edges);
         if (roots.length > 1) {
           setError(
-            `Warning: Claude created ${roots.length} disconnected root nodes (${roots.map((r) => r.id).join(", ")}). ` +
+            `Warning: Claude created ${roots.length} disconnected root nodes (${roots.map((r) => fmtNodeId(r.id)).join(", ")}). ` +
             `The map should have exactly one root. Consider undoing this turn and rephrasing.`
           );
         }
@@ -331,6 +364,10 @@ export default function App() {
       pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
 
       if (detected.length > 0) setConcessionQueue(detected);
+
+      // Lock in the speaker's name after first submission
+      const speakerKey = currentSpeaker === "Blue" ? "a" : "b";
+      setHasSubmitted((prev) => ({ ...prev, [speakerKey]: true }));
 
       // Switch turns: User A → User B → User A → ...
       setCurrentSpeaker((prev) =>
@@ -508,7 +545,7 @@ export default function App() {
     setError(null);
 
     try {
-      const { reply, updatedMap } = await chatWithModerator(argumentMap, updatedHistory, { a: theme.a.name, b: theme.b.name });
+      const { reply, updatedMap } = await chatWithModerator(argumentMap, updatedHistory, { a: resolvedTheme.a.name, b: resolvedTheme.b.name });
       const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
       setChatMessages((prev) => [...prev, assistantMsg]);
       if (updatedMap) {
@@ -520,7 +557,7 @@ export default function App() {
           clearTimeout(newNodeTimerRef.current);
           newNodeTimerRef.current = setTimeout(() => setNewNodeIds(new Set()), 3500);
         }
-        const sanitizedChatMap = sanitizeNodeContent(updatedMap, theme);
+        const sanitizedChatMap = sanitizeNodeContent(updatedMap, resolvedTheme);
         const chatChanges = computeMapDiff(argumentMap.argument_map, sanitizedChatMap.argument_map);
         if (chatChanges.length > 0) {
           setAiChangeLog((prev) => [...prev, {
@@ -546,9 +583,6 @@ export default function App() {
   const handleNodeClick = useCallback((node) => {
     setSelectedNode(node);
   }, []);
-
-  // Unwrap the inner argument_map for components
-  const inner = argumentMap.argument_map;
 
   // Compute faded/colored node sets for visual invalidation:
   // - fadedNodeIds: opacity-faded due to thumbs-up (agreement) or thumbs-down (retraction)
@@ -674,6 +708,14 @@ export default function App() {
       {/* LCARS left-edge spine — fixed orange strip connecting header & footer elbows */}
       {theme.lcars && <div className="lcars-spine" />}
 
+      {/* Invisible hit zones — restore UI when header/footer are hidden */}
+      {!uiVisible && (
+        <>
+          <div onClick={toggleUI} style={{position:"fixed",top:0,left:0,right:0,height:90,zIndex:55,cursor:"pointer"}} />
+          <div onClick={toggleUI} style={{position:"fixed",bottom:0,left:0,right:0,height:80,zIndex:55,cursor:"pointer"}} />
+        </>
+      )}
+
       {/* Fixed top bar: title + tabs slide together */}
       <div className={`app-top${uiVisible ? "" : " app-top--hidden"}`}>
         <div className="app-top-body">
@@ -739,7 +781,7 @@ export default function App() {
             walkbackBorderIds={fadedInfo.walkbackBorderIds}
             newNodeIds={newNodeIds}
             onToggleUI={toggleUI}
-            theme={theme}
+            theme={resolvedTheme}
           />
         </div>
 
@@ -754,7 +796,7 @@ export default function App() {
               loading={loading}
               fadedNodeIds={fadedInfo.fadedNodeIds}
               newNodeIds={newNodeIds}
-              theme={theme}
+              theme={resolvedTheme}
             />
           </div>
         )}
@@ -765,16 +807,16 @@ export default function App() {
 
         {activeTab === "moderator" && (() => {
           const fixNames = (s) => typeof s === "string"
-            ? s.replace(/\bBlue\b/g, theme.a.name).replace(/\bGreen\b/g, theme.b.name)
+            ? s.replace(/\bBlue\b/g, resolvedTheme.a.name).replace(/\bGreen\b/g, resolvedTheme.b.name)
             : s;
           const buildEvents = (internalSpeaker) => {
             const events = [];
             for (const node of inner.nodes) {
               if (node.speaker === internalSpeaker) {
                 if (node.metadata?.contradicts)
-                  events.push({ cls: "bad", text: `Contradicted own position: ${node.metadata.contradicts} ⚠ ${node.id}` });
+                  events.push({ cls: "bad", text: `Contradicted own position: ${fmtNodeId(node.metadata.contradicts)} ⚠ ${fmtNodeId(node.id)}` });
                 if (node.metadata?.moves_goalposts_from)
-                  events.push({ cls: "bad", text: `Moved goalposts: ${node.metadata.moves_goalposts_from} ⤳ ${node.id}` });
+                  events.push({ cls: "bad", text: `Moved goalposts: ${fmtNodeId(node.metadata.moves_goalposts_from)} ⤳ ${fmtNodeId(node.id)}` });
                 if (node.rating === "down") {
                   const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
                   events.push({ cls: "neutral", text: `↩ Retracted own argument: "${snip}"` });
@@ -785,7 +827,7 @@ export default function App() {
                 }
                 for (const key of (node.metadata?.tactics || [])) {
                   const t = TACTICS[key];
-                  if (t) events.push({ cls: t.type === "fallacy" ? "bad" : "good", text: `${t.symbol} ${t.name} (${node.id})` });
+                  if (t) events.push({ cls: t.type === "fallacy" ? "bad" : "good", text: `${t.symbol} ${t.name} (${fmtNodeId(node.id)})` });
                 }
               } else {
                 if (node.metadata?.agreed_by?.speaker === internalSpeaker) {
@@ -803,7 +845,7 @@ export default function App() {
               {/* Top half: side-by-side speaker breakdowns */}
               <div className="moderator-speakers">
                 <div className="moderator-speaker" style={{ borderRight: `2px solid ${theme.a.bg}33` }}>
-                  <div className="moderator-speaker-name" style={{ color: theme.a.bg }}>{theme.a.name}</div>
+                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.a.bg }}>{resolvedTheme.a.name}</div>
                   {effectiveAnalysis
                     ? <p className="moderator-speaker-style">{fixNames(effectiveAnalysis.user_a_style)}</p>
                     : <p className="moderator-speaker-empty">No analysis yet.</p>}
@@ -816,7 +858,7 @@ export default function App() {
                   )}
                 </div>
                 <div className="moderator-speaker">
-                  <div className="moderator-speaker-name" style={{ color: theme.b.bg }}>{theme.b.name}</div>
+                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.b.bg }}>{resolvedTheme.b.name}</div>
                   {effectiveAnalysis
                     ? <p className="moderator-speaker-style">{fixNames(effectiveAnalysis.user_b_style)}</p>
                     : <p className="moderator-speaker-empty">No analysis yet.</p>}
@@ -840,7 +882,7 @@ export default function App() {
                         <div
                           className="chat-bubble"
                           style={msg.role === "user"
-                            ? { backgroundColor: speakerBorder(msg.speaker, theme) }
+                            ? { backgroundColor: speakerBorder(msg.speaker, resolvedTheme) }
                             : undefined}
                         >{msg.content}</div>
                         {msg.mapUpdated && <div className="chat-map-updated">Map updated</div>}
@@ -879,7 +921,7 @@ export default function App() {
             onSave={handleNodeSave}
             currentSpeaker={currentSpeaker}
             loading={loading}
-            theme={theme}
+            theme={resolvedTheme}
           />
         );
       })()}
@@ -893,7 +935,7 @@ export default function App() {
           edges={inner.edges}
           onSave={handleAddNode}
           currentSpeaker={currentSpeaker}
-          theme={theme}
+          theme={resolvedTheme}
         />
       )}
 
@@ -903,7 +945,7 @@ export default function App() {
           concession={concessionQueue[0]}
           onConfirm={handleConfirmConcession}
           onDismiss={handleDismissConcession}
-          theme={theme}
+          theme={resolvedTheme}
         />
       )}
 
@@ -912,8 +954,17 @@ export default function App() {
         <AIChangeLogModal
           log={aiChangeLog}
           onClose={() => setShowChangeLog(false)}
-          theme={theme}
+          theme={resolvedTheme}
         />
+      )}
+
+      {/* Sign-in nudge — shown when user has nodes but is not signed in */}
+      {!user && !saveNudgeDismissed && inner.nodes.length >= 2 && (
+        <div className="save-nudge">
+          <span>Your conversation isn't being saved.</span>
+          <button className="save-nudge-signin" onClick={() => setShowAuthModal(true)}>Sign in to keep it</button>
+          <button className="save-nudge-dismiss" onClick={() => setSaveNudgeDismissed(true)} title="Dismiss">✕</button>
+        </div>
       )}
 
       {/* Statement input at the bottom — hidden on history tab only */}
@@ -936,7 +987,17 @@ export default function App() {
             onAddNode={() => setAddNodeOpen(true)}
             onReviewChanges={() => setShowChangeLog(true)}
             changeLogCount={aiChangeLog.length}
-            theme={theme}
+            theme={resolvedTheme}
+            nameEditable={!hasSubmitted[currentSpeaker === "Blue" ? "a" : "b"]}
+            currentName={currentSpeaker === "Blue" ? playerNames.a : playerNames.b}
+            onNameChange={(name) => {
+              const key = currentSpeaker === "Blue" ? "a" : "b";
+              setPlayerNames((prev) => ({ ...prev, [key]: name }));
+            }}
+            onRefreshName={() => {
+              const key = currentSpeaker === "Blue" ? "a" : "b";
+              setPlayerNames((prev) => ({ ...prev, [key]: randomName(prev[key]) }));
+            }}
           />
         </footer>
       )}

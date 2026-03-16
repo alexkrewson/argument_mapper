@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from "react";
 import { speakerName } from "../utils/speakers.js";
 
-export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo, onAddNode, onReviewChanges, changeLogCount, theme }) {
+export default function StatementInput({ currentSpeaker, speakerSummary, onSubmit, onChatMessage, loading, loadingSpeaker, directMode, onSkipTurn, onUndo, onRedo, canUndo, canRedo, onAddNode, onReviewChanges, changeLogCount, theme, nameEditable, currentName, onNameChange, onRefreshName }) {
   const [text, setText] = useState("");
   const textareaRef = useRef(null);
 
@@ -53,7 +53,29 @@ export default function StatementInput({ currentSpeaker, speakerSummary, onSubmi
         <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#475569" : speakerColor }}>
           {loading && loadingSpeaker ? (
             <>Considering {speakerName(loadingSpeaker, theme)}'s statement<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
-          ) : `${speakerName(currentSpeaker, theme)}'s turn`}
+          ) : nameEditable ? (
+            <span className="name-edit-row">
+              <input
+                className="name-edit-input"
+                type="text"
+                value={currentName}
+                placeholder="Your name"
+                size={Math.max(6, (currentName || "Your name").length + 1)}
+                onChange={(e) => onNameChange(e.target.value)}
+                style={{ color: speakerColor, borderColor: `${speakerColor}60` }}
+              />
+              <button
+                type="button"
+                className="name-refresh-btn"
+                onClick={onRefreshName}
+                title="Generate a new name"
+                style={{ color: speakerColor }}
+              >⟳</button>
+              <span>'s turn</span>
+            </span>
+          ) : (
+            `${speakerName(currentSpeaker, theme)}'s turn`
+          )}
         </div>
         {!loading && (
           <div className="turn-controls">

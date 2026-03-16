@@ -9,6 +9,7 @@
 import { useMemo, useState } from "react";
 import { TACTICS } from "../utils/tactics.js";
 import { speakerName, speakerBorder } from "../utils/speakers.js";
+import { fmtNodeId, fmtNodeNum } from "../utils/format.js";
 
 const MODERATOR_STYLE = { bg: "#ede9fe", border: "#94a3b8" };
 
@@ -83,7 +84,7 @@ function countDescendants(children) {
   return count;
 }
 
-const nodeChipLabel = (id) => id.toUpperCase().replace("NODE_", "NODE #");
+const nodeChipLabel = fmtNodeNum;
 
 function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, onNodeClick, loading, fadedNodeIds, newNodeIds, theme, flagPairsMap }) {
   const { node, crossLinkCount, children } = item;
@@ -133,19 +134,25 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
               ▾
             </button>
           )}
-          <span
-            className="speaker-badge"
-            style={{ backgroundColor: speakerBorder(node.speaker, theme) }}
-          >
+          <span className="node-id-badge">{fmtNodeNum(node.id)}</span>
+          <span className="speaker-badge" style={{ backgroundColor: speakerBorder(node.speaker, theme) }}>
             {speakerName(node.speaker, theme)}
           </span>
-          <span className="node-id-badge">{node.id}</span>
-          <span className={`type-badge type-${node.type}`}>{node.type}</span>
-          {node.metadata?.confidence && (
-            <span className={`confidence-badge confidence-${node.metadata.confidence}`}>
-              {node.metadata.confidence}
+          <span className={`type-badge type-${node.type}`}>{node.type.charAt(0).toUpperCase() + node.type.slice(1)}</span>
+          {flagPairs.map((pair, i) => (
+            <span key={i} className="node-flag-chip node-flag-chip--contradiction">
+              {nodeChipLabel(pair.upstream)} ⚠️ {nodeChipLabel(pair.downstream)}
             </span>
-          )}
+          ))}
+          {tactics.length > 0 && tactics.map((key) => (
+            <span
+              key={key}
+              className={`tactic-badge tactic-${TACTICS[key].type}`}
+              title={TACTICS[key].name}
+            >
+              {TACTICS[key].symbol}
+            </span>
+          ))}
           {crossLinkCount > 0 && (
             <span
               className="map-tree-crosslink"
@@ -156,30 +163,8 @@ function TreeNode({ item, depth, collapsed, onToggle, currentSpeaker, onRate, on
           )}
         </div>
 
-        {/* Contradiction / goalpost chips */}
-        {flagPairs.map((pair, i) => (
-          <div key={i} className="node-flag-chip node-flag-chip--contradiction">
-            {nodeChipLabel(pair.upstream)} ⚠️ {nodeChipLabel(pair.downstream)}
-          </div>
-        ))}
-
         {/* Claim text */}
         <span className="claim-text">{node.content}</span>
-
-        {/* Tactic badges */}
-        {tactics.length > 0 && (
-          <div className="node-badges">
-            {tactics.map((key) => (
-              <span
-                key={key}
-                className={`tactic-badge tactic-${TACTICS[key].type}`}
-                title={TACTICS[key].name}
-              >
-                {TACTICS[key].symbol} {TACTICS[key].name}
-              </span>
-            ))}
-          </div>
-        )}
 
         {/* Topic tags */}
         {node.metadata?.tags?.length > 0 && (
