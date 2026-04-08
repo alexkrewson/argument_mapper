@@ -1,6 +1,20 @@
-export default function AboutTab() {
+import { useEffect, useRef } from "react";
+
+export default function AboutTab({ isActive }) {
+  const divRef = useRef(null);
+  const savedScroll = useRef(0);
+
+  useEffect(() => {
+    if (!divRef.current) return;
+    if (isActive) {
+      divRef.current.scrollTop = savedScroll.current;
+    } else {
+      savedScroll.current = divRef.current.scrollTop;
+    }
+  }, [isActive]);
+
   return (
-    <div className="about-tab">
+    <div className="about-tab" ref={divRef}>
       <div className="about-content">
         <h2>Argument Mapper</h2>
         <p className="about-lead">
