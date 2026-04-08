@@ -812,7 +812,10 @@ export default function App() {
           <DebateHistory user={user} onLoadDebate={handleLoadDebate} />
         )}
 
-        {activeTab === "about" && <AboutTab />}
+        {/* Always mounted so scroll position is preserved across tab switches */}
+        <div style={activeTab !== "about" ? { display: "none" } : undefined}>
+          <AboutTab />
+        </div>
 
         {activeTab === "moderator" && (() => {
           const fixNames = (s) => typeof s === "string"

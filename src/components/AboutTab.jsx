@@ -53,6 +53,14 @@ export default function AboutTab() {
           <li><strong>Edit mode</strong> (✏) — change content, type, parent, tags, and flags</li>
         </ul>
 
+        <h3>Adding Nodes Manually</h3>
+        <p>
+          Not every argument needs to go through Claude. Use the <strong>+ Node</strong> button in the input bar
+          to add a node directly — no AI analysis, no turn cost. You set the content, type, and parent yourself.
+          The node is attributed to the current speaker. Useful for adding evidence, clarifications, or points
+          you want to place precisely in the tree.
+        </p>
+
         <h3>Concessions</h3>
         <p>There are two ways to concede a point:</p>
         <ul>
@@ -72,18 +80,16 @@ export default function AboutTab() {
           <li><strong>⤳ Goalpost Moving:</strong> A speaker shifts the standard they're arguing against mid-debate. Both affected nodes get an orange border.</li>
         </ul>
 
-        <h3>Moderator Gauge</h3>
+        <h3>Moderator Tab</h3>
         <p>
-          A floating widget on the Map tab shows which side Claude thinks currently has the stronger argument.
-          <strong> Drag</strong> it anywhere on screen. <strong>Click</strong> it to open a popup with the leaning score, a written reason, and mutually agreed-upon points.
-          The score adjusts in real-time as nodes are faded, contradicted, or walked back.
+          The Moderator tab shows a side-by-side breakdown of both speakers — Claude's assessment of each
+          person's rhetorical style, plus a running event log of notable moves (tactics used, concessions made,
+          contradictions, retractions, and points the opponent agreed with).
         </p>
-
-        <h3>AI Moderator Chat</h3>
         <p>
-          In the Moderator tab, use the chat at the bottom to talk to Claude directly — ask it to explain the map,
-          identify weak points, steelman a position, or summarize the debate. Claude can update the argument map
-          from the chat; a "Map updated" label appears on those replies.
+          Below the breakdowns is an <strong>AI chat</strong> where you can ask Claude anything about the debate —
+          explain the map, identify weak points, steelman a position, summarize. Claude can update the argument
+          map from the chat; a "Map updated" label appears on those replies.
         </p>
 
         <h3>Accounts &amp; Auto-Save</h3>
@@ -98,14 +104,12 @@ export default function AboutTab() {
         <dl>
           <dt>← / → (input bar)</dt>
           <dd>Undo and redo — every submission, rating, and edit is tracked in a history stack.</dd>
-          <dt>+ Node (input bar)</dt>
-          <dd>Manually add a node attributed to the current speaker.</dd>
           <dt>Review Changes (input bar)</dt>
           <dd>Opens a log of every change Claude has made to the map across all turns.</dd>
           <dt>Skip Turn</dt>
           <dd>Pass to the other speaker without submitting a statement.</dd>
           <dt>⚙ Settings</dt>
-          <dd>Switch themes (light, dark, and LCARS). Sign in or out.</dd>
+          <dd>Switch themes (light and dark). Sign in or out.</dd>
         </dl>
 
         <h3>Keyboard Shortcuts</h3>

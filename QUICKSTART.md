@@ -113,17 +113,6 @@ Claude also flags two specific bad-faith patterns:
 
 ---
 
-## Moderator Gauge
-
-A floating widget on the Map tab shows which side Claude thinks currently has the stronger argument. The marker slides between the two speakers.
-
-- **Drag** the gauge anywhere on screen using the grip handle.
-- **Click** it to open the full moderator popup, which includes the leaning score, a written reason, and a list of mutually agreed-upon points.
-
-The gauge score is adjusted in real-time by argument invalidations: faded nodes (agreed/retracted), contradictions, and goalpost-moving all reduce a speaker's effective standing.
-
----
-
 ## AI Moderator Chat
 
 Switch to the **Moderator** tab and use the chat at the bottom to talk to Claude directly.
@@ -164,7 +153,7 @@ The **Review Changes** button (input bar, shows a count badge) opens a modal lis
 
 ## Themes
 
-Open the **⚙ settings** menu to choose a theme. Light and dark variants are available, as well as an LCARS (Star Trek) theme.
+Open the **⚙ settings** menu to choose a theme. Light and dark variants are available.
 
 ---
 
