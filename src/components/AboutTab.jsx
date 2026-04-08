@@ -4,17 +4,15 @@ export default function AboutTab({ isActive }) {
   const divRef = useRef(null);
   const savedScroll = useRef(0);
 
+  // Restore scroll when becoming active
   useEffect(() => {
-    if (!divRef.current) return;
-    if (isActive) {
+    if (isActive && divRef.current) {
       divRef.current.scrollTop = savedScroll.current;
-    } else {
-      savedScroll.current = divRef.current.scrollTop;
     }
   }, [isActive]);
 
   return (
-    <div className="about-tab" ref={divRef}>
+    <div className="about-tab" ref={divRef} onScroll={() => { savedScroll.current = divRef.current.scrollTop; }}>
       <div className="about-content">
         <h2>Argument Mapper</h2>
         <p className="about-lead">
