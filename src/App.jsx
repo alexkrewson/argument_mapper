@@ -18,6 +18,7 @@ import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
 import AIChangeLogModal from "./components/AIChangeLogModal";
 import AuthModal from "./components/AuthModal";
 import DebateHistory from "./components/DebateHistory";
+import AboutTab from "./components/AboutTab";
 import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
 import { TACTICS } from "./utils/tactics.js";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
@@ -757,6 +758,12 @@ export default function App() {
             History
           </button>
         )}
+        <button
+          className={`tab-btn${activeTab === "about" ? " tab-btn--active" : ""}`}
+          onClick={() => setActiveTab("about")}
+        >
+          About
+        </button>
         </nav>
           </div>{/* app-top-content */}
         </div>{/* app-top-body */}
@@ -804,6 +811,8 @@ export default function App() {
         {activeTab === "history" && (
           <DebateHistory user={user} onLoadDebate={handleLoadDebate} />
         )}
+
+        {activeTab === "about" && <AboutTab />}
 
         {activeTab === "moderator" && (() => {
           const fixNames = (s) => typeof s === "string"
@@ -967,8 +976,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Statement input at the bottom — hidden on history tab only */}
-      {activeTab !== "history" && (
+      {/* Statement input at the bottom — hidden on history and about tabs */}
+      {activeTab !== "history" && activeTab !== "about" && (
         <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
           {theme.lcars && <div className="lcars-rail lcars-rail--footer" />}
           <StatementInput

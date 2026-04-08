@@ -1,40 +1,54 @@
-# Argument Mapper — Quick Start Guide
+# Argument Mapper — Feature Guide
 
 ## What is it?
 
-A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude) analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics, and moderates the exchange.
+A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude) analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics, moderates the exchange, and tracks concessions.
 
-No backend. No accounts. Everything is session-only — refresh and it's gone.
-
----
-
-## Setup
-
-1. Add your Anthropic API key to a `.env` file at the project root:
-   ```
-   VITE_ANTHROPIC_API_KEY=sk-ant-...
-   ```
-2. Run the app (`npm run dev` or open the built `dist/`).
+Debates are saved to Supabase when you're signed in — sign in via the ⚙ settings menu.
 
 ---
 
 ## The Debate Flow
 
-The app alternates turns between **User A** (blue) and **User B** (green).
+The app alternates turns between two speakers — each shown in their own color.
 
-1. **User A types a statement** in the text box at the bottom and hits Submit (or `Enter`).
-2. Claude analyzes the statement, assigns it a node type, detects any tactics, and adds it to the argument map.
-3. The turn passes to **User B**, who does the same.
-4. Repeat — the map grows as the debate continues.
+1. Before your first submission, you can **edit your name** in the input bar or hit the shuffle icon for a random one. The name locks in after you submit.
+2. Type a statement and hit **Submit** (or `Enter`).
+3. Claude analyzes the statement, assigns it a node type, detects tactics and flags, and adds it to the argument map.
+4. The turn passes to the other speaker. Repeat.
 
 ---
 
-## Features
+## Tabs
 
-### Argument Map (Graph)
-The main area shows a live visual graph of the debate. Each node is a claim, premise, evidence, objection, or rebuttal. Edges show how arguments relate (supports, opposes, rebuts, etc.). Click any node to open its detail popup.
+### Map
+The main area shows a live visual graph of the debate. Each node is a statement; edges show how arguments relate. Click any node to open its detail popup. Click the graph background to hide/show the header and footer for a cleaner view.
 
-**Node types:**
+**Node colors** match the speaker who made the argument.
+
+**Node visual states:**
+- **Faded (opacity-reduced):** Agreed-upon or retracted — settled, move on.
+- **Red background + border:** Involved in a self-contradiction.
+- **Orange background + border:** Involved in goalpost-moving.
+- **Pulsing glow (briefly):** Newly added this turn.
+
+### List
+A tree view of all nodes, indented by parent-child relationship. Includes tactic badges, fading, and concede buttons. Good for mobile or dense debates.
+
+### Moderator
+Two panels — one per speaker — showing:
+- **Style analysis:** Claude's assessment of each speaker's rhetorical style.
+- **Events list:** A running record of notable moves — tactics used, concessions made, contradictions, retractions, and points the opponent agreed with.
+
+Below the panels is an **AI chat** where you can ask Claude anything about the debate (see [AI Moderator Chat](#ai-moderator-chat)).
+
+### History *(signed-in users only)*
+A list of all your saved debates, sorted by last modified. Click a title to load it (replaces the current debate). Delete with ✕.
+
+---
+
+## Node Types
+
 | Type | Meaning |
 |------|---------|
 | `claim` | The main position being argued |
@@ -42,25 +56,45 @@ The main area shows a live visual graph of the debate. Each node is a claim, pre
 | `evidence` | A fact or citation backing a premise |
 | `objection` | A counterargument |
 | `rebuttal` | A response to an objection |
+| `clarification` | A clarifying statement |
 
-### Sidebar — Claims List
-The right sidebar lists all nodes. You can:
-- **Click any node** to open its details.
-- **Rate the other user's nodes** with thumbs up 👍 or down 👎.
-  - Thumbs up = "I agree this is a fair representation of their point."
-  - Agreed nodes (and all their supporting predecessors) **fade out** on both the graph and sidebar — they're settled, move on.
+---
 
-### Node Detail Popup
-Click any node (graph or sidebar) to open a popup showing:
-- The **original statement** as typed by the user
-- The **AI summary** (the cleaned-up claim Claude extracted)
-- Any **tactics detected** with an explanation of why
-- Tags and confidence level
+## Node Detail Popup
+
+Click any node (in the graph or list) to open a popup showing:
+
+- **Original Statement** — what the user actually typed
+- **AI Summary** — the cleaned-up claim Claude extracted
+- **Tactics Detected** — badges with per-tactic explanations
+- **Concede button** — see [Concessions](#concessions)
+- **Contradiction / goalpost chips** — clickable, navigate to the related node
+- **Agreement / retraction / inactive banner** — explains why a node is faded
+- **Tags** — topic tags Claude assigned
+
+The **pencil icon** (✏) opens edit mode, where you can change the content, type, parent node, tags, and flags.
 
 Close with `×`, clicking the backdrop, or `Escape`.
 
-### Tactic Detection
-Claude automatically detects rhetorical tactics on every node. Badges appear in the sidebar and popup.
+---
+
+## Concessions
+
+There are two ways to concede a point:
+
+**Manual:** In the node detail popup, click the concede button:
+- On the *other speaker's* node: "[You] concede that [their] point is correct" — you're agreeing their point stands.
+- On *your own* node: "[You] concede that this statement of theirs is incorrect" — you're retracting your own argument.
+
+**AI-detected:** When Claude notices that a submitted statement implicitly concedes a point, a confirmation modal appears. Confirm to apply the concession, or dismiss to ignore it.
+
+When a node is conceded or retracted, it and all its supporting predecessors **fade out** across the map and list — they're settled, no longer contested.
+
+---
+
+## Tactic Detection
+
+Claude automatically detects rhetorical tactics on every node. Badges appear in the list view and in the node detail popup.
 
 **Fallacies** (red badges):
 - Straw Man, Ad Hominem, No True Scotsman, False Dilemma, Slippery Slope, Appeal to Authority, Red Herring, Circular Reasoning, Appeal to Emotion, Hasty Generalization
@@ -68,26 +102,69 @@ Claude automatically detects rhetorical tactics on every node. Badges appear in 
 **Good techniques** (green badges):
 - Steel Man, Evidence Based, Logical Deduction, Addresses Counterargument, Cites Source
 
-### Moderator Gauge
-A floating widget in the graph area shows which side the AI thinks currently has the stronger argument. The marker slides between **User A** and **User B**.
+---
 
-- **Drag** the gauge anywhere on screen using the grip icon (☰).
-- **Click** the gauge to open the full Moderator Analysis popup, which includes:
-  - The leaning score with a reason
-  - A style assessment for each user
-  - A list of mutually agreed-upon points
+## Contradiction & Goalpost Detection
 
-Agreements shift the gauge: each thumbs-up on User A's node nudges it toward A, and vice versa.
+Claude also flags two specific bad-faith patterns:
 
-### AI Moderator Mode
-Click **"Talk to AI"** (bottom right of the input) to switch from debate mode to a direct chat with Claude.
+- **⚠ Contradiction:** A speaker's new node directly contradicts one of their own earlier nodes. Both nodes get a red border and a red background. Clicking the chip in the popup navigates to the related node.
+- **⤳ Goalpost Moving:** A speaker shifts the standard they're arguing against mid-debate. Both nodes get an orange border. Also navigable via the popup chip.
 
-- Ask Claude to explain the map, identify weak points, steelman a position, or anything else.
-- Claude can update the argument map directly from the chat (you'll see a "Map updated" indicator on the reply).
-- Click **"Back to Debate"** to return to turn-based mode.
+---
 
-### Resizable Sidebar
-Drag the divider between the graph and the sidebar to resize them.
+## Moderator Gauge
+
+A floating widget on the Map tab shows which side Claude thinks currently has the stronger argument. The marker slides between the two speakers.
+
+- **Drag** the gauge anywhere on screen using the grip handle.
+- **Click** it to open the full moderator popup, which includes the leaning score, a written reason, and a list of mutually agreed-upon points.
+
+The gauge score is adjusted in real-time by argument invalidations: faded nodes (agreed/retracted), contradictions, and goalpost-moving all reduce a speaker's effective standing.
+
+---
+
+## AI Moderator Chat
+
+Switch to the **Moderator** tab and use the chat at the bottom to talk to Claude directly.
+
+- Ask Claude to explain the map, identify weak points, steelman a position, summarize the debate, or anything else.
+- Claude can **update the argument map** directly from the chat — a "Map updated" indicator appears on the reply when it does.
+
+---
+
+## Undo / Redo
+
+Every submission, rating, and manual edit is tracked in a history stack. Use the **←** and **→** buttons in the input bar to move through the history.
+
+---
+
+## Manual Node Management
+
+- **+ Node** button (input bar) — opens a create modal to add a node manually, attributed to the current speaker. Set content, type, parent, and any flags.
+- **Edit mode** (✏ in the node popup) — update any field on an existing node, including re-parenting it.
+
+---
+
+## AI Change Log
+
+The **Review Changes** button (input bar, shows a count badge) opens a modal listing every change Claude has made to the map across all turns — nodes added, modified, removed, edges added, and concessions detected. Useful for auditing what the AI did.
+
+---
+
+## Accounts & Auto-Save
+
+- Sign in or sign up via the **⚙ settings** menu (top right).
+- When signed in, debates **auto-save** to Supabase 1.5 seconds after any change. A "Saving…" / "Saved ✓" indicator appears in the header.
+- The debate title is auto-generated from the first claim node (or a date fallback).
+- If you're not signed in and have started a debate, a **sign-in nudge** appears at the bottom. Closing the tab will trigger a browser warning about unsaved work.
+- Load or delete saved debates from the **History** tab.
+
+---
+
+## Themes
+
+Open the **⚙ settings** menu to choose a theme. Light and dark variants are available, as well as an LCARS (Star Trek) theme.
 
 ---
 
@@ -104,6 +181,7 @@ Drag the divider between the graph and the sidebar to resize them.
 ## Tips
 
 - **Be specific** — vague statements produce vague nodes. Claude works best with clear, focused claims.
-- **Use the thumbs-up** liberally for points of genuine agreement. Fading out settled nodes keeps the map focused on what's still contested.
-- **Switch to AI Moderator mode** mid-debate if you want a neutral read on who's winning or why an argument is weak.
-- **Click nodes in the graph** — the popup shows the original wording vs. the AI's interpretation, which is useful if you want to dispute a summary.
+- **Concede freely** — fading settled nodes keeps the map focused on what's still genuinely contested.
+- **Use the Moderator tab mid-debate** for a neutral read on who's winning or where an argument is weak.
+- **Click nodes in the graph** — the popup shows the original wording vs. the AI's interpretation, useful if you want to dispute a summary or edit it.
+- **Undo aggressively** — if Claude misreads a statement and creates a bad node, undo and rephrase rather than trying to work around it.

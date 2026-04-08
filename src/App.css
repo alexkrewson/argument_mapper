@@ -3286,3 +3286,72 @@ button {
 }
 [data-dark="true"] .settings-user-email { color: #92a1b5; }
 [data-dark="true"] .settings-section-label--themes { border-top-color: #334155; }
+
+/* --- About tab --- */
+.about-tab {
+  overflow-y: auto;
+  height: 100%;
+  padding: 1.5rem 1rem 4rem;
+}
+.about-content {
+  max-width: 680px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+.about-content h2 {
+  font-size: 1.4rem;
+  margin-bottom: 0.4rem;
+}
+.about-content h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.4rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.2rem;
+}
+.about-lead {
+  color: #475569;
+  margin-bottom: 0.5rem;
+}
+.about-content ol, .about-content ul {
+  padding-left: 1.4rem;
+  margin: 0.3rem 0 0.5rem;
+}
+.about-content li {
+  margin-bottom: 0.3rem;
+}
+.about-content dl {
+  margin: 0.3rem 0 0.5rem;
+}
+.about-content dt {
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+.about-content dd {
+  margin-left: 1.2rem;
+  color: #475569;
+}
+.about-table {
+  border-collapse: collapse;
+  margin: 0.4rem 0 0.5rem;
+  font-size: 0.9rem;
+}
+.about-table td {
+  padding: 0.2rem 0.75rem 0.2rem 0;
+  vertical-align: top;
+}
+.about-table td:first-child {
+  white-space: nowrap;
+}
+.about-content kbd {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.85em;
+  font-family: monospace;
+}
+[data-dark="true"] .about-content h3 { border-bottom-color: #334155; }
+[data-dark="true"] .about-lead { color: #94a3b8; }
+[data-dark="true"] .about-content dd { color: #94a3b8; }
+[data-dark="true"] .about-content kbd { background: #1e293b; border-color: #475569; color: #e2e8f0; }
