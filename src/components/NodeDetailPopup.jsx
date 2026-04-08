@@ -439,7 +439,9 @@ export default function NodeDetailPopup({
           const isOtherNode = node.speaker !== currentSpeaker;
           const isActive = isOtherNode ? node.rating === "up" : node.rating === "down";
           const ratingType = isOtherNode ? "up" : "down";
-          const btnText = isOtherNode ? "I concede, this is correct" : "I concede, this is incorrect";
+          const btnText = isOtherNode
+            ? `${speakerName(currentSpeaker, theme)} concedes that ${speakerName(node.speaker, theme)}'s point is correct`
+            : `${speakerName(currentSpeaker, theme)} concedes that this statement of theirs is incorrect`;
           return (
             <div className="popup-section popup-rating-row">
               <button
