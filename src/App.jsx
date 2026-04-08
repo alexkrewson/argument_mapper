@@ -813,7 +813,7 @@ export default function App() {
         )}
 
         {/* Always mounted so scroll position is preserved across tab switches */}
-        <div style={activeTab !== "about" ? { display: "none" } : undefined}>
+        <div style={activeTab !== "about" ? { display: "none" } : { height: "100%", overflow: "hidden" }}>
           <AboutTab />
         </div>
 
