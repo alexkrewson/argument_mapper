@@ -302,6 +302,9 @@ export default function NodeDetailPopup({
             {goalpostsNode && (
               <span className="node-flag-chip node-flag-chip--goalposts">⤳ {fmtNodeId(goalpostsNode.id)}</span>
             )}
+            {node.metadata?.non_sequitur && (
+              <span className="node-flag-chip node-flag-chip--non-sequitur">⚡ non-sequitur</span>
+            )}
             {walkedBackByNode && (
               <span className="node-flag-chip node-flag-chip--goalposts">⤳↙ {fmtNodeId(walkedBackByNode.id)}</span>
             )}
@@ -398,6 +401,14 @@ export default function NodeDetailPopup({
           <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
             <span className="flag-chip-label">⤳ Goalpost Moved by {fmtNodeId(walkedBackByNode.id)}</span>
             <span className="flag-chip-sub">{walkedBackByNode.content.length > 80 ? walkedBackByNode.content.slice(0, 77) + "…" : walkedBackByNode.content}</span>
+          </div>
+        )}
+
+        {/* Non-sequitur flag */}
+        {node.metadata?.non_sequitur && (
+          <div className="flag-chip flag-chip--non-sequitur">
+            <span className="flag-chip-label">⚡ Non-sequitur</span>
+            <span className="flag-chip-sub">This statement doesn't appear to logically connect to the current argument</span>
           </div>
         )}
 

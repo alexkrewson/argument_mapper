@@ -420,8 +420,9 @@
   white-space: nowrap;
   border: 1.5px solid rgba(0,0,0,0.4);
 }
-.node-flag-chip--contradiction { background: rgba(185, 28, 28, 0.9); }
-.node-flag-chip--goalposts     { background: rgba(185, 28, 28, 0.9); }
+.node-flag-chip--contradiction  { background: rgba(185, 28, 28, 0.9); }
+.node-flag-chip--goalposts      { background: rgba(185, 28, 28, 0.9); }
+.node-flag-chip--non-sequitur   { background: rgba(185, 28, 28, 0.9); }
 
 .map-tree-crosslink {
   font-size: 0.6rem;
@@ -739,6 +740,10 @@
   color: #fff;
 }
 .flag-chip--goalposts {
+  background: #dc2626;
+  color: #fff;
+}
+.flag-chip--non-sequitur {
   background: #dc2626;
   color: #fff;
 }
@@ -1868,8 +1873,9 @@
   color: #64748b;
 }
 
-[data-dark="true"] .flag-chip--contradiction { background: #b91c1c; }
-[data-dark="true"] .flag-chip--goalposts    { background: #b91c1c; }
+[data-dark="true"] .flag-chip--contradiction  { background: #b91c1c; }
+[data-dark="true"] .flag-chip--goalposts     { background: #b91c1c; }
+[data-dark="true"] .flag-chip--non-sequitur  { background: #b91c1c; }
 
 [data-dark="true"] .inactive-banner {
   background: #1e293b;

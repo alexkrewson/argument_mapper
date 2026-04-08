@@ -70,7 +70,8 @@ JSON schema:
         "tactic_reasons": { "tactic_key_1": "One-sentence explanation of why this tactic applies" },
         "agreed_by": { "speaker": "Blue|Green", "text": "the original agreeing statement" },
         "contradicts": "node_id_or_null",
-        "moves_goalposts_from": "node_id_or_null"
+        "moves_goalposts_from": "node_id_or_null",
+        "non_sequitur": true
       }
     }],
     "edges": [{
@@ -130,7 +131,12 @@ Rules:
 - Add 2-4 relevant tags per node.
 - Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible. If the speaker uses an analogy, strip the analogy from the content entirely and state the underlying argument in plain, literal terms; tag the node with the "analogy" tactic.
 - Each node must have at most ONE outgoing edge (one parent). If a node could logically connect to multiple existing nodes, choose the single most appropriate parent. Do not create multiple edges from the same source node.
-- SINGLE ROOT CONSTRAINT: There must be exactly ONE root node at all times. The root is the node that has no incoming edges (no edge has it as a "to" target). The very first statement creates this root claim. Every subsequent node you add MUST connect to the existing tree via an outgoing edge — a node with no edge is never allowed. If a new statement reveals that the debate concerns a broader topic and the initial root was merely a sub-case of it, UPDATE the existing root claim node's content to reflect the broader scope rather than creating a new disconnected node.
+- SINGLE ROOT CONSTRAINT: There must be exactly ONE root node at all times. The root is the node that has no incoming edges (no edge has it as a "to" target). The very first statement creates this root claim. Every subsequent node you add MUST connect to the existing tree via an outgoing edge — a node with no edge is never allowed, UNLESS it is flagged as a non-sequitur (see below). If a new statement reveals that the debate concerns a broader topic and the initial root was merely a sub-case of it, UPDATE the existing root claim node's content to reflect the broader scope rather than creating a new disconnected node.
+
+Non-sequitur detection:
+- When a speaker's new statement does not logically connect to any existing node in the argument map — it introduces a wholly unrelated topic, switches the subject without any argumentative link, or is simply off-topic — set "metadata.non_sequitur": true on the new node and DO NOT create an edge for it (leave it disconnected from the tree).
+- Only flag genuine non-sequiturs. A statement that challenges, supports, clarifies, or even loosely relates to the debate topic should be connected normally.
+- Omit the field entirely (do not set it to false) when the statement logically belongs in the tree.
 
 Contradiction detection:
 - When a speaker's new node directly contradicts one of their OWN earlier nodes (the speaker asserts something logically incompatible with what they previously said), set "metadata.contradicts" to the ID of the contradicted node (e.g., "node_3").

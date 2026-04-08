@@ -23,10 +23,11 @@ const BADGE_BASE_TOP = 4;    // top & left inset for badge area
 const NODE_WIDTH     = 260;  // must match stylesheet width
 const BADGE_AVAIL    = NODE_WIDTH - 2 * BADGE_BASE_TOP;  // 252px
 
-function estimateBadgeRows(tactics, flagPairs) {
+function estimateBadgeRows(tactics, flagPairs, nonSequitur) {
   // Primary row: fixed badges (~110px) + tactic icons inline, wrapping as needed
   const primaryRows = Math.ceil((110 + (tactics?.length ?? 0) * 29) / BADGE_AVAIL);
-  const chipRows    = flagPairs?.length ? Math.ceil(flagPairs.length * 104 / BADGE_AVAIL) : 0;
+  const chipCount   = (flagPairs?.length ?? 0) + (nonSequitur ? 1 : 0);
+  const chipRows    = chipCount ? Math.ceil(chipCount * 104 / BADGE_AVAIL) : 0;
   return primaryRows + chipRows;
 }
 
@@ -87,6 +88,7 @@ function buildStylesheet(theme) {
     // --- Faded nodes ---
     { selector: "node.faded", style: { opacity: 0.25 } },
     { selector: "edge.faded", style: { opacity: 0.25 } },
+    { selector: "node.non-sequitur", style: { "border-width": 3, "border-color": "#dc2626" } },
     // --- Base edge style ---
     {
       selector: "edge",
@@ -306,7 +308,8 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
           : `Goalpost move: ${fmtId(pair.upstream)} ⚠️ ${fmtId(pair.downstream)}`;
         return `<span title="${title}" style="${cs("#dc2626")}">${label}</span>`;
       }).join("");
-      const chipRow = chipHtml ? `<div style="${rowStyle}">${chipHtml}</div>` : "";
+      const nonSeqHtml = data.non_sequitur ? `<span title="This statement doesn't logically connect to the argument" style="${cs("#dc2626")}">⚡ non-sequitur</span>` : "";
+      const chipRow = (chipHtml || nonSeqHtml) ? `<div style="${rowStyle}">${chipHtml}${nonSeqHtml}</div>` : "";
 
       return `<div style="position:absolute;top:${BADGE_BASE_TOP}px;left:${BADGE_BASE_TOP}px;display:flex;flex-direction:column;gap:${GAP}px;pointer-events:none;width:${BADGE_AVAIL}px;opacity:${data.faded ? 0.25 : 1};">
         ${primaryRow}${chipRow}
@@ -572,9 +575,10 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     }
 
     const nodeDataOf = (node) => {
-      const tactics   = node.metadata?.tactics || [];
-      const flagPairs = flagPairsMap.get(node.id) || [];
-      const badgeRows = estimateBadgeRows(tactics, flagPairs);
+      const tactics      = node.metadata?.tactics || [];
+      const flagPairs    = flagPairsMap.get(node.id) || [];
+      const non_sequitur = node.metadata?.non_sequitur || false;
+      const badgeRows    = estimateBadgeRows(tactics, flagPairs, non_sequitur);
       // Summary placement rule: gap(badge_bottom → text_top) = gap(text_bottom → node_bottom)
       //   Both gaps = BADGE_BASE_TOP (matches left/top badge inset for visual unity).
       //   text_centre = (badge_bottom + nodeHeight) / 2
@@ -594,6 +598,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         rating: node.rating,
         tactics,
         flagPairs,
+        non_sequitur,
         badgeRows,
         nodeHeight,
         textMarginY,
@@ -658,10 +663,25 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       cy.edges().filter((e) => fadedNodeIds.has(e.source().id()) && fadedNodeIds.has(e.target().id())).addClass("faded");
     }
 
+    // Non-sequitur border class
+    cy.nodes().removeClass("non-sequitur");
+    cy.nodes().filter((n) => n.data("non_sequitur")).addClass("non-sequitur");
+
     // Always run a full fresh layout so dagre re-centers and symmetrically
     // repositions all nodes whenever the graph structure changes.
     if (cy.nodes().length > 0) {
-      runLayout(cy);
+      runLayout(cy, () => {
+        // After layout settles, position non-sequitur nodes beside the main tree
+        const nonSeqNodes = cy.nodes().filter((n) => n.data("non_sequitur"));
+        if (nonSeqNodes.length === 0) return;
+        const connectedNodes = cy.nodes().filter((n) => !n.data("non_sequitur"));
+        const bb = connectedNodes.length > 0 ? connectedNodes.boundingBox() : { x2: 0, y1: 0 };
+        const rightX = bb.x2 + 80 + NODE_WIDTH / 2;
+        nonSeqNodes.forEach((n, i) => {
+          n.position({ x: rightX, y: bb.y1 + i * (n.height() + 40) });
+        });
+        fitToSafeZone(cy);
+      });
     }
   }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds]);
 

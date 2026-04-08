@@ -86,10 +86,11 @@ export default function AboutTab({ isActive }) {
         <p><strong>Fallacies</strong> (red badges): Straw Man, Ad Hominem, No True Scotsman, False Dilemma, Slippery Slope, Appeal to Authority, Red Herring, Circular Reasoning, Appeal to Emotion, Hasty Generalization</p>
         <p><strong>Good techniques</strong> (green badges): Steel Man, Evidence Based, Logical Deduction, Addresses Counterargument, Cites Source</p>
 
-        <h3>Contradiction &amp; Goalpost Detection</h3>
+        <h3>Contradiction, Goalpost &amp; Non-sequitur Detection</h3>
         <ul>
           <li><strong>⚠ Contradiction:</strong> A speaker's new node directly contradicts one of their own earlier nodes. Both get a red border and background.</li>
           <li><strong>⤳ Goalpost Moving:</strong> A speaker shifts the standard they're arguing against mid-debate. Both affected nodes get an orange border.</li>
+          <li><strong>⚡ Non-sequitur:</strong> A statement that doesn't logically connect to any existing node in the argument. It appears beside the tree with a bright red border and a non-sequitur badge.</li>
         </ul>
 
         <h3>Moderator Tab</h3>

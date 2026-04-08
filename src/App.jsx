@@ -353,7 +353,8 @@ export default function App() {
       // The map must always have exactly one root. If Claude accidentally created
       // a second disconnected root, warn the user — they can undo and rephrase.
       if (argumentMap.argument_map.nodes.length > 0) {
-        const roots = findRootNodes(cleanMap.argument_map.nodes, cleanMap.argument_map.edges);
+        const roots = findRootNodes(cleanMap.argument_map.nodes, cleanMap.argument_map.edges)
+          .filter((n) => !n.metadata?.non_sequitur);
         if (roots.length > 1) {
           setError(
             `Warning: Claude created ${roots.length} disconnected root nodes (${roots.map((r) => fmtNodeId(r.id)).join(", ")}). ` +
