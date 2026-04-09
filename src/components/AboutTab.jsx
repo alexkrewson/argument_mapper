@@ -43,7 +43,7 @@ const ALL_IDS = NAV.flatMap(s => [s.id, ...(s.sub?.map(ss => ss.id) ?? [])]);
 export default function AboutTab({ isActive }) {
   const divRef     = useRef(null);
   const savedScroll = useRef(0);
-  const [activeId,  setActiveId]  = useState(null);
+  const [activeId,  setActiveId]  = useState("about");
   const [collapsed, setCollapsed] = useState(false);
   const [expanded,  setExpanded]  = useState({});  // section id → bool
 
@@ -64,7 +64,7 @@ export default function AboutTab({ isActive }) {
           if (entry.isIntersecting) setActiveId(entry.target.id);
         }
       },
-      { root: container, rootMargin: "-10% 0px -80% 0px", threshold: 0 }
+      { root: container, rootMargin: "0px 0px -85% 0px", threshold: 0 }
     );
     container.querySelectorAll("h2[id], h3[id], h4[id]").forEach(el => observer.observe(el));
     return () => observer.disconnect();
@@ -350,21 +350,19 @@ export default function AboutTab({ isActive }) {
         {/* ── Philosophy ─────────────────────────────────────── */}
         <h3 id="philosophy">Philosophy</h3>
         <p>
-          Argument Mapper exists because most online debate is structurally broken — not because people
-          are dishonest, but because the medium works against them.
+          Argument Mapper exists to help people have more productive disagreements.
         </p>
 
         <h4 id="phil-problem">The Problem</h4>
         <p>
-          Text-based conversation is linear. Arguments are not. When two people debate in a chat thread,
-          the conversation sprawls — earlier points get buried, rebuttals get detached from what they're
+          In person and text-based conversations are linear; Arguments are not. When two people debate in a chat thread,
+          the conversation sprawls. Earlier points get buried, rebuttals get detached from what they're
           rebutting, and rhetorical sleight-of-hand is hard to call out in the moment. People talk past
-          each other not out of bad faith but because the format makes it nearly impossible to track
+          each other because the format makes it nearly impossible to track
           what has actually been established and what remains contested.
         </p>
         <p>
-          The result is that most online arguments end without resolution — not because the disagreement
-          is irresolvable, but because neither side can agree on what the disagreement even is anymore.
+          The result is that most online arguments end without resolution and each person feels unheard and misrepresented.
         </p>
 
         <h4 id="phil-approach">The Approach</h4>
@@ -376,9 +374,12 @@ export default function AboutTab({ isActive }) {
         </p>
         <p>
           Nodes that have been agreed upon fade out. Statements that contradict the same speaker's earlier
-          position are flagged. Rhetorical patterns — fallacies, steelmanning, goalpost-moving — are surfaced
+          position are flagged. Rhetorical patterns — fallacies, steelmanning, goalpost-moving, etc are flagged
           automatically. The map is a shared artifact that both participants are building together, even as
           they argue.
+        </p>
+        <p>
+          Users maintain full editing control over the content. A map can be contstucted manually without any AI influence if desired.
         </p>
 
         <h4 id="phil-ai-role">The Role of AI</h4>
