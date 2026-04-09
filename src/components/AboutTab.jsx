@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const NAV = [
+  { id: "about",               label: "About" },
   { id: "debate-flow",         label: "Debate Flow" },
   { id: "tabs",                label: "Tabs" },
   { id: "node-types",          label: "Node Types" },
@@ -65,7 +66,7 @@ export default function AboutTab({ isActive }) {
       },
       { root: container, rootMargin: "-10% 0px -80% 0px", threshold: 0 }
     );
-    container.querySelectorAll("h3[id], h4[id]").forEach(el => observer.observe(el));
+    container.querySelectorAll("h2[id], h3[id], h4[id]").forEach(el => observer.observe(el));
     return () => observer.disconnect();
   }, [isActive]);
 
@@ -144,7 +145,7 @@ export default function AboutTab({ isActive }) {
       <div className="about-scroll" ref={divRef}
         onScroll={() => { savedScroll.current = divRef.current.scrollTop; }}>
       <div className="about-content">
-        <h2>Argument Mapper</h2>
+        <h2 id="about">Argument Mapper</h2>
         <p className="about-lead">
           A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude)
           analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics,
