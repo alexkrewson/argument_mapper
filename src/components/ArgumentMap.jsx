@@ -552,6 +552,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       }
       return visited;
     }
+    const nodeById = new Map(nodes.map((n) => [n.id, n]));
     const flagPairsMap = new Map();
     const addPair = (nodeId, pair) => {
       if (!flagPairsMap.has(nodeId)) flagPairsMap.set(nodeId, []);
@@ -563,14 +564,17 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       if (node.metadata?.contradicts) {
         const pair = { type: "contradiction", upstream: node.metadata.contradicts, downstream: node.id };
         addPair(pair.upstream, pair); addPair(pair.downstream, pair);
+        // Only same-speaker predecessors get the badge — the other speaker's nodes are not undermined
         for (const predId of bfsBack(pair.upstream))
-          if (predId !== pair.upstream && predId !== pair.downstream) addPair(predId, pair);
+          if (predId !== pair.upstream && predId !== pair.downstream)
+            if (nodeById.get(predId)?.speaker === node.speaker) addPair(predId, pair);
       }
       if (node.metadata?.moves_goalposts_from) {
         const pair = { type: "goalpost", upstream: node.metadata.moves_goalposts_from, downstream: node.id };
         addPair(pair.upstream, pair); addPair(pair.downstream, pair);
         for (const predId of bfsBack(pair.upstream))
-          if (predId !== pair.upstream && predId !== pair.downstream) addPair(predId, pair);
+          if (predId !== pair.upstream && predId !== pair.downstream)
+            if (nodeById.get(predId)?.speaker === node.speaker) addPair(predId, pair);
       }
     }
 

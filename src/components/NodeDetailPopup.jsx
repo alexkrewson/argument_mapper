@@ -282,6 +282,44 @@ export default function NodeDetailPopup({
   const contradictedByNode = nodes?.find((n) => n.metadata?.contradicts === node.id) ?? null;
   const walkedBackByNode = nodes?.find((n) => n.metadata?.moves_goalposts_from === node.id) ?? null;
 
+  // Detect if this node is a *downstream* predecessor of a contradiction/goalpost but not
+  // directly involved. Used to show either an "undermined" warning (same speaker) or
+  // a soft info note (other speaker).
+  const upstreamConflict = (() => {
+    if (!nodes || !edges) return null;
+    // Skip nodes that are already directly flagged — they have their own chips
+    if (contradictsNode || contradictedByNode || goalpostsNode || walkedBackByNode) return null;
+    const predMap = new Map();
+    for (const edge of edges) {
+      if (!predMap.has(edge.to)) predMap.set(edge.to, new Set());
+      predMap.get(edge.to).add(edge.from);
+    }
+    const getPreds = (startId) => {
+      const visited = new Set();
+      const q = [startId];
+      while (q.length) {
+        const id = q.shift();
+        for (const p of predMap.get(id) || []) {
+          if (!visited.has(p)) { visited.add(p); q.push(p); }
+        }
+      }
+      return visited;
+    };
+    for (const n of nodes) {
+      const targetId = n.metadata?.contradicts || n.metadata?.moves_goalposts_from;
+      if (!targetId) continue;
+      if (getPreds(targetId).has(node.id)) {
+        return {
+          type: n.metadata?.contradicts ? "contradiction" : "goalpost move",
+          isSameUser: node.speaker === n.speaker,
+          sourceId: n.id,
+          targetId,
+        };
+      }
+    }
+    return null;
+  })();
+
   return (
     <div className="popup-backdrop" onClick={onClose}>
       <div className="popup-card" onClick={(e) => e.stopPropagation()}>
@@ -401,6 +439,26 @@ export default function NodeDetailPopup({
           <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
             <span className="flag-chip-label">⤳ Goalpost Moved by {fmtNodeId(walkedBackByNode.id)}</span>
             <span className="flag-chip-sub">{walkedBackByNode.content.length > 80 ? walkedBackByNode.content.slice(0, 77) + "…" : walkedBackByNode.content}</span>
+          </div>
+        )}
+
+        {/* Downstream conflict — same speaker: red "undermined" chip */}
+        {upstreamConflict?.isSameUser && (
+          <div className="flag-chip flag-chip--contradiction" onClick={() => { onClose(); onNodeClick?.(nodes?.find(n => n.id === upstreamConflict.sourceId)); }}>
+            <span className="flag-chip-label">⚠ Undermined</span>
+            <span className="flag-chip-sub">
+              This statement supports an argument undermined by an upstream {upstreamConflict.type} ({fmtNodeId(upstreamConflict.sourceId)} / {fmtNodeId(upstreamConflict.targetId)})
+            </span>
+          </div>
+        )}
+
+        {/* Downstream conflict — other speaker: soft info note */}
+        {upstreamConflict && !upstreamConflict.isSameUser && (
+          <div className="downstream-note">
+            <span className="downstream-note-icon">ℹ</span>
+            <span className="downstream-note-text">
+              This statement is downstream of an upstream {upstreamConflict.type} by the other speaker and may carry less weight in the current argument.
+            </span>
           </div>
         )}
 
