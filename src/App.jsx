@@ -21,7 +21,7 @@ import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
 import { updateArgumentMap, rateNode, chatWithModerator, parseConversation } from "./utils/claude";
 import { TACTICS } from "./utils/tactics.js";
-import { computeScores, computeScoreDelta } from "./utils/scoring.js";
+import { computeScores, computeScoreDelta, POINTS } from "./utils/scoring.js";
 import { playHappy, playSad, playBigWin } from "./utils/sounds.js";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { fmtNodeId } from "./utils/format.js";
@@ -955,25 +955,26 @@ export default function App() {
             for (const node of inner.nodes) {
               if (node.speaker === internalSpeaker) {
                 if (node.metadata?.contradicts)
-                  events.push({ cls: "bad", text: `Contradicted own position: ${fmtNodeId(node.metadata.contradicts)} ⚠ ${fmtNodeId(node.id)}` });
+                  events.push({ cls: "bad", pts: POINTS.contradiction, text: `Contradicted own position: ${fmtNodeId(node.metadata.contradicts)} ⚠ ${fmtNodeId(node.id)}` });
                 if (node.metadata?.moves_goalposts_from)
-                  events.push({ cls: "bad", text: `Moved goalposts: ${fmtNodeId(node.metadata.moves_goalposts_from)} ⤳ ${fmtNodeId(node.id)}` });
+                  events.push({ cls: "bad", pts: POINTS.goalposts, text: `Moved goalposts: ${fmtNodeId(node.metadata.moves_goalposts_from)} ⤳ ${fmtNodeId(node.id)}` });
                 if (node.rating === "down") {
                   const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
-                  events.push({ cls: "neutral", text: `↩ Retracted own argument: "${snip}"` });
+                  events.push({ cls: "good", pts: POINTS.self_retraction, text: `↩ Retracted own argument: "${snip}"` });
                 }
                 if (node.rating === "up" && node.metadata?.agreed_by?.speaker && node.metadata.agreed_by.speaker !== internalSpeaker) {
                   const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
-                  events.push({ cls: "good", text: `✓ Opponent agreed with your point: "${snip}"` });
+                  events.push({ cls: "good", pts: POINTS.concession_received, text: `✓ Opponent agreed with your point: "${snip}"` });
                 }
                 for (const key of (node.metadata?.tactics || [])) {
                   const t = TACTICS[key];
-                  if (t) events.push({ cls: t.type === "fallacy" ? "bad" : "good", text: `${t.symbol} ${t.name} (${fmtNodeId(node.id)})` });
+                  const pts = POINTS[key];
+                  if (t) events.push({ cls: t.type === "fallacy" ? "bad" : "good", pts: pts ?? 0, text: `${t.symbol} ${t.name} (${fmtNodeId(node.id)})` });
                 }
               } else {
                 if (node.metadata?.agreed_by?.speaker === internalSpeaker) {
                   const snip = node.content.length > 50 ? node.content.slice(0, 47) + "…" : node.content;
-                  events.push({ cls: "neutral", text: `✓ Conceded opposing point: "${snip}"` });
+                  events.push({ cls: "good", pts: POINTS.concession_given, text: `✓ Conceded opposing point: "${snip}"` });
                 }
               }
             }
@@ -1004,7 +1005,14 @@ export default function App() {
                   {eventsA.length > 0 && (
                     <ul className="moderator-events">
                       {eventsA.map((ev, i) => (
-                        <li key={i} className={`moderator-event moderator-event--${ev.cls}`}>{ev.text}</li>
+                        <li key={i} className={`moderator-event moderator-event--${ev.cls}`}>
+                          <span className="moderator-event-text">{ev.text}</span>
+                          {gameMode && ev.pts != null && (
+                            <span className={`moderator-event-pts${ev.pts >= 0 ? " pts-pos" : " pts-neg"}`}>
+                              {ev.pts >= 0 ? "+" : ""}{ev.pts}
+                            </span>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   )}
@@ -1025,7 +1033,14 @@ export default function App() {
                   {eventsB.length > 0 && (
                     <ul className="moderator-events">
                       {eventsB.map((ev, i) => (
-                        <li key={i} className={`moderator-event moderator-event--${ev.cls}`}>{ev.text}</li>
+                        <li key={i} className={`moderator-event moderator-event--${ev.cls}`}>
+                          <span className="moderator-event-text">{ev.text}</span>
+                          {gameMode && ev.pts != null && (
+                            <span className={`moderator-event-pts${ev.pts >= 0 ? " pts-pos" : " pts-neg"}`}>
+                              {ev.pts >= 0 ? "+" : ""}{ev.pts}
+                            </span>
+                          )}
+                        </li>
                       ))}
                     </ul>
                   )}

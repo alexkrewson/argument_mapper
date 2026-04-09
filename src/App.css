@@ -3680,3 +3680,20 @@ button {
 [data-dark="true"] .node-points-total td { border-top-color: #334155; }
 [data-dark="true"] .pts-pos { color: #4ade80; }
 [data-dark="true"] .pts-neg { color: #f87171; }
+
+/* Moderator event point badges */
+.moderator-event {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+.moderator-event-text {
+  flex: 1;
+  min-width: 0;
+}
+.moderator-event-pts {
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
