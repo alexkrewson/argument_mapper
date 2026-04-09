@@ -213,6 +213,46 @@ Return the updated map JSON.`;
 }
 
 /**
+ * Parse a pasted back-and-forth conversation into ordered turns.
+ * The first distinct speaker maps to Blue (speakerNames.a), the second to Green.
+ * Uses Haiku since this is a simple parsing task.
+ *
+ * @param {string} text         — Raw pasted conversation text
+ * @param {object} speakerNames — { a: "...", b: "..." }
+ * @returns {Array<{ speaker: "Blue"|"Green", text: string }>}
+ */
+export async function parseConversation(text, speakerNames) {
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 2000,
+      system: `Parse the following conversation into an ordered list of turns.
+The first distinct speaker maps to "${speakerNames.a}" (use "Blue"). The second distinct speaker maps to "${speakerNames.b}" (use "Green").
+Return ONLY a JSON array — no explanation, no markdown fences:
+[{"speaker":"Blue","text":"..."},{"speaker":"Green","text":"..."},...]
+Strip any speaker labels, timestamps, or metadata from the text field — only the statement content.
+If someone sends multiple consecutive messages, treat each as a separate object.`,
+      messages: [{ role: "user", content: text }],
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`Conversation parse error (${response.status}): ${errorBody}`);
+  }
+
+  const data = await response.json();
+  const raw = data.content[0].text.trim().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw new Error("Could not parse the conversation. Make sure it contains two distinct speakers.");
+  }
+}
+
+/**
  * Chat with the AI moderator about the argument map.
  * Supports back-and-forth conversation with optional map updates.
  *

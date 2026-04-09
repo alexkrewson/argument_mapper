@@ -19,7 +19,7 @@ import AIChangeLogModal from "./components/AIChangeLogModal";
 import AuthModal from "./components/AuthModal";
 import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
-import { updateArgumentMap, rateNode, chatWithModerator } from "./utils/claude";
+import { updateArgumentMap, rateNode, chatWithModerator, parseConversation } from "./utils/claude";
 import { TACTICS } from "./utils/tactics.js";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { fmtNodeId } from "./utils/format.js";
@@ -190,6 +190,8 @@ export default function App() {
   const [showChangeLog, setShowChangeLog] = useState(false); // Whether the changelog modal is open
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
+  const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
+  const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
   const currentDebateIdRef = useRef(null); // Supabase row id of current debate (ref avoids stale closure)
   const skipNextSaveRef = useRef(false);   // Set true after loading a debate to skip the immediate re-save
@@ -591,6 +593,52 @@ export default function App() {
       throw err; // Re-throw so StatementInput knows submission failed
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCombinedSubmit = async (conversationText) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const turns = await parseConversation(conversationText, { a: resolvedTheme.a.name, b: resolvedTheme.b.name });
+      if (!turns.length) throw new Error("No turns found in conversation.");
+
+      let workingMap = argumentMap;
+      let workingSpeaker = currentSpeaker;
+      const newOriginalTexts = { ...originalTexts };
+
+      for (let i = 0; i < turns.length; i++) {
+        setCombiningProgress({ current: i + 1, total: turns.length });
+        setLoadingSpeaker(workingSpeaker);
+
+        const updatedMap = await updateArgumentMap(
+          workingMap, workingSpeaker, turns[i].text,
+          { a: resolvedTheme.a.name, b: resolvedTheme.b.name }
+        );
+
+        const oldIds = new Set(workingMap.argument_map.nodes.map((n) => n.id));
+        updatedMap.argument_map.nodes
+          .filter((n) => !oldIds.has(n.id))
+          .forEach((n) => { newOriginalTexts[n.id] = turns[i].text; });
+
+        const cleanMap = sanitizeNodeContent(updatedMap, resolvedTheme);
+        pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
+        workingMap = cleanMap;
+        workingSpeaker = workingSpeaker === "Blue" ? "Green" : "Blue";
+      }
+
+      setOriginalTexts(newOriginalTexts);
+      setCurrentSpeaker(workingSpeaker);
+      setHasSubmitted({ a: true, b: true });
+      setInputMode("turns");
+      setActiveTab("map");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+      setLoadingSpeaker(null);
+      setCombiningProgress(null);
     }
   };
 
@@ -1023,6 +1071,10 @@ export default function App() {
               const key = currentSpeaker === "Blue" ? "a" : "b";
               setPlayerNames((prev) => ({ ...prev, [key]: randomName(prev[key]) }));
             }}
+            inputMode={inputMode}
+            onModeChange={setInputMode}
+            onCombinedSubmit={handleCombinedSubmit}
+            combiningProgress={combiningProgress}
           />
         </footer>
       )}
