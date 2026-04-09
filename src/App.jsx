@@ -87,6 +87,32 @@ function findRootNodes(nodes, edges) {
   return nodes.filter((n) => !hasOutgoing.has(n.id));
 }
 
+// When a node is conceded/agreed, BFS its supporting subtree and clear any
+// contradiction or goalpost-moving flags it or its predecessors are the *source* of.
+// (Both nodes in a flag pair derive the badge from the source's metadata field,
+// so clearing the source is enough to remove the badge from both.)
+function clearConflictFlagsForFadedSubtree(nodes, edges, fadedRootId) {
+  const predecessorMap = new Map();
+  for (const edge of edges) {
+    if (!predecessorMap.has(edge.to)) predecessorMap.set(edge.to, new Set());
+    predecessorMap.get(edge.to).add(edge.from);
+  }
+  const faded = new Set([fadedRootId]);
+  const queue = [fadedRootId];
+  while (queue.length) {
+    const id = queue.shift();
+    for (const predId of predecessorMap.get(id) || []) {
+      if (!faded.has(predId)) { faded.add(predId); queue.push(predId); }
+    }
+  }
+  return nodes.map((node) => {
+    if (!faded.has(node.id)) return node;
+    if (!node.metadata?.contradicts && !node.metadata?.moves_goalposts_from) return node;
+    const { contradicts, moves_goalposts_from, ...restMeta } = node.metadata;
+    return { ...node, metadata: restMeta };
+  });
+}
+
 // Replace internal "Blue"/"Green" speaker names in node content with theme display names.
 function sanitizeNodeContent(map, theme) {
   const inner = map.argument_map;
@@ -423,7 +449,12 @@ export default function App() {
         return { ...node, metadata: restMetadata };
       }
     });
-    pushHistory({ argument_map: { ...inner, nodes: updatedNodes } }, moderatorAnalysis);
+    // Clear contradiction/goalpost flags from nodes that become faded
+    const ratedNode = updatedNodes.find((n) => n.id === nodeId);
+    const finalNodes = (ratedNode?.rating === "up" || ratedNode?.rating === "down")
+      ? clearConflictFlagsForFadedSubtree(updatedNodes, inner.edges, nodeId)
+      : updatedNodes;
+    pushHistory({ argument_map: { ...inner, nodes: finalNodes } }, moderatorAnalysis);
   };
 
   /** Concession queue handlers */
@@ -453,7 +484,8 @@ export default function App() {
         },
       };
     });
-    pushHistory({ argument_map: { ...inner, nodes } }, moderatorAnalysis);
+    const cleanedNodes = clearConflictFlagsForFadedSubtree(nodes, inner.edges, item.nodeId);
+    pushHistory({ argument_map: { ...inner, nodes: cleanedNodes } }, moderatorAnalysis);
     setConcessionQueue(rest);
   };
 
