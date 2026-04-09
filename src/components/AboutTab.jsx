@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 const NAV = [
   { id: "about",               label: "About" },
   { id: "debate-flow",         label: "Debate Flow" },
+  { id: "combined-mode",       label: "Combined Mode" },
   { id: "tabs",                label: "Tabs" },
   { id: "node-types",          label: "Node Types" },
   { id: "node-detail-popup",   label: "Node Detail Popup" },
@@ -10,6 +11,7 @@ const NAV = [
   { id: "concessions",         label: "Concessions" },
   { id: "tactic-detection",    label: "Tactic Detection" },
   { id: "flags",               label: "Contradiction & Goalpost" },
+  { id: "game-mode",           label: "Game Mode" },
   { id: "moderator-tab",       label: "Moderator Tab" },
   { id: "accounts",            label: "Accounts & Auto-Save" },
   { id: "other-controls",      label: "Other Controls" },
@@ -149,7 +151,8 @@ export default function AboutTab({ isActive }) {
         <p className="about-lead">
           A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude)
           analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics,
-          moderates the exchange, and tracks concessions.
+          moderates the exchange, tracks concessions, and — if you enable Game Mode — scores both
+          participants in real time.
         </p>
 
         <h3 id="debate-flow">The Debate Flow</h3>
@@ -160,18 +163,38 @@ export default function AboutTab({ isActive }) {
           <li>Claude analyzes the statement, assigns it a node type, detects tactics and flags, and adds it to the argument map.</li>
           <li>The turn passes to the other speaker. Repeat.</li>
         </ol>
-        <p>Alternatively, use <strong>Combined mode</strong> (input bar) to paste an entire back-and-forth conversation at once — Claude parses and processes each turn sequentially.</p>
+        <p>Alternatively, use <strong>Combined mode</strong> to paste an entire back-and-forth conversation at once and have it processed all at once.</p>
+
+        <h3 id="combined-mode">Combined Mode</h3>
+        <p>
+          Combined mode lets you import a conversation that already happened — paste a full chat log and
+          get the complete argument map built in one go.
+        </p>
+        <ol>
+          <li>Click <strong>Combined</strong> in the input bar (next to Skip Turn).</li>
+          <li>Paste the full conversation — speaker labels, timestamps, and all.</li>
+          <li>Hit <strong>Process</strong>. Progress shows as "Processing turn N of M…"</li>
+        </ol>
+        <p>
+          Behind the scenes: Claude Haiku first parses the raw text into an ordered list of attributed turns,
+          stripping speaker labels and metadata. Then Claude Sonnet runs the full argument map analysis for
+          each turn sequentially, building the graph progressively just as if the debate had happened live.
+        </p>
+        <p>
+          The first distinct speaker maps to the current player, the second to their opponent.
+          Switch back to <strong>Turns</strong> mode at any time to resume one-at-a-time submissions.
+        </p>
 
         <h3 id="tabs">Tabs</h3>
         <dl>
           <dt>Map</dt>
           <dd>Live visual graph of the debate. Click any node to see its details. Click the background to hide/show the header and footer for a cleaner view.</dd>
           <dt>List</dt>
-          <dd>Tree view of all nodes, indented by parent-child relationship. Good for mobile or dense debates.</dd>
+          <dd>Tree view of all nodes, indented by parent-child relationship. Includes tactic badges, fading, and concede buttons. Good for mobile or dense debates.</dd>
           <dt>Moderator</dt>
-          <dd>Side-by-side speaker breakdowns (style analysis + event log) plus an AI chat where you can ask Claude anything about the debate.</dd>
+          <dd>Side-by-side speaker breakdowns — scores (Game Mode), style analysis, and event log — plus an AI chat where you can ask Claude anything about the debate.</dd>
           <dt>Arguments</dt>
-          <dd>Your saved debates (requires sign-in). Start a new argument, load a previous one, or delete from here.</dd>
+          <dd>Your saved debates (requires sign-in). Start a fresh argument with <strong>New Argument</strong>, load a previous one, or delete from here.</dd>
         </dl>
 
         <h3 id="node-types">Node Types</h3>
@@ -189,11 +212,13 @@ export default function AboutTab({ isActive }) {
         <h3 id="node-detail-popup">Node Detail Popup</h3>
         <p>Click any node to open a popup showing:</p>
         <ul>
-          <li><strong>Original Statement</strong> — what the user actually typed</li>
+          <li><strong>Original Statement</strong> — what the user actually typed (or the parsed turn text in Combined mode)</li>
           <li><strong>AI Summary</strong> — the cleaned-up claim Claude extracted</li>
           <li><strong>Tactics Detected</strong> — badges with per-tactic explanations</li>
+          <li><strong>Points</strong> (Game Mode only) — per-node breakdown of every point event, with totals per speaker</li>
           <li><strong>Concede button</strong> — concede the point manually</li>
           <li><strong>Contradiction / goalpost chips</strong> — clickable, navigate to the related node</li>
+          <li><strong>Agreement / retraction / inactive banner</strong> — explains why a node is faded</li>
           <li><strong>Edit mode</strong> (✏) — change content, type, parent, tags, and flags</li>
         </ul>
 
@@ -204,6 +229,10 @@ export default function AboutTab({ isActive }) {
           The node is attributed to the current speaker. Useful for adding evidence, clarifications, or points
           you want to place precisely in the tree.
         </p>
+        <p>
+          Existing nodes can also be edited at any time via the ✏ icon in the popup — change content, retype,
+          re-parent, or manually set contradiction and goalpost flags.
+        </p>
 
         <h3 id="concessions">Concessions</h3>
         <p>There are two ways to concede a point:</p>
@@ -211,39 +240,103 @@ export default function AboutTab({ isActive }) {
           <li><strong>Manual:</strong> In the node detail popup, click the concede button — on the opponent's node to agree their point stands, or on your own node to retract it.</li>
           <li><strong>AI-detected:</strong> When Claude notices a submitted statement implicitly concedes a point, a confirmation modal appears. Confirm to apply it, or dismiss to ignore.</li>
         </ul>
-        <p>Conceded and retracted nodes — along with all their supporting predecessors — <strong>fade out</strong> across the map and list. Conceding a node also automatically clears any contradiction or goalpost-moving flags it was the source of, since those arguments are no longer in play.</p>
+        <p>
+          Conceded and retracted nodes — along with all their supporting predecessors — <strong>fade out</strong>{" "}
+          across the map and list. Conceding a node also automatically clears any contradiction or
+          goalpost-moving flags it was the source of, since those arguments are no longer in play.
+        </p>
+        <p>In Game Mode, concessions are the highest-value actions — see <a href="#game-mode">Game Mode</a>.</p>
 
         <h3 id="tactic-detection">Tactic Detection</h3>
-        <p>Claude automatically detects rhetorical tactics on every node.</p>
+        <p>Claude automatically detects rhetorical tactics on every node. Tactics are <strong>re-evaluated on every turn</strong> — new context can reveal fallacies in earlier statements.</p>
         <p><strong>Fallacies</strong> (red badges): Straw Man, Ad Hominem, No True Scotsman, False Dilemma, Slippery Slope, Appeal to Authority, Red Herring, Circular Reasoning, Appeal to Emotion, Hasty Generalization</p>
         <p><strong>Good techniques</strong> (green badges): Steel Man, Evidence Based, Logical Deduction, Addresses Counterargument, Cites Source</p>
-        <p>Tactics are re-evaluated on every turn — new context can reveal fallacies in earlier statements.</p>
+        <p><strong>Rhetorical devices</strong>: Analogy (the underlying literal argument is preserved in the node content; the analogy itself is stripped)</p>
 
         <h3 id="flags">Contradiction, Goalpost &amp; Non-sequitur Detection</h3>
         <ul>
-          <li><strong>⚠ Contradiction:</strong> A speaker's new node directly contradicts one of their own earlier nodes. Both get a red border. Supporting nodes by the same speaker are also flagged as undermined.</li>
+          <li><strong>⚠ Contradiction:</strong> A speaker's new node directly contradicts one of their own earlier nodes. Both get a red border and background. Supporting nodes by the same speaker are also flagged as undermined. Clicking the chip in the popup navigates to the related node.</li>
           <li><strong>⤳ Goalpost Moving:</strong> A speaker quietly shifts the scope of their own earlier claim to dodge a challenge. Both affected nodes get an orange border.</li>
-          <li><strong>⚡ Non-sequitur:</strong> A statement with no logical connection to any existing node. It appears beside the tree with a red border.</li>
+          <li><strong>⚡ Non-sequitur:</strong> A statement with no logical connection to any existing node. It appears <em>beside</em> the tree with a bright red border instead of connecting to it.</li>
         </ul>
         <p>These flags only apply within a single speaker's own nodes — they can never occur across speakers, since arguing against the other person is just normal debate.</p>
 
+        <h3 id="game-mode">Game Mode</h3>
+        <p>
+          Enable <strong>🎮 Points &amp; sounds</strong> in the ⚙ settings menu. The setting persists across sessions.
+        </p>
+        <p><strong>What changes in Game Mode:</strong></p>
+        <ul>
+          <li>Each speaker's <strong>score</strong> appears in large text in the Moderator tab. The leader gets a 👑 crown.</li>
+          <li>Every event in the Moderator tab shows its <strong>point value</strong> inline.</li>
+          <li>Every node's info popup shows a <strong>per-node points breakdown</strong> with totals per speaker.</li>
+          <li>After each submission, an <strong>animated toast</strong> floats up (green, bouncy) or shakes down (red), colored by the submitting speaker.</li>
+          <li><strong>Sounds</strong> play — an ascending arpeggio for gains, a descending minor chord for losses, a 5-note fanfare for big wins (≥ +18 pts in one turn).</li>
+        </ul>
+        <p>Scores are <strong>cumulative</strong> — every node on the map contributes to the running total at all times.</p>
+
+        <p><strong>Concessions — highest rewards (hardest to do):</strong></p>
+        <table className="about-table">
+          <tbody>
+            <tr><td>Retract your own argument</td><td><strong style={{color:"#16a34a"}}>+20</strong></td></tr>
+            <tr><td>Concede the opponent's point</td><td><strong style={{color:"#16a34a"}}>+20</strong></td></tr>
+            <tr><td>Opponent concedes your point</td><td><strong style={{color:"#16a34a"}}>+8</strong></td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Good techniques:</strong></p>
+        <table className="about-table">
+          <tbody>
+            <tr><td>Steel Man</td><td><strong style={{color:"#16a34a"}}>+10</strong></td></tr>
+            <tr><td>Evidence Based</td><td><strong style={{color:"#16a34a"}}>+6</strong></td></tr>
+            <tr><td>Logical Deduction</td><td><strong style={{color:"#16a34a"}}>+5</strong></td></tr>
+            <tr><td>Addresses Counterargument</td><td><strong style={{color:"#16a34a"}}>+5</strong></td></tr>
+            <tr><td>Cites Source</td><td><strong style={{color:"#16a34a"}}>+4</strong></td></tr>
+            <tr><td>Analogy</td><td><strong style={{color:"#16a34a"}}>+2</strong></td></tr>
+          </tbody>
+        </table>
+
+        <p><strong>Fallacies &amp; flags:</strong></p>
+        <table className="about-table">
+          <tbody>
+            <tr><td>Ad Hominem</td><td><strong style={{color:"#dc2626"}}>−15</strong></td></tr>
+            <tr><td>Straw Man</td><td><strong style={{color:"#dc2626"}}>−12</strong></td></tr>
+            <tr><td>Contradiction (self)</td><td><strong style={{color:"#dc2626"}}>−12</strong></td></tr>
+            <tr><td>No True Scotsman</td><td><strong style={{color:"#dc2626"}}>−10</strong></td></tr>
+            <tr><td>Goalpost Moving</td><td><strong style={{color:"#dc2626"}}>−10</strong></td></tr>
+            <tr><td>False Dilemma</td><td><strong style={{color:"#dc2626"}}>−8</strong></td></tr>
+            <tr><td>Circular Reasoning</td><td><strong style={{color:"#dc2626"}}>−8</strong></td></tr>
+            <tr><td>Appeal to Emotion</td><td><strong style={{color:"#dc2626"}}>−8</strong></td></tr>
+            <tr><td>Red Herring</td><td><strong style={{color:"#dc2626"}}>−8</strong></td></tr>
+            <tr><td>Slippery Slope</td><td><strong style={{color:"#dc2626"}}>−6</strong></td></tr>
+            <tr><td>Appeal to Authority</td><td><strong style={{color:"#dc2626"}}>−6</strong></td></tr>
+            <tr><td>Hasty Generalization</td><td><strong style={{color:"#dc2626"}}>−6</strong></td></tr>
+            <tr><td>Non-sequitur</td><td><strong style={{color:"#dc2626"}}>−5</strong></td></tr>
+          </tbody>
+        </table>
+
         <h3 id="moderator-tab">Moderator Tab</h3>
         <p>
-          The Moderator tab shows a side-by-side breakdown of both speakers — Claude's assessment of each
-          person's rhetorical style, plus a running event log of notable moves (tactics used, concessions made,
-          contradictions, retractions, and points the opponent agreed with).
+          The Moderator tab shows a side-by-side breakdown of both speakers. In Game Mode, each speaker's
+          current score appears prominently at the top with a 👑 crown on the leader.
         </p>
         <p>
-          Below the breakdowns is an <strong>AI chat</strong> where you can ask Claude anything about the debate —
-          explain the map, identify weak points, steelman a position, summarize. Claude can update the argument
-          map from the chat; a "Map updated" label appears on those replies.
+          Below the scores (or at the top outside Game Mode) is Claude's assessment of each person's
+          rhetorical style, followed by a <strong>running event log</strong> of notable moves — tactics used,
+          concessions made, contradictions, retractions, and points the opponent agreed with. In Game Mode,
+          each event shows its point value inline.
+        </p>
+        <p>
+          Below the breakdowns is an <strong>AI chat</strong> where you can ask Claude anything about the
+          debate — explain the map, identify weak points, steelman a position, summarize. Claude can update
+          the argument map from the chat; a "Map updated" label appears on those replies.
         </p>
 
         <h3 id="accounts">Accounts &amp; Auto-Save</h3>
         <ul>
           <li>Sign in or sign up via the <strong>⚙ settings</strong> menu (top right).</li>
           <li>When signed in, debates <strong>auto-save</strong> to the cloud a moment after any change.</li>
-          <li>Load, delete, or start a new argument from the <strong>Arguments</strong> tab.</li>
+          <li>Load, delete, or start a new argument from the <strong>Arguments</strong> tab. Use <strong>New Argument</strong> to clear the current map and start fresh.</li>
           <li>If you're not signed in, a nudge appears after a few nodes. Closing the tab will warn you about unsaved work.</li>
         </ul>
 
@@ -252,13 +345,15 @@ export default function AboutTab({ isActive }) {
           <dt>← / → (input bar)</dt>
           <dd>Undo and redo — every submission, rating, and edit is tracked in a history stack.</dd>
           <dt>Review Changes (input bar)</dt>
-          <dd>Opens a log of every change Claude has made to the map across all turns.</dd>
+          <dd>Opens a log of every change Claude has made to the map across all turns — nodes added, modified, removed, and concessions detected.</dd>
           <dt>Skip Turn</dt>
           <dd>Pass to the other speaker without submitting a statement.</dd>
           <dt>Combined / Turns (input bar)</dt>
           <dd>Switch between one-turn-at-a-time mode and bulk conversation paste mode.</dd>
+          <dt>+ Node (input bar)</dt>
+          <dd>Add a node manually without AI analysis.</dd>
           <dt>⚙ Settings</dt>
-          <dd>Switch themes (light and dark). Sign in or out.</dd>
+          <dd>Toggle Game Mode. Switch themes (light and dark). Sign in or out.</dd>
         </dl>
 
         <h3 id="keyboard-shortcuts">Keyboard Shortcuts</h3>
@@ -273,7 +368,8 @@ export default function AboutTab({ isActive }) {
         <h3 id="tips">Tips</h3>
         <ul>
           <li><strong>Be specific</strong> — vague statements produce vague nodes. Claude works best with clear, focused claims.</li>
-          <li><strong>Concede freely</strong> — fading settled nodes keeps the map focused on what's still genuinely contested.</li>
+          <li><strong>Concede freely</strong> — fading settled nodes keeps the map focused on what's still genuinely contested. In Game Mode, conceding also earns the most points.</li>
+          <li><strong>Use Combined mode</strong> to import a conversation that already happened — paste a chat export and get the full map built instantly.</li>
           <li><strong>Use the Moderator tab mid-debate</strong> for a neutral read on who's winning or where an argument is weak.</li>
           <li><strong>Click nodes in the graph</strong> — the popup shows the original wording vs. the AI's interpretation, useful if you want to dispute or edit a summary.</li>
           <li><strong>Undo aggressively</strong> — if Claude misreads a statement and creates a bad node, undo and rephrase rather than working around it.</li>
@@ -294,6 +390,7 @@ export default function AboutTab({ isActive }) {
             <tr><td><strong>Cytoscape.js</strong></td><td>Graph rendering engine. Uses the <code>dagre</code> layout plugin for tree arrangement and <code>cytoscape-node-html-label</code> for rich badge overlays on nodes.</td></tr>
             <tr><td><strong>Supabase</strong></td><td>PostgreSQL database for debate storage, Supabase Auth for user accounts, and Supabase Edge Functions (Deno runtime) as the AI proxy.</td></tr>
             <tr><td><strong>Claude (Anthropic)</strong></td><td>Claude Sonnet for full argument map analysis each turn; Claude Haiku for fast conversation parsing in Combined mode.</td></tr>
+            <tr><td><strong>Web Audio API</strong></td><td>Synthesizes Game Mode sounds entirely in the browser — no audio files. Happy arpeggios, sad descending chords, and a fanfare for big wins.</td></tr>
             <tr><td><strong>GitHub Pages</strong></td><td>Hosts the static build. Deployed from the <code>master</code> branch via GitHub Actions.</td></tr>
           </tbody>
         </table>
@@ -336,8 +433,8 @@ export default function AboutTab({ isActive }) {
         </p>
         <p>
           Locally, the app maintains an in-memory undo/redo stack (a plain array of map snapshots).
-          The theme preference is persisted to <code>localStorage</code>. Nothing else touches the client
-          file system.
+          The theme preference and Game Mode toggle are persisted to <code>localStorage</code>. Nothing
+          else touches the client file system.
         </p>
 
         <h4 id="tech-hosting">Hosting &amp; Deployment</h4>
