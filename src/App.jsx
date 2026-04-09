@@ -671,7 +671,6 @@ export default function App() {
 
       let workingMap = argumentMap;
       let workingSpeaker = currentSpeaker;
-      const newOriginalTexts = { ...originalTexts };
 
       for (let i = 0; i < turns.length; i++) {
         setCombiningProgress({ current: i + 1, total: turns.length });
@@ -683,17 +682,21 @@ export default function App() {
         );
 
         const oldIds = new Set(workingMap.argument_map.nodes.map((n) => n.id));
-        updatedMap.argument_map.nodes
-          .filter((n) => !oldIds.has(n.id))
-          .forEach((n) => { newOriginalTexts[n.id] = turns[i].text; });
+        const newNodes = updatedMap.argument_map.nodes.filter((n) => !oldIds.has(n.id));
+        if (newNodes.length > 0) {
+          const turnText = turns[i].text;
+          setOriginalTexts((prev) => {
+            const next = { ...prev };
+            for (const n of newNodes) next[n.id] = turnText;
+            return next;
+          });
+        }
 
         const cleanMap = sanitizeNodeContent(updatedMap, resolvedTheme);
         pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
         workingMap = cleanMap;
         workingSpeaker = workingSpeaker === "Blue" ? "Green" : "Blue";
       }
-
-      setOriginalTexts(newOriginalTexts);
       setCurrentSpeaker(workingSpeaker);
       setHasSubmitted({ a: true, b: true });
       setInputMode("turns");
