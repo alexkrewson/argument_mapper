@@ -21,6 +21,8 @@ import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
 import { updateArgumentMap, rateNode, chatWithModerator, parseConversation } from "./utils/claude";
 import { TACTICS } from "./utils/tactics.js";
+import { computeScores, computeScoreDelta } from "./utils/scoring.js";
+import { playHappy, playSad, playBigWin } from "./utils/sounds.js";
 import { speakerName, speakerBorder } from "./utils/speakers.js";
 import { fmtNodeId } from "./utils/format.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
@@ -218,6 +220,9 @@ export default function App() {
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
+  const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameMode") === "true");
+  const [gameToast, setGameToast] = useState(null); // { speaker, delta, key } | null
+  const gameToastTimerRef = useRef(null);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
   const currentDebateIdRef = useRef(null); // Supabase row id of current debate (ref avoids stale closure)
   const skipNextSaveRef = useRef(false);   // Set true after loading a debate to skip the immediate re-save
@@ -299,6 +304,27 @@ export default function App() {
     setActiveTab("map");
   };
 
+  // Current scores derived from the live map
+  const scores = useMemo(() => computeScores(inner.nodes), [inner.nodes]);
+
+  const handleGameModeChange = useCallback((val) => {
+    setGameMode(val);
+    localStorage.setItem("gameMode", val ? "true" : "false");
+  }, []);
+
+  const triggerGameFeedback = useCallback((nodesBefore, nodesAfter, speaker) => {
+    if (!gameMode) return;
+    const delta = computeScoreDelta(nodesBefore, nodesAfter);
+    const d = delta[speaker] ?? 0;
+    if (d === 0) return;
+    clearTimeout(gameToastTimerRef.current);
+    setGameToast({ speaker, delta: d, key: Date.now() });
+    if (d >= 18) playBigWin();       // self-retraction or huge gain
+    else if (d > 0) playHappy();
+    else playSad();
+    gameToastTimerRef.current = setTimeout(() => setGameToast(null), 2400);
+  }, [gameMode]);
+
   /**
    * Called when a user submits a new statement.
    * Sends it to Claude along with the current map, gets back an updated map.
@@ -307,6 +333,8 @@ export default function App() {
     setLoading(true);
     setLoadingSpeaker(currentSpeaker);
     setError(null);
+    const nodesBefore = inner.nodes;        // capture before async work
+    const submittingSpeaker = currentSpeaker;
 
     try {
       // Call Claude to process the statement and update the map
@@ -404,6 +432,7 @@ export default function App() {
       }
 
       pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
+      triggerGameFeedback(nodesBefore, cleanMap.argument_map.nodes, submittingSpeaker);
 
       if (detected.length > 0) setConcessionQueue(detected);
 
@@ -429,6 +458,7 @@ export default function App() {
    * Called when a user rates (thumbs up/down) the other user's node.
    */
   const handleRate = (nodeId, rating) => {
+    const nodesBefore = argumentMap.argument_map.nodes;
     const updatedMap = rateNode(argumentMap, nodeId, rating);
     // Add/remove agreed_by metadata for manual thumbs-up
     const inner = updatedMap.argument_map;
@@ -455,11 +485,13 @@ export default function App() {
       ? clearConflictFlagsForFadedSubtree(updatedNodes, inner.edges, nodeId)
       : updatedNodes;
     pushHistory({ argument_map: { ...inner, nodes: finalNodes } }, moderatorAnalysis);
+    triggerGameFeedback(nodesBefore, finalNodes, currentSpeaker);
   };
 
   /** Concession queue handlers */
   const handleConfirmConcession = () => {
     const [item, ...rest] = concessionQueue;
+    const nodesBefore = argumentMap.argument_map.nodes;
     const inner = argumentMap.argument_map;
     const nodes = inner.nodes.map((node) => {
       if (node.id !== item.nodeId) return node;
@@ -486,6 +518,7 @@ export default function App() {
     });
     const cleanedNodes = clearConflictFlagsForFadedSubtree(nodes, inner.edges, item.nodeId);
     pushHistory({ argument_map: { ...inner, nodes: cleanedNodes } }, moderatorAnalysis);
+    triggerGameFeedback(nodesBefore, cleanedNodes, item.concedingBy);
     setConcessionQueue(rest);
   };
 
@@ -822,7 +855,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} />
         </header>
         <nav className="tab-bar">
         <button
@@ -945,12 +978,23 @@ export default function App() {
           };
           const eventsA = buildEvents("Blue");
           const eventsB = buildEvents("Green");
+          const scoreA = scores.Blue ?? 0;
+          const scoreB = scores.Green ?? 0;
+          const scoreLeader = scoreA > scoreB ? "Blue" : scoreB > scoreA ? "Green" : null;
           return (
             <div className="moderator-combined">
               {/* Top half: side-by-side speaker breakdowns */}
               <div className="moderator-speakers">
                 <div className="moderator-speaker" style={{ borderRight: `2px solid ${theme.a.bg}33` }}>
-                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.a.bg }}>{resolvedTheme.a.name}</div>
+                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.a.bg }}>
+                    {resolvedTheme.a.name}
+                    {scoreLeader === "Blue" && <span className="score-crown">👑</span>}
+                  </div>
+                  {gameMode && (
+                    <div className={`score-display${scoreA >= 0 ? " score-display--pos" : " score-display--neg"}`}>
+                      {scoreA >= 0 ? "+" : ""}{scoreA} pts
+                    </div>
+                  )}
                   {effectiveAnalysis
                     ? <p className="moderator-speaker-style">{fixNames(effectiveAnalysis.user_a_style)}</p>
                     : <p className="moderator-speaker-empty">No analysis yet.</p>}
@@ -963,7 +1007,15 @@ export default function App() {
                   )}
                 </div>
                 <div className="moderator-speaker">
-                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.b.bg }}>{resolvedTheme.b.name}</div>
+                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.b.bg }}>
+                    {resolvedTheme.b.name}
+                    {scoreLeader === "Green" && <span className="score-crown">👑</span>}
+                  </div>
+                  {gameMode && (
+                    <div className={`score-display${scoreB >= 0 ? " score-display--pos" : " score-display--neg"}`}>
+                      {scoreB >= 0 ? "+" : ""}{scoreB} pts
+                    </div>
+                  )}
                   {effectiveAnalysis
                     ? <p className="moderator-speaker-style">{fixNames(effectiveAnalysis.user_b_style)}</p>
                     : <p className="moderator-speaker-empty">No analysis yet.</p>}
@@ -1000,6 +1052,18 @@ export default function App() {
           );
         })()}
       </main>
+
+      {/* Game mode toast */}
+      {gameMode && gameToast && (
+        <div
+          key={gameToast.key}
+          className={`game-toast game-toast--${gameToast.delta > 0 ? "good" : "bad"}`}
+          style={{ color: gameToast.speaker === "Blue" ? resolvedTheme.a.bg : resolvedTheme.b.bg }}
+        >
+          {gameToast.delta > 0 ? "+" : ""}{gameToast.delta} pts
+          {gameToast.delta >= 18 ? " 🌟" : gameToast.delta > 0 ? " ⭐" : " 💨"}
+        </div>
+      )}
 
       {/* Error display */}
       {error && (

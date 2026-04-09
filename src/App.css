@@ -3545,3 +3545,103 @@ button {
 [data-dark="true"] .about-lead { color: #94a3b8; }
 [data-dark="true"] .about-content dd { color: #94a3b8; }
 [data-dark="true"] .about-content kbd { background: #1e293b; border-color: #475569; color: #e2e8f0; }
+
+/* --- Game Mode --- */
+
+/* Score display in moderator tab */
+.score-display {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0.15rem 0 0.5rem;
+  line-height: 1;
+}
+.score-display--pos { color: #16a34a; }
+.score-display--neg { color: #dc2626; }
+[data-dark="true"] .score-display--pos { color: #4ade80; }
+[data-dark="true"] .score-display--neg { color: #f87171; }
+
+.score-crown {
+  font-size: 1rem;
+  margin-left: 0.3rem;
+  vertical-align: middle;
+}
+
+/* Settings toggle */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+}
+.settings-toggle-label {
+  font-size: 0.85rem;
+}
+.settings-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.settings-toggle--on {
+  background: #2563eb;
+}
+.settings-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.settings-toggle--on .settings-toggle-thumb {
+  transform: translateX(16px);
+}
+
+/* Game toast overlay */
+.game-toast {
+  position: fixed;
+  left: 50%;
+  top: 40%;
+  transform: translateX(-50%);
+  font-size: 2.4rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  pointer-events: none;
+  z-index: 9999;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+.game-toast--good {
+  animation: game-toast-good 2.4s ease-out forwards;
+}
+.game-toast--bad {
+  animation: game-toast-bad 2.4s ease-out forwards;
+}
+
+@keyframes game-toast-good {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.4) translateY(0); }
+  12%  { opacity: 1; transform: translateX(-50%) scale(1.35) translateY(0); }
+  25%  { opacity: 1; transform: translateX(-50%) scale(1)    translateY(-12px); }
+  70%  { opacity: 1; transform: translateX(-50%) scale(1)    translateY(-28px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.85) translateY(-55px); }
+}
+
+@keyframes game-toast-bad {
+  0%   { opacity: 0; transform: translateX(-50%) scale(0.4); }
+  12%  { opacity: 1; transform: translateX(-47%) scale(1.2); }
+  22%  { opacity: 1; transform: translateX(-53%) scale(1); }
+  32%  { opacity: 1; transform: translateX(-48%) scale(1); }
+  42%  { opacity: 1; transform: translateX(-52%) scale(1); }
+  55%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
+  80%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(12px); }
+  100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(22px); }
+}

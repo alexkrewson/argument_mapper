@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { THEMES } from "../utils/themes.js";
 import { supabase } from "../utils/supabase";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth }) {
+export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -44,6 +44,20 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
               </button>
             )}
           </div>
+          <div className="settings-section-label settings-section-label--themes">Game Mode</div>
+          <label className="settings-toggle-row">
+            <span className="settings-toggle-label">🎮 Points &amp; sounds</span>
+            <span
+              className={`settings-toggle${gameMode ? " settings-toggle--on" : ""}`}
+              onClick={() => onGameModeChange(!gameMode)}
+              role="switch"
+              aria-checked={gameMode}
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onGameModeChange(!gameMode); }}
+            >
+              <span className="settings-toggle-thumb" />
+            </span>
+          </label>
           <div className="settings-section-label settings-section-label--themes">Themes</div>
           {[false, true].map((isDark) => {
             const entries = Object.entries(THEMES).filter(([, t]) => !!t.dark === isDark);
