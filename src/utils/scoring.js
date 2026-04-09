@@ -37,7 +37,7 @@ export const POINTS = {
 
   // Concessions
   self_retraction:           +20,  // YOU retracted your own node — most points (hardest to do)
-  concession_given:          +12,  // you agree with the opponent's node (intellectual honesty)
+  concession_given:          +20,  // you agree with the opponent's node (intellectual honesty)
   concession_received:        +8,  // opponent agrees with your node (your argument was strong)
 };
 

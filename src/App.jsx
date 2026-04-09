@@ -1091,6 +1091,7 @@ export default function App() {
             currentSpeaker={currentSpeaker}
             loading={loading}
             theme={resolvedTheme}
+            gameMode={gameMode}
           />
         );
       })()}

@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from "react";
 import { TACTICS } from "../utils/tactics.js";
+import { POINTS } from "../utils/scoring.js";
 import { speakerName, speakerBorder, speakerBackground } from "../utils/speakers.js";
 import { fmtNodeId, fmtNodeNum } from "../utils/format.js";
 
@@ -18,7 +19,7 @@ export default function NodeDetailPopup({
   node, isNew, originalText, onClose,
   fadedNodeIds, nodes, edges,
   onNodeClick, onRate, onSave,
-  currentSpeaker, loading, theme,
+  currentSpeaker, loading, theme, gameMode,
 }) {
   const [editMode, setEditMode] = useState(!!isNew);
 
@@ -502,6 +503,67 @@ export default function NodeDetailPopup({
             </ul>
           </div>
         )}
+
+        {/* Points breakdown (game mode only) */}
+        {gameMode && (() => {
+          const events = [];
+          for (const key of tactics) {
+            if (POINTS[key] != null)
+              events.push({ label: `${TACTICS[key].symbol} ${TACTICS[key].name}`, pts: POINTS[key], speaker: node.speaker });
+          }
+          if (node.metadata?.contradicts)
+            events.push({ label: "⚠ Contradiction", pts: POINTS.contradiction, speaker: node.speaker });
+          if (node.metadata?.moves_goalposts_from)
+            events.push({ label: "🥅 Moves goalposts", pts: POINTS.goalposts, speaker: node.speaker });
+          if (node.metadata?.non_sequitur)
+            events.push({ label: "⚡ Non-sequitur", pts: POINTS.non_sequitur, speaker: node.speaker });
+          if (node.rating === "down")
+            events.push({ label: "↩ Retracted own argument", pts: POINTS.self_retraction, speaker: node.speaker });
+          if (node.rating === "up") {
+            const agreedBy = node.metadata?.agreed_by?.speaker;
+            if (agreedBy && agreedBy !== node.speaker) {
+              events.push({ label: "✓ Argument validated by opponent", pts: POINTS.concession_received, speaker: node.speaker });
+              events.push({ label: "✓ Conceded (intellectual honesty)", pts: POINTS.concession_given, speaker: agreedBy });
+            }
+          }
+          if (events.length === 0) return null;
+
+          // Totals per speaker
+          const totals = {};
+          for (const ev of events) totals[ev.speaker] = (totals[ev.speaker] ?? 0) + ev.pts;
+
+          return (
+            <div className="popup-section">
+              <h4>Points</h4>
+              <table className="node-points-table">
+                <tbody>
+                  {events.map((ev, i) => (
+                    <tr key={i}>
+                      <td className="node-points-label">{ev.label}</td>
+                      <td className="node-points-player" style={{ color: speakerBorder(ev.speaker, theme) }}>
+                        {speakerName(ev.speaker, theme)}
+                      </td>
+                      <td className={`node-points-val${ev.pts >= 0 ? " pts-pos" : " pts-neg"}`}>
+                        {ev.pts >= 0 ? "+" : ""}{ev.pts}
+                      </td>
+                    </tr>
+                  ))}
+                  {Object.entries(totals).map(([sp, total]) => (
+                    <tr key={sp} className="node-points-total">
+                      <td className="node-points-label"><strong>Total</strong></td>
+                      <td className="node-points-player" style={{ color: speakerBorder(sp, theme) }}>
+                        <strong>{speakerName(sp, theme)}</strong>
+                      </td>
+                      <td className={`node-points-val${total >= 0 ? " pts-pos" : " pts-neg"}`}>
+                        <strong>{total >= 0 ? "+" : ""}{total}</strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
 
         {/* Concede button */}
         {onRate && (() => {

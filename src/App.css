@@ -3645,3 +3645,38 @@ button {
   80%  { opacity: 1; transform: translateX(-50%) scale(1) translateY(12px); }
   100% { opacity: 0; transform: translateX(-50%) scale(0.8) translateY(22px); }
 }
+
+/* Node detail points breakdown */
+.node-points-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+.node-points-label {
+  padding: 0.15rem 0.5rem 0.15rem 0;
+  color: #475569;
+}
+.node-points-player {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.node-points-val {
+  padding: 0.15rem 0 0.15rem 0.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pts-pos { color: #16a34a; }
+.pts-neg { color: #dc2626; }
+.node-points-total td {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.3rem;
+  margin-top: 0.2rem;
+}
+[data-dark="true"] .node-points-label { color: #94a3b8; }
+[data-dark="true"] .node-points-total td { border-top-color: #334155; }
+[data-dark="true"] .pts-pos { color: #4ade80; }
+[data-dark="true"] .pts-neg { color: #f87171; }
