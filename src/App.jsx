@@ -151,9 +151,7 @@ export default function App() {
   const [originalTexts, setOriginalTexts] = useState({}); // { [nodeId]: original statement }
   const [selectedNode, setSelectedNode] = useState(null); // Node shown in detail popup
   const [chatMessages, setChatMessages] = useState([]); // AI moderator chat history
-  const [activeTab, setActiveTab] = useState(
-    () => window.innerWidth < 640 ? "list" : "map"
-  );
+  const [activeTab, setActiveTab] = useState("map");
   const directMode = activeTab === "moderator";
 
   const [uiVisible, setUiVisible] = useState(true);
@@ -256,6 +254,20 @@ export default function App() {
     setAiChangeLog([]);
     setChatMessages([]);
     setOriginalTexts({});
+    setActiveTab("map");
+  };
+
+  const handleNewDebate = () => {
+    dispatchHistory({ type: "load", entry: { map: EMPTY_MAP, analysis: null } });
+    currentDebateIdRef.current = null;
+    const a = randomName();
+    setPlayerNames({ a, b: randomName(a) });
+    setHasSubmitted({ a: false, b: false });
+    setCurrentSpeaker("Blue");
+    setChatMessages([]);
+    setAiChangeLog([]);
+    setOriginalTexts({});
+    setSelectedNode(null);
     setActiveTab("map");
   };
 
@@ -753,10 +765,10 @@ export default function App() {
         </button>
         {user && (
           <button
-            className={`tab-btn${activeTab === "history" ? " tab-btn--active" : ""}`}
-            onClick={() => setActiveTab("history")}
+            className={`tab-btn${activeTab === "arguments" ? " tab-btn--active" : ""}`}
+            onClick={() => setActiveTab("arguments")}
           >
-            History
+            Arguments
           </button>
         )}
         <button
@@ -809,8 +821,8 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === "history" && (
-          <DebateHistory user={user} onLoadDebate={handleLoadDebate} />
+        {activeTab === "arguments" && (
+          <DebateHistory user={user} onLoadDebate={handleLoadDebate} onNewDebate={handleNewDebate} />
         )}
 
         {/* Always mounted so scroll position is preserved across tab switches */}
@@ -980,8 +992,8 @@ export default function App() {
         </div>
       )}
 
-      {/* Statement input at the bottom — hidden on history and about tabs */}
-      {activeTab !== "history" && activeTab !== "about" && (
+      {/* Statement input at the bottom — hidden on arguments and about tabs */}
+      {activeTab !== "arguments" && activeTab !== "about" && (
         <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
           {theme.lcars && <div className="lcars-rail lcars-rail--footer" />}
           <StatementInput

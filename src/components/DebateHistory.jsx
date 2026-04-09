@@ -5,7 +5,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function DebateHistory({ user, onLoadDebate }) {
+export default function DebateHistory({ user, onLoadDebate, onNewDebate }) {
   const [debates, setDebates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,25 +32,31 @@ export default function DebateHistory({ user, onLoadDebate }) {
     setConfirmDelete(null);
   };
 
+  const newArgBtn = (
+    <button className="history-new-btn" onClick={onNewDebate}>+ New Argument</button>
+  );
+
   if (loading) {
-    return <div className="history-loading">Loading debates...</div>;
+    return <div className="history-loading">{newArgBtn}Loading debates...</div>;
   }
 
   if (error) {
-    return <div className="history-error">{error}</div>;
+    return <div className="history-error">{newArgBtn}{error}</div>;
   }
 
   if (debates.length === 0) {
     return (
       <div className="history-empty">
+        {newArgBtn}
         <p>No saved debates yet.</p>
-        <p>Use the Save button in the input bar to save your current debate.</p>
+        <p>Sign in and start debating — your arguments will be saved automatically.</p>
       </div>
     );
   }
 
   return (
     <div className="history-list">
+      {newArgBtn}
       {confirmLoad && (
         <div className="concession-overlay">
           <div className="concession-modal">

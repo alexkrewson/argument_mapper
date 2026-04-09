@@ -38,8 +38,8 @@ export default function AboutTab({ isActive }) {
           <dd>Tree view of all nodes, indented by parent-child relationship. Good for mobile or dense debates.</dd>
           <dt>Moderator</dt>
           <dd>Side-by-side speaker breakdowns (style analysis + event log) plus an AI chat where you can ask Claude anything about the debate.</dd>
-          <dt>History</dt>
-          <dd>Your saved debates (requires sign-in). Load or delete from here.</dd>
+          <dt>Arguments</dt>
+          <dd>Your saved debates (requires sign-in). Start a new argument, load a previous one, or delete from here.</dd>
         </dl>
 
         <h3>Node Types</h3>
@@ -109,7 +109,7 @@ export default function AboutTab({ isActive }) {
         <ul>
           <li>Sign in or sign up via the <strong>⚙ settings</strong> menu (top right).</li>
           <li>When signed in, debates <strong>auto-save</strong> to the cloud a moment after any change.</li>
-          <li>Load or delete saved debates from the <strong>History</strong> tab.</li>
+          <li>Load, delete, or start a new argument from the <strong>Arguments</strong> tab.</li>
           <li>If you're not signed in, a nudge appears after a few nodes. Closing the tab will warn you about unsaved work.</li>
         </ul>
 

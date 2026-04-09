@@ -3169,6 +3169,19 @@ button {
   flex: 1;
   max-width: 640px;
 }
+.history-new-btn {
+  align-self: flex-start;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 0.25rem;
+}
+.history-new-btn:hover { background: #2563eb; }
 
 .history-row {
   display: flex;
