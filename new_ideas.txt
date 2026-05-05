@@ -1,3 +1,59 @@
+================================================================================
+FUTURE / ANDROID APP IDEAS (added 2026-05-05)
+================================================================================
+
+--- BUG: Moderator chat stops responding ---
+Sometimes in moderator chat mode the AI stops responding entirely — no error
+message, just silence. Root cause unknown. Needs investigation: check whether
+the Edge Function is timing out, whether the chatHistory array is growing too
+large and hitting max_tokens, or whether the JSON parse is silently failing.
+Look at chatWithModerator() in src/utils/claude.js and the corresponding edge
+function. Add better error surfacing so the user sees something actionable
+instead of nothing.
+
+--- FEATURE: User-provided API keys ---
+Allow users to paste their own Anthropic API key in a settings screen. The key
+would be stored in localStorage (stays on-device, never sent to our servers
+except as a request header to the Edge Function). The Edge Function would use
+the user-supplied key instead of the server key when one is present. This
+eliminates all API cost risk for the developer and lets power users run the app
+without any per-use charges. Implementation notes:
+  - Add a "Settings" screen or modal with an API key input field
+  - Validate the key format client-side (starts with "sk-ant-")
+  - Pass it as a custom header (e.g. X-User-Api-Key) to the Edge Function
+  - Edge Function checks for the header and prefers it over the env-var key
+  - Show a clear indicator in the UI when the user's own key is active
+  - Consider only supporting Anthropic keys for now; other providers
+    (OpenAI, Gemini) would require separate API request formats and
+    system prompt tuning and are a larger project
+
+--- FEATURE: Prepaid token credits (pay-as-you-go) ---
+Rather than a subscription, users purchase a small credit bundle up front (e.g.
+$3, $5, $10) and the app tracks their token consumption against that balance.
+This is fairer than a subscription and more transparent. Implementation notes:
+  - Use Stripe for one-time purchases (Stripe has a clean Supabase integration)
+  - Add a `token_credits` column to the Supabase users table
+  - After each API call, deduct actual token usage from the balance using the
+    `usage.input_tokens` + `usage.output_tokens` fields in the Anthropic
+    response (already returned by the API)
+  - The Edge Function should check the user's balance before calling Anthropic
+    and return a clear "out of credits" error if insufficient
+  - Add a "Refill credits" flow in the app UI
+  - Price credits at a markup above raw Anthropic cost to cover Stripe fees
+    and operational overhead — calculate this carefully before launch
+
+--- FEATURE: Retry logic for API overloaded errors ---
+Anthropic occasionally returns HTTP 529 (overloaded) during high-traffic
+periods. The current code has no retry logic, so users see a raw error.
+Fix: in the Edge Function (or in src/utils/claude.js), add exponential backoff
+retries — 3 attempts with 1s, 2s, 4s delays. Show the user a "retrying..."
+indicator rather than an immediate error. For sustained rate limit issues,
+request a limit increase from Anthropic once the app has real usage history.
+
+================================================================================
+EXISTING IDEAS (below)
+================================================================================
+
 We need to overhaul the user name system. Above the input field where it says, for example "Amber's turn", if it's that user's first turn, instead of "Amber's", it should be a text input field with an auto generated name placeholder. So if the user doesn't want to choose their own name, they get the auto generated one. There can be a refresh button inside the text input if possible or next to it if that's easier, that just has a refresh icon. This will auto generate a different name.
 
 Please make sure to replace all instances of the users' names, including mentions in the info box about who conceded to whom, in the moderator tab, user mentions within the summaries, and the name that the AI chatbot uses to refer to the user.
