@@ -1,5 +1,8 @@
 # Argument Mapper — Feature Guide
 
+# Running Anroid Studio
+~/android-studio/bin/studio.sh.
+
 ## What is it?
 
 A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude) analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics, moderates the exchange, tracks concessions, and — if you enable Game Mode — scores both participants in real time.
