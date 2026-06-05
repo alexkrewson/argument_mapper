@@ -157,7 +157,7 @@ function historyReducer(state, action) {
 
 export default function App() {
   // --- State ---
-  const { user } = useAuth();
+  const { user, authEvent } = useAuth();
   const [{ entries: histEntries, index: histIndex }, dispatchHistory] = useReducer(
     historyReducer,
     { entries: [{ map: EMPTY_MAP, analysis: null }], index: 0 }
@@ -214,6 +214,7 @@ export default function App() {
   const [aiChangeLog, setAiChangeLog] = useState([]); // Log of all AI-made changes
   const [showChangeLog, setShowChangeLog] = useState(false); // Whether the changelog modal is open
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authInitialMode, setAuthInitialMode] = useState("signin");
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
@@ -230,6 +231,15 @@ export default function App() {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Open reset-password modal when Supabase fires the PASSWORD_RECOVERY event
+  useEffect(() => {
+    if (authEvent === "PASSWORD_RECOVERY") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      setAuthInitialMode("reset_password");
+      setShowAuthModal(true);
+    }
+  }, [authEvent]);
 
   // Warn before closing if user is not signed in and has unsaved nodes
   useEffect(() => {
@@ -1191,7 +1201,7 @@ export default function App() {
       )}
 
       {/* Auth modal */}
-      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
+      {showAuthModal && <AuthModal initialMode={authInitialMode} onClose={() => { setShowAuthModal(false); setAuthInitialMode("signin"); }} />}
     </div>
   );
 }

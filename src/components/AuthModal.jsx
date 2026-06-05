@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { supabase } from "../utils/supabase";
 
-export default function AuthModal({ onClose }) {
-  const [mode, setMode] = useState("signin"); // "signin" | "signup" | "forgot" | "otp_verify" | "reset_password"
+export default function AuthModal({ onClose, initialMode = "signin" }) {
+  const [mode, setMode] = useState(initialMode); // "signin" | "signup" | "forgot" | "otp_verify" | "reset_password"
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
