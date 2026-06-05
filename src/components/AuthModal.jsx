@@ -166,12 +166,12 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
 
         ) : mode === "otp_verify" ? (
           <form className="auth-form" onSubmit={handleVerifyOtp}>
-            <p className="auth-hint">Enter the 6-digit code sent to {email}.</p>
+            <p className="auth-hint">Enter the 8-digit code sent to {email}.</p>
             <input className="auth-input auth-otp-input" type="text" inputMode="numeric"
-              placeholder="000000" maxLength={6} value={otp}
+              placeholder="00000000" maxLength={8} value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} required autoFocus />
             {error && <p className="auth-error">{error}</p>}
-            <button className="concession-btn-confirm" type="submit" disabled={loading || otp.length < 6}>
+            <button className="concession-btn-confirm" type="submit" disabled={loading || otp.length < 8}>
               {loading ? "..." : "Verify code"}
             </button>
             <button type="button" className="auth-toggle-link"
