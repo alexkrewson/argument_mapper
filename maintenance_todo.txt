@@ -1,0 +1,9 @@
+================================================================================
+MAINTENANCE / DEV ENVIRONMENT TODO
+================================================================================
+
+--- Consider removing Vercel MCP plugin ---
+The project deploys to GitHub Pages via GitHub Actions — Vercel is not used.
+The Vercel MCP server shows a setup warning on every Claude Code launch because
+it needs authentication. If we're confident we won't move to Vercel, remove the
+plugin to eliminate the noise.

@@ -3697,3 +3697,17 @@ button {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+@media (max-width: 520px) {
+  .input-header {
+    flex-wrap: wrap;
+  }
+  .turn-controls {
+    flex-shrink: 1;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .speaker-summary {
+    display: none;
+  }
+}

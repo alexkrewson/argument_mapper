@@ -188,10 +188,7 @@ export default function App() {
   const [themeKey, setThemeKey] = useState(() => localStorage.getItem("theme") ?? DEFAULT_THEME_KEY);
   const theme = useMemo(() => THEMES[themeKey] ?? THEMES[DEFAULT_THEME_KEY], [themeKey]);
 
-  const [playerNames, setPlayerNames] = useState(() => {
-    const a = randomName();
-    return { a, b: randomName(a) };
-  });
+  const [playerNames, setPlayerNames] = useState({ a: "User A", b: "User B" });
   const [hasSubmitted, setHasSubmitted] = useState({ a: false, b: false });
 
   // resolvedTheme: same as theme but with player-chosen names overriding the defaults
@@ -293,8 +290,7 @@ export default function App() {
   const handleNewDebate = () => {
     dispatchHistory({ type: "load", entry: { map: EMPTY_MAP, analysis: null } });
     currentDebateIdRef.current = null;
-    const a = randomName();
-    setPlayerNames({ a, b: randomName(a) });
+    setPlayerNames({ a: "User A", b: "User B" });
     setHasSubmitted({ a: false, b: false });
     setCurrentSpeaker("Blue");
     setChatMessages([]);
