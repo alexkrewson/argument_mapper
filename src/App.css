@@ -3170,6 +3170,20 @@ button {
 }
 .auth-signup-done p { margin: 0; font-size: 0.9rem; color: #0f172a; }
 
+.auth-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.auth-otp-input {
+  text-align: center;
+  font-size: 1.4rem;
+  letter-spacing: 0.4em;
+  font-weight: 600;
+}
+
 /* Auth header button (logged-in chip) */
 .auth-user-chip {
   max-width: 120px;
@@ -3302,6 +3316,7 @@ button {
 [data-dark="true"] .auth-signup-done p { color: #f1f5f9; }
 [data-dark="true"] .auth-toggle-link { color: #92a1b5; }
 [data-dark="true"] .auth-toggle-link:hover { color: #f1f5f9; }
+[data-dark="true"] .auth-hint { color: #92a1b5; }
 [data-dark="true"] .save-debate-btn { color: #92a1b5; border-color: #334155; }
 [data-dark="true"] .save-debate-btn:hover { color: #f1f5f9; border-color: #64748b; }
 [data-dark="true"] .history-row { background: #1e293b; border-color: #334155; }
