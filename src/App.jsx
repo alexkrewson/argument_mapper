@@ -636,6 +636,36 @@ export default function App() {
   };
 
   /**
+   * Delete a node and its entire descendant subtree.
+   * Edges go FROM child TO parent, so children of X = nodes N where edge.to === X.
+   */
+  const handleDeleteNode = (nodeId) => {
+    const inner = argumentMap.argument_map;
+    const toDelete = new Set([nodeId]);
+    const queue = [nodeId];
+    while (queue.length) {
+      const pid = queue.shift();
+      for (const edge of inner.edges) {
+        if (edge.to === pid && !toDelete.has(edge.from)) {
+          toDelete.add(edge.from);
+          queue.push(edge.from);
+        }
+      }
+    }
+    const updatedNodes = inner.nodes
+      .filter((n) => !toDelete.has(n.id))
+      .map((n) => {
+        const meta = { ...n.metadata };
+        if (meta.contradicts && toDelete.has(meta.contradicts)) delete meta.contradicts;
+        if (meta.moves_goalposts_from && toDelete.has(meta.moves_goalposts_from)) delete meta.moves_goalposts_from;
+        return { ...n, metadata: meta };
+      });
+    const updatedEdges = inner.edges.filter((e) => !toDelete.has(e.from) && !toDelete.has(e.to));
+    pushHistory({ argument_map: { ...inner, nodes: updatedNodes, edges: updatedEdges } }, moderatorAnalysis);
+    setSelectedNode(null);
+  };
+
+  /**
    * Manual node creation — adds a brand-new node (attributed to currentSpeaker).
    * No API call; pushes directly to history.
    */
@@ -1188,6 +1218,7 @@ export default function App() {
             onNodeClick={handleNodeClick}
             onRate={handleRate}
             onSave={handleNodeSave}
+            onDelete={handleDeleteNode}
             currentSpeaker={currentSpeaker}
             loading={loading}
             theme={resolvedTheme}

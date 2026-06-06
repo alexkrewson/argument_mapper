@@ -18,10 +18,11 @@ const NODE_TYPES = ["claim", "premise", "objection", "rebuttal", "evidence", "cl
 export default function NodeDetailPopup({
   node, isNew, originalText, onClose,
   fadedNodeIds, nodes, edges,
-  onNodeClick, onRate, onSave,
+  onNodeClick, onRate, onSave, onDelete,
   currentSpeaker, loading, theme, gameMode,
 }) {
   const [editMode, setEditMode] = useState(!!isNew);
+  const [deleteStep, setDeleteStep] = useState(0); // 0=none, 1=first confirm, 2=children confirm
 
   // Form state — initialised from node prop (blank for new nodes)
   const [editContent,  setEditContent]  = useState(node?.content ?? "");
@@ -597,6 +598,41 @@ export default function NodeDetailPopup({
             </div>
           </div>
         )}
+
+        {/* Delete */}
+        {onDelete && (() => {
+          const directChildren = nodes?.filter(n => edges?.some(e => e.from === n.id && e.to === node.id)) ?? [];
+          if (deleteStep === 0) return (
+            <div className="popup-section popup-delete-row">
+              <button className="delete-node-btn" onClick={() => setDeleteStep(1)}>
+                Delete node
+              </button>
+            </div>
+          );
+          if (deleteStep === 1) return (
+            <div className="popup-section popup-delete-confirm">
+              <p className="delete-confirm-text">Delete <strong>{fmtNodeId(node.id)}</strong>?</p>
+              <div className="delete-confirm-btns">
+                <button className="delete-cancel-btn" onClick={() => setDeleteStep(0)}>Cancel</button>
+                <button className="delete-confirm-btn" onClick={() => directChildren.length > 0 ? setDeleteStep(2) : onDelete(node.id)}>
+                  Delete
+                </button>
+              </div>
+            </div>
+          );
+          if (deleteStep === 2) return (
+            <div className="popup-section popup-delete-confirm">
+              <p className="delete-confirm-text">
+                This node has <strong>{directChildren.length}</strong> direct child{directChildren.length !== 1 ? "ren" : ""}.
+                Their descendants will also be deleted.
+              </p>
+              <div className="delete-confirm-btns">
+                <button className="delete-cancel-btn" onClick={() => setDeleteStep(0)}>Cancel</button>
+                <button className="delete-confirm-btn" onClick={() => onDelete(node.id)}>Delete all</button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

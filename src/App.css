@@ -1247,6 +1247,57 @@
   background: #dcfce7;
 }
 
+/* --- Node delete --- */
+.popup-delete-row {
+  padding-top: 0;
+}
+.delete-node-btn {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+}
+.delete-node-btn:hover { background: #fef2f2; }
+
+.popup-delete-confirm { display: flex; flex-direction: column; gap: 0.75rem; }
+.delete-confirm-text { margin: 0; font-size: 0.9rem; color: #374151; }
+.delete-confirm-btns { display: flex; gap: 0.5rem; }
+.delete-cancel-btn {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  background: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: #64748b;
+}
+.delete-cancel-btn:hover { background: #f1f5f9; }
+.delete-confirm-btn {
+  flex: 1;
+  padding: 0.6rem 0.5rem;
+  background: #dc2626;
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.delete-confirm-btn:hover { background: #b91c1c; }
+
+[data-dark="true"] .delete-node-btn { border-color: #7f1d1d; color: #f87171; }
+[data-dark="true"] .delete-node-btn:hover { background: #1c0a0a; }
+[data-dark="true"] .delete-confirm-text { color: #e2e8f0; }
+[data-dark="true"] .delete-cancel-btn { border-color: #334155; color: #92a1b5; }
+[data-dark="true"] .delete-cancel-btn:hover { background: #1e293b; }
+
 .speaker-summary {
   font-weight: 400;
   font-size: 0.8rem;
