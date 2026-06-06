@@ -423,6 +423,7 @@
 .node-flag-chip--contradiction  { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--goalposts      { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--non-sequitur   { background: rgba(185, 28, 28, 0.9); }
+.node-flag-chip--despite        { background: rgba(14, 116, 144, 0.9); }
 
 .map-tree-crosslink {
   font-size: 0.6rem;
@@ -761,6 +762,11 @@
 .flag-chip--non-sequitur {
   background: #dc2626;
   color: #fff;
+}
+.flag-chip--despite {
+  background: #0e7490;
+  color: #fff;
+  cursor: pointer;
 }
 .flag-chip-label {
   font-weight: 800;
@@ -2077,6 +2083,7 @@
 [data-dark="true"] .flag-chip--contradiction  { background: #b91c1c; }
 [data-dark="true"] .flag-chip--goalposts     { background: #b91c1c; }
 [data-dark="true"] .flag-chip--non-sequitur  { background: #b91c1c; }
+[data-dark="true"] .flag-chip--despite       { background: #0e7490; }
 
 [data-dark="true"] .inactive-banner {
   background: #1e293b;

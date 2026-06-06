@@ -321,10 +321,13 @@ export default function NodeDetailPopup({
   const tacticReasons = node.metadata?.tactic_reasons || {};
   const contradictsId = node.metadata?.contradicts;
   const goalpostsId = node.metadata?.moves_goalposts_from;
+  const despiteId = node.metadata?.despite_concession_of;
   const contradictsNode = contradictsId ? nodes?.find((n) => n.id === contradictsId) : null;
   const goalpostsNode = goalpostsId ? nodes?.find((n) => n.id === goalpostsId) : null;
   const contradictedByNode = nodes?.find((n) => n.metadata?.contradicts === node.id) ?? null;
   const walkedBackByNode = nodes?.find((n) => n.metadata?.moves_goalposts_from === node.id) ?? null;
+  const despiteNode = despiteId ? nodes?.find((n) => n.id === despiteId) : null;
+  const despiteRebuttalNode = nodes?.find((n) => n.metadata?.despite_concession_of === node.id) ?? null;
 
   // Detect if this node is a *downstream* predecessor of a contradiction/goalpost but not
   // directly involved. Used to show either an "undermined" warning (same speaker) or
@@ -386,6 +389,12 @@ export default function NodeDetailPopup({
             )}
             {node.metadata?.non_sequitur && (
               <span className="node-flag-chip node-flag-chip--non-sequitur">⚡ non-sequitur</span>
+            )}
+            {despiteNode && (
+              <span className="node-flag-chip node-flag-chip--despite">⇲ despite {fmtNodeId(despiteNode.id)}</span>
+            )}
+            {despiteRebuttalNode && (
+              <span className="node-flag-chip node-flag-chip--despite">⇲↙ {fmtNodeId(despiteRebuttalNode.id)}</span>
             )}
             {walkedBackByNode && (
               <span className="node-flag-chip node-flag-chip--goalposts">⤳↙ {fmtNodeId(walkedBackByNode.id)}</span>
@@ -483,6 +492,20 @@ export default function NodeDetailPopup({
           <div className="flag-chip flag-chip--goalposts" onClick={() => { onClose(); onNodeClick?.(walkedBackByNode); }}>
             <span className="flag-chip-label">⤳ Goalpost Moved by {fmtNodeId(walkedBackByNode.id)}</span>
             <span className="flag-chip-sub">{walkedBackByNode.content.length > 80 ? walkedBackByNode.content.slice(0, 77) + "…" : walkedBackByNode.content}</span>
+          </div>
+        )}
+
+        {despiteNode && (
+          <div className="flag-chip flag-chip--despite" onClick={() => { onClose(); onNodeClick?.(despiteNode); }}>
+            <span className="flag-chip-label">⇲ Despite conceding {fmtNodeId(despiteNode.id)}</span>
+            <span className="flag-chip-sub">{despiteNode.content.length > 80 ? despiteNode.content.slice(0, 77) + "…" : despiteNode.content}</span>
+          </div>
+        )}
+
+        {despiteRebuttalNode && (
+          <div className="flag-chip flag-chip--despite" onClick={() => { onClose(); onNodeClick?.(despiteRebuttalNode); }}>
+            <span className="flag-chip-label">⇲ Conceded here, rebutted by {fmtNodeId(despiteRebuttalNode.id)}</span>
+            <span className="flag-chip-sub">{despiteRebuttalNode.content.length > 80 ? despiteRebuttalNode.content.slice(0, 77) + "…" : despiteRebuttalNode.content}</span>
           </div>
         )}
 

@@ -92,7 +92,8 @@ JSON schema:
         "contradicts": "node_id_or_null",
         "moves_goalposts_from": "node_id_or_null",
         "non_sequitur": true,
-        "twins": ["node_id_of_twin"]
+        "twins": ["node_id_of_twin"],
+        "despite_concession_of": "node_id"
       }
     }],
     "edges": [{
@@ -172,7 +173,13 @@ Goalpost moving detection:
 - Example: originally claiming "all X are Y," then under pressure claiming "most X are Y" or "I only meant some X."
 - Only flag goalpost-moving within the SAME speaker's nodes. A speaker cannot move the goalposts of the OTHER speaker — that is just normal counter-argument. Only flag clear cases. Omit the field or set to null if not applicable.
 
-Agreement detection (agreeing with the other speaker):
+Concessive rebuttal detection ("yeah, but..."):
+- When a speaker implicitly or explicitly acknowledges that an OPPONENT's node is valid, but continues to argue their own position anyway, this is a concessive rebuttal. Signals: "yeah, but...", "even if that's true...", "granted, but...", "I'll concede that, however...", "that may be so, but...", or any phrasing that accepts a point while continuing to dispute the conclusion.
+- Do TWO things when you detect this:
+  1. On the conceded node (the opponent's node being acknowledged): set metadata.agreed_by = { "speaker": "<current speaker>", "text": "<exact phrase from their statement that expresses the concession>" }.
+  2. Create the new rebuttal node as a SIBLING of the conceded node — connect it to the conceded node's PARENT (not to the conceded node itself). Set metadata.despite_concession_of = "<conceded_node_id>" on the new node. Use relationship "rebuts" or "opposes" to the parent.
+- The new node represents "despite that being true, here is why my argument still stands." It belongs at the SAME level as the conceded node, not below it — making it a child of the conceded node would imply it supports or follows from it, which is wrong.
+- Only apply this when the concession is genuine and explicit enough that a neutral observer would clearly read it as an acknowledgment. Omit despite_concession_of if not applicable.
 - When a speaker explicitly or implicitly agrees with an opposing speaker's node (e.g. "I agree that...", "You're right about...", "Fair point on...", or conceding a point), set "rating": "up" on that agreed-upon node.
 - Also set "metadata.agreed_by": { "speaker": "<the agreeing speaker>", "text": "<the original agreeing statement verbatim>" } on that node. The "speaker" is who agreed (the current speaker), and "text" is the exact words from their statement that express agreement.
 - Only set rating "up" on nodes belonging to the OTHER speaker — a speaker cannot agree with their own nodes.
