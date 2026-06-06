@@ -116,17 +116,31 @@ function clearConflictFlagsForFadedSubtree(nodes, edges, fadedRootId) {
 }
 
 // Replace internal "Blue"/"Green" speaker names in node content with theme display names.
+// Also enforces tree structure: each node may have at most one parent (one outgoing edge).
+// If Claude produces multiple edges from the same node, keep the one with the highest edge number.
 function sanitizeNodeContent(map, theme) {
   const inner = map.argument_map;
   const a = theme.a.name, b = theme.b.name;
   const fix = (s) => typeof s === "string"
     ? s.replace(/\bBlue\b/g, a).replace(/\bGreen\b/g, b)
     : s;
+
+  // Deduplicate: one outgoing edge per node (one parent). Keep highest-numbered edge.
+  const bestEdge = new Map();
+  for (const edge of (inner.edges ?? [])) {
+    const existing = bestEdge.get(edge.from);
+    const existingNum = existing ? (parseInt(existing.id.replace("edge_", ""), 10) || 0) : -1;
+    const newNum = parseInt(edge.id.replace("edge_", ""), 10) || 0;
+    if (!existing || newNum > existingNum) bestEdge.set(edge.from, edge);
+  }
+  const dedupedEdges = Array.from(bestEdge.values());
+
   return {
     ...map,
     argument_map: {
       ...inner,
       nodes: inner.nodes.map((n) => ({ ...n, content: fix(n.content) })),
+      edges: dedupedEdges,
     },
   };
 }
@@ -525,34 +539,52 @@ export default function App() {
 
   /**
    * Called when a user rates (thumbs up/down) the other user's node.
+   * Propagates the same rating to all twin nodes.
    */
   const handleRate = (nodeId, rating) => {
     const nodesBefore = argumentMap.argument_map.nodes;
     const updatedMap = rateNode(argumentMap, nodeId, rating);
-    // Add/remove agreed_by metadata for manual thumbs-up
     const inner = updatedMap.argument_map;
+
+    // Determine final rating after toggle (rateNode may have cleared it)
+    const primaryAfter = inner.nodes.find((n) => n.id === nodeId);
+    const newRating = primaryAfter?.rating ?? null;
+    const twinIds = new Set(argumentMap.argument_map.nodes.find((n) => n.id === nodeId)?.metadata?.twins ?? []);
+
     const updatedNodes = inner.nodes.map((node) => {
-      if (node.id !== nodeId) return node;
-      if (node.rating === "up") {
-        // Setting thumbs-up: add agreed_by with current speaker (no text for manual)
-        return {
-          ...node,
-          metadata: {
-            ...node.metadata,
-            agreed_by: { speaker: currentSpeaker },
-          },
-        };
-      } else {
-        // Toggling off: remove agreed_by
-        const { agreed_by, ...restMetadata } = node.metadata || {};
-        return { ...node, metadata: restMetadata };
+      if (node.id === nodeId) {
+        if (node.rating === "up") {
+          return { ...node, metadata: { ...node.metadata, agreed_by: { speaker: currentSpeaker } } };
+        } else {
+          const { agreed_by, ...restMetadata } = node.metadata || {};
+          return { ...node, metadata: restMetadata };
+        }
       }
+      if (twinIds.has(node.id)) {
+        // Apply the same final rating to each twin
+        if (newRating === "up") {
+          return { ...node, rating: "up", metadata: { ...node.metadata, agreed_by: { speaker: currentSpeaker } } };
+        } else if (newRating === "down") {
+          const { agreed_by, ...restMeta } = node.metadata || {};
+          return { ...node, rating: "down", metadata: restMeta };
+        } else {
+          const { agreed_by, ...restMeta } = node.metadata || {};
+          return { ...node, rating: null, metadata: restMeta };
+        }
+      }
+      return node;
     });
-    // Clear contradiction/goalpost flags from nodes that become faded
+
     const ratedNode = updatedNodes.find((n) => n.id === nodeId);
-    const finalNodes = (ratedNode?.rating === "up" || ratedNode?.rating === "down")
+    let finalNodes = (ratedNode?.rating === "up" || ratedNode?.rating === "down")
       ? clearConflictFlagsForFadedSubtree(updatedNodes, inner.edges, nodeId)
       : updatedNodes;
+    for (const twinId of twinIds) {
+      const twinNode = finalNodes.find((n) => n.id === twinId);
+      if (twinNode?.rating === "up" || twinNode?.rating === "down") {
+        finalNodes = clearConflictFlagsForFadedSubtree(finalNodes, inner.edges, twinId);
+      }
+    }
     pushHistory({ argument_map: { ...inner, nodes: finalNodes } }, moderatorAnalysis);
     triggerGameFeedback(nodesBefore, finalNodes, currentSpeaker);
   };
@@ -562,10 +594,13 @@ export default function App() {
     const [item, ...rest] = concessionQueue;
     const nodesBefore = argumentMap.argument_map.nodes;
     const inner = argumentMap.argument_map;
+
+    const twinIds = new Set(inner.nodes.find((n) => n.id === item.nodeId)?.metadata?.twins ?? []);
+    const allToUpdate = new Set([item.nodeId, ...twinIds]);
+
     const nodes = inner.nodes.map((node) => {
-      if (node.id !== item.nodeId) return node;
+      if (!allToUpdate.has(node.id)) return node;
       if (item.type === "self") {
-        // Speaker retracting their own node
         return {
           ...node,
           rating: "down",
@@ -575,7 +610,6 @@ export default function App() {
           },
         };
       }
-      // Speaker agreeing with other speaker's node
       return {
         ...node,
         rating: "up",
@@ -585,7 +619,11 @@ export default function App() {
         },
       };
     });
-    const cleanedNodes = clearConflictFlagsForFadedSubtree(nodes, inner.edges, item.nodeId);
+
+    let cleanedNodes = clearConflictFlagsForFadedSubtree(nodes, inner.edges, item.nodeId);
+    for (const twinId of twinIds) {
+      cleanedNodes = clearConflictFlagsForFadedSubtree(cleanedNodes, inner.edges, twinId);
+    }
     pushHistory({ argument_map: { ...inner, nodes: cleanedNodes } }, moderatorAnalysis);
     triggerGameFeedback(nodesBefore, cleanedNodes, item.concedingBy);
     setConcessionQueue(rest);
@@ -602,14 +640,38 @@ export default function App() {
   const handleNodeSave = (nodeId, data, newParentId) => {
     const inner = argumentMap.argument_map;
 
+    // Compute twin changes for bidirectional sync
+    const originalNode = inner.nodes.find((n) => n.id === nodeId);
+    const oldTwins = new Set(originalNode?.metadata?.twins ?? []);
+    const newTwins = new Set(data.twins ?? []);
+    const addedTwins = [...newTwins].filter((id) => !oldTwins.has(id));
+    const removedTwins = [...oldTwins].filter((id) => !newTwins.has(id));
+
     const updatedNodes = inner.nodes.map((n) => {
-      if (n.id !== nodeId) return n;
-      const meta = { ...n.metadata, tactics: data.tactics, tags: data.tags };
-      if (data.contradicts) meta.contradicts = data.contradicts;
-      else delete meta.contradicts;
-      if (data.moves_goalposts_from) meta.moves_goalposts_from = data.moves_goalposts_from;
-      else delete meta.moves_goalposts_from;
-      return { ...n, content: data.content, type: data.type, metadata: meta };
+      if (n.id === nodeId) {
+        const meta = { ...n.metadata, tactics: data.tactics, tags: data.tags };
+        if (data.contradicts) meta.contradicts = data.contradicts;
+        else delete meta.contradicts;
+        if (data.moves_goalposts_from) meta.moves_goalposts_from = data.moves_goalposts_from;
+        else delete meta.moves_goalposts_from;
+        if (newTwins.size > 0) meta.twins = [...newTwins];
+        else delete meta.twins;
+        return { ...n, content: data.content, type: data.type, metadata: meta };
+      }
+      if (addedTwins.includes(n.id)) {
+        const t = new Set(n.metadata?.twins ?? []);
+        t.add(nodeId);
+        return { ...n, metadata: { ...n.metadata, twins: [...t] } };
+      }
+      if (removedTwins.includes(n.id)) {
+        const t = new Set(n.metadata?.twins ?? []);
+        t.delete(nodeId);
+        const tArr = [...t];
+        const meta = { ...n.metadata };
+        if (tArr.length > 0) meta.twins = tArr; else delete meta.twins;
+        return { ...n, metadata: meta };
+      }
+      return n;
     });
 
     // Re-parent: replace existing outgoing edge if parent changed
@@ -658,6 +720,10 @@ export default function App() {
         const meta = { ...n.metadata };
         if (meta.contradicts && toDelete.has(meta.contradicts)) delete meta.contradicts;
         if (meta.moves_goalposts_from && toDelete.has(meta.moves_goalposts_from)) delete meta.moves_goalposts_from;
+        if (meta.twins) {
+          const cleaned = meta.twins.filter((id) => !toDelete.has(id));
+          if (cleaned.length > 0) meta.twins = cleaned; else delete meta.twins;
+        }
         return { ...n, metadata: meta };
       });
     const updatedEdges = inner.edges.filter((e) => !toDelete.has(e.from) && !toDelete.has(e.to));
@@ -870,10 +936,20 @@ export default function App() {
       return visited;
     }
 
-    // Thumbs-up/down opacity fading (agreement + retraction)
+    // Thumbs-up/down opacity fading (agreement + retraction).
+    // Expand rated sets to include twins before BFS so twin subtrees fade together.
+    const expandWithTwins = (ids) => {
+      const expanded = new Set(ids);
+      for (const id of ids) {
+        for (const twinId of (inner.nodes.find((n) => n.id === id)?.metadata?.twins ?? [])) {
+          expanded.add(twinId);
+        }
+      }
+      return [...expanded];
+    };
     const agreedIds = inner.nodes.filter((n) => n.rating === "up").map((n) => n.id);
     const downIds = inner.nodes.filter((n) => n.rating === "down").map((n) => n.id);
-    const fadedNodeIds = new Set([...bfsBack(agreedIds), ...bfsBack(downIds)]);
+    const fadedNodeIds = new Set([...bfsBack(expandWithTwins(agreedIds)), ...bfsBack(expandWithTwins(downIds))]);
 
     // Contradiction borders: both the flagging node AND the node being contradicted
     const contradictionBorderIds = new Set();
@@ -985,7 +1061,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} onStartTour={() => setShowCoachMarks(true)} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} onStartTour={() => setShowCoachMarks(true)} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
         </header>
         <nav className="tab-bar">
         <button

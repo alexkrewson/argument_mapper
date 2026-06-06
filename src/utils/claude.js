@@ -91,7 +91,8 @@ JSON schema:
         "agreed_by": { "speaker": "Blue|Green", "text": "the original agreeing statement" },
         "contradicts": "node_id_or_null",
         "moves_goalposts_from": "node_id_or_null",
-        "non_sequitur": true
+        "non_sequitur": true,
+        "twins": ["node_id_of_twin"]
       }
     }],
     "edges": [{
@@ -150,7 +151,8 @@ Rules:
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
 - Add 2-4 relevant tags per node.
 - Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible. If the speaker uses an analogy, strip the analogy from the content entirely and state the underlying argument in plain, literal terms; tag the node with the "analogy" tactic.
-- Each node must have at most ONE outgoing edge (one parent). If a node could logically connect to multiple existing nodes, choose the single most appropriate parent. Do not create multiple edges from the same source node.
+- Each node must have at most ONE outgoing edge (one parent). Do not create multiple edges from the same source node.
+- TWIN NODES: If a new statement applies meaningfully to multiple separate branches of the tree (i.e., it logically supports or challenges nodes in branches that are not ancestors/descendants of each other), do NOT connect one node to multiple parents. Instead, create separate "twin" nodes — one per relevant parent branch — each with a unique node ID and exactly one outgoing edge. Link them by setting metadata.twins to an array of the other twins' node IDs on EACH twin node. Example: if node_8 and node_9 are twins, set node_8.metadata.twins = ["node_9"] and node_9.metadata.twins = ["node_8"]. Twins share the same speaker and nearly identical content. When one twin is conceded or contradicted, that consequence applies equally to all of its twins.
 - SINGLE ROOT CONSTRAINT: There must be exactly ONE root node at all times. The root is the node that has no incoming edges (no edge has it as a "to" target). The very first statement creates this root claim. Every subsequent node you add MUST connect to the existing tree via an outgoing edge — a node with no edge is never allowed, UNLESS it is flagged as a non-sequitur (see below). If a new statement reveals that the debate concerns a broader topic and the initial root was merely a sub-case of it, UPDATE the existing root claim node's content to reflect the broader scope rather than creating a new disconnected node.
 
 Non-sequitur detection:

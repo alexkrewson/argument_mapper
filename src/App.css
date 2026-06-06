@@ -1247,6 +1247,26 @@
   background: #dcfce7;
 }
 
+/* --- Twin nodes --- */
+.popup-twins { display: flex; flex-direction: column; gap: 0.4rem; }
+.twin-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  border: 1px dashed #94a3b8;
+  background: none;
+}
+.twin-chip--link { cursor: pointer; }
+.twin-chip--link:hover { background: #f1f5f9; border-color: #64748b; }
+.twin-chip-id { font-size: 0.72rem; font-weight: 700; color: #64748b; }
+.twin-chip-content { font-size: 0.85rem; color: #374151; }
+[data-dark="true"] .twin-chip { border-color: #475569; }
+[data-dark="true"] .twin-chip--link:hover { background: #1e293b; border-color: #94a3b8; }
+[data-dark="true"] .twin-chip-id { color: #92a1b5; }
+[data-dark="true"] .twin-chip-content { color: #e2e8f0; }
+
 /* --- Node delete --- */
 .popup-delete-row {
   padding-top: 0;

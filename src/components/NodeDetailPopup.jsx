@@ -35,6 +35,7 @@ export default function NodeDetailPopup({
   const [tagInput,        setTagInput]        = useState("");
   const [editContradicts, setEditContradicts] = useState(node?.metadata?.contradicts ?? "");
   const [editGoalposts,   setEditGoalposts]   = useState(node?.metadata?.moves_goalposts_from ?? "");
+  const [editTwins,       setEditTwins]       = useState(node?.metadata?.twins ?? []);
 
   // Escape: cancel edit, or close popup
   useEffect(() => {
@@ -67,6 +68,7 @@ export default function NodeDetailPopup({
       tags: editTags,
       contradicts: editContradicts || null,
       moves_goalposts_from: editGoalposts || null,
+      twins: editTwins,
     }, editParent || null);
     if (!isNew) setEditMode(false);
   };
@@ -233,6 +235,46 @@ export default function NodeDetailPopup({
               )}
             </div>
           </div>
+
+          {/* Twin nodes */}
+          {!isNew && (
+            <div className="popup-section">
+              <h4>Twin Nodes</h4>
+              <select
+                className="popup-edit-select popup-edit-flag-select"
+                value=""
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (id && !editTwins.includes(id)) setEditTwins((prev) => [...prev, id]);
+                  e.target.value = "";
+                }}
+              >
+                <option value="">Link a twin node…</option>
+                {nodes?.filter((n) => n.id !== node?.id && !editTwins.includes(n.id)).map((n) => (
+                  <option key={n.id} value={n.id}>
+                    {fmtNodeId(n.id)}: {n.content.length > 55 ? n.content.slice(0, 52) + "…" : n.content}
+                  </option>
+                ))}
+              </select>
+              {editTwins.length > 0 && (
+                <div className="popup-edit-tag-list" style={{ marginTop: "0.4rem" }}>
+                  {editTwins.map((twinId) => {
+                    const tn = nodes?.find((n) => n.id === twinId);
+                    return (
+                      <span key={twinId} className="popup-edit-tag">
+                        {fmtNodeId(twinId)}{tn ? `: ${tn.content.slice(0, 28)}…` : ""}
+                        <button
+                          type="button"
+                          className="popup-edit-tag-remove"
+                          onClick={() => setEditTwins((prev) => prev.filter((id) => id !== twinId))}
+                        >×</button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Tags */}
           <div className="popup-section">
@@ -595,6 +637,30 @@ export default function NodeDetailPopup({
               {node.metadata.tags.map((tag) => (
                 <span key={tag} className="popup-tag">{tag}</span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Twin nodes */}
+        {node.metadata?.twins?.length > 0 && (
+          <div className="popup-section">
+            <h4>Twin Nodes</h4>
+            <div className="popup-twins">
+              {node.metadata.twins.map((twinId) => {
+                const tn = nodes?.find((n) => n.id === twinId);
+                return (
+                  <div
+                    key={twinId}
+                    className={`twin-chip${tn ? " twin-chip--link" : ""}`}
+                    onClick={() => tn && (onClose(), onNodeClick?.(tn))}
+                  >
+                    <span className="twin-chip-id">{fmtNodeId(twinId)}</span>
+                    <span className="twin-chip-content">
+                      {tn ? (tn.content.length > 80 ? tn.content.slice(0, 77) + "…" : tn.content) : "(not found)"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
