@@ -328,7 +328,7 @@ export default function StatementInput({
               ? (combiningProgress ? "Processing..." : "Thinking...")
               : (isCombined ? "Process" : "Submit")}
           </button>
-          {!loading && !directMode && estimatedCost && (
+          {!loading && !directMode && !isCombined && estimatedCost && (
             <span className="cost-estimate">~{estimatedCost}</span>
           )}
         </div>
