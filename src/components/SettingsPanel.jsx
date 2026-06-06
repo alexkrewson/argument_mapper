@@ -9,8 +9,9 @@ function formatCredits(cents) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, onStartTour, creditBalance, onBuyCredits }) {
+export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, onStartTour, creditBalance, onBuyCredits, onCopyContext }) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const ref = useRef(null);
 
   // Close on outside click
@@ -63,6 +64,18 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
           <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
             Take a tour
           </button>
+          {onCopyContext && (
+            <button
+              className="theme-option"
+              onClick={() => {
+                onCopyContext();
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+            >
+              {copied ? "✓ Copied!" : "Copy map JSON (debug)"}
+            </button>
+          )}
           <div className="settings-section-label settings-section-label--themes">Game Mode</div>
           <label className="settings-toggle-row">
             <span className="settings-toggle-label">🎮 Points &amp; sounds</span>
