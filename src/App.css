@@ -3536,6 +3536,21 @@ button {
 [data-dark="true"] .settings-user-email { color: #92a1b5; }
 [data-dark="true"] .settings-section-label--themes { border-top-color: #334155; }
 
+/* --- Token usage debug bar --- */
+.usage-debug {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  background: rgba(15,23,42,0.85);
+  color: #94a3b8;
+  font-size: 0.7rem;
+  padding: 0.25rem 0.75rem;
+  z-index: 600;
+  cursor: pointer;
+  border-top-right-radius: 6px;
+  font-family: monospace;
+}
+
 /* --- Credit balance in settings panel --- */
 .settings-credits-row {
   display: flex;

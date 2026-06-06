@@ -220,6 +220,7 @@ export default function App() {
   const [showCoachMarks, setShowCoachMarks] = useState(false);
   const [creditBalance, setCreditBalance] = useState(null);
   const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [lastUsage, setLastUsage] = useState(null); // { input, output, costCents }
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
   const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameMode") === "true");
@@ -455,6 +456,13 @@ export default function App() {
         }
         return n;
       });
+
+      if (updatedMap._usage) {
+        const { input_tokens, output_tokens } = updatedMap._usage;
+        const costCents = input_tokens * 0.0003 + output_tokens * 0.0015;
+        setLastUsage({ input: input_tokens, output: output_tokens, costCents });
+        delete updatedMap._usage;
+      }
 
       const strippedMap = { ...updatedMap, argument_map: { ...updatedMap.argument_map, nodes: strippedNodes } };
       const cleanMap = sanitizeNodeContent(strippedMap, resolvedTheme);
@@ -1145,6 +1153,13 @@ export default function App() {
         >
           {gameToast.delta > 0 ? "+" : ""}{gameToast.delta} pts
           {gameToast.delta >= 18 ? " 🌟" : gameToast.delta > 0 ? " ⭐" : " 💨"}
+        </div>
+      )}
+
+      {/* Token usage debug display */}
+      {lastUsage && (
+        <div className="usage-debug" onClick={() => setLastUsage(null)}>
+          Last turn: {lastUsage.input.toLocaleString()} in + {lastUsage.output.toLocaleString()} out = ${(lastUsage.costCents / 100).toFixed(6)} ✕
         </div>
       )}
 

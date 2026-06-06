@@ -218,7 +218,7 @@ Return the updated map JSON.`;
   if (data.stop_reason === "max_tokens") {
     throw new Error("Response was too long and got cut off. The map may be too large — try the Chat tab to ask the moderator to summarise or prune some nodes.");
   }
- 
+
   // Claude returns an array of content blocks. The text is in the first one.
   const text = data.content[0].text;
 
@@ -227,7 +227,9 @@ Return the updated map JSON.`;
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
   try {
-    return JSON.parse(cleaned);
+    const parsed = JSON.parse(cleaned);
+    parsed._usage = data.usage || null;
+    return parsed;
   } catch (e) {
     console.error("Failed to parse Claude response:", text);
     throw new Error("Claude returned invalid JSON. Try again.");
