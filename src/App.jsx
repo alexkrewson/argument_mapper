@@ -272,9 +272,7 @@ export default function App() {
 
   const handleCreditUpdate = useCallback((balance) => {
     setCreditBalance(balance);
-    // Also re-fetch from DB shortly after to confirm deduction landed
-    setTimeout(refreshBalance, 1500);
-  }, [refreshBalance]);
+  }, []);
 
   const handleAiError = useCallback((err) => {
     if (err.code === "sign_in_required") {
@@ -514,6 +512,7 @@ export default function App() {
     } finally {
       setLoading(false);
       setLoadingSpeaker(null);
+      refreshBalance();
     }
   };
 
@@ -721,6 +720,7 @@ export default function App() {
       throw err; // Re-throw so StatementInput knows submission failed
     } finally {
       setLoading(false);
+      refreshBalance();
     }
   };
 
@@ -771,6 +771,7 @@ export default function App() {
       setLoading(false);
       setLoadingSpeaker(null);
       setCombiningProgress(null);
+      refreshBalance();
     }
   };
 
