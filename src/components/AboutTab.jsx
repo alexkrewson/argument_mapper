@@ -14,6 +14,7 @@ const NAV = [
   { id: "game-mode",           label: "Game Mode" },
   { id: "moderator-tab",       label: "Moderator Tab" },
   { id: "accounts",            label: "Accounts & Auto-Save" },
+  { id: "pricing",             label: "Credits & Pricing" },
   { id: "other-controls",      label: "Other Controls" },
   { id: "keyboard-shortcuts",  label: "Keyboard Shortcuts" },
   { id: "tips",                label: "Tips" },
@@ -339,6 +340,41 @@ export default function AboutTab({ isActive }) {
           <li>Load, delete, or start a new argument from the <strong>Arguments</strong> tab. Use <strong>New Argument</strong> to clear the current map and start fresh.</li>
           <li>If you're not signed in, a nudge appears after a few nodes. Closing the tab will warn you about unsaved work.</li>
         </ul>
+
+        <h3 id="pricing">Credits &amp; Pricing</h3>
+        <p>
+          Each AI turn costs a small amount of credits, deducted automatically from your balance.
+          Costs are based on actual token usage billed by Anthropic at Claude Sonnet rates.
+        </p>
+        <p>
+          <strong>Why does cost scale with map size?</strong> Every turn sends the entire current
+          map to Claude as context — so as the conversation grows, the input gets longer and more
+          expensive. The output also grows because Claude rewrites and returns the full updated map.
+        </p>
+        <table className="about-table about-table--pricing">
+          <thead>
+            <tr>
+              <th>Map size</th>
+              <th>Approx. input tokens</th>
+              <th>Est. cost / turn</th>
+              <th>Turns per $1</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Starting out (0–5 nodes)</td>  <td>~3,800</td>  <td>~2–3¢</td>  <td>~40–50</td></tr>
+            <tr><td>Growing (10–15 nodes)</td>     <td>~4,500</td>  <td>~3–5¢</td>  <td>~25–35</td></tr>
+            <tr><td>Substantial (25–30 nodes)</td> <td>~5,800</td>  <td>~6–7¢</td>  <td>~15–20</td></tr>
+            <tr><td>Large (50+ nodes)</td>         <td>~7,500+</td> <td>~9–12¢</td> <td>~8–12</td></tr>
+          </tbody>
+        </table>
+        <p>
+          The estimated cost of your next turn is shown below the Submit button in real time,
+          so you always know what you're about to spend before you submit.
+        </p>
+        <p>
+          Credits can be purchased from the <strong>⚙ settings</strong> menu. New accounts
+          receive $0.50 of free starter credits.
+        </p>
 
         <h3 id="other-controls">Other Controls</h3>
         <dl>

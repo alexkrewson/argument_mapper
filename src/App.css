@@ -3536,6 +3536,17 @@ button {
 [data-dark="true"] .settings-user-email { color: #92a1b5; }
 [data-dark="true"] .settings-section-label--themes { border-top-color: #334155; }
 
+/* --- Cost estimate below submit button --- */
+.cost-estimate {
+  display: block;
+  text-align: center;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 0.2rem;
+  font-variant-numeric: tabular-nums;
+}
+[data-dark="true"] .cost-estimate { color: #64748b; }
+
 /* --- Token usage debug bar --- */
 .usage-debug {
   position: fixed;
@@ -3832,6 +3843,15 @@ button {
 .about-table td:first-child {
   white-space: nowrap;
 }
+.about-table--pricing th {
+  text-align: left;
+  padding: 0.2rem 0.75rem 0.35rem 0;
+  font-size: 0.78rem;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+}
+.about-table--pricing td { padding: 0.25rem 0.75rem 0.25rem 0; white-space: nowrap; }
+[data-dark="true"] .about-table--pricing th { color: #92a1b5; border-bottom-color: #334155; }
 .about-content kbd {
   background: #f1f5f9;
   border: 1px solid #cbd5e1;

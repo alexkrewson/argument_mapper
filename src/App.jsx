@@ -21,6 +21,7 @@ import BuyCreditsModal from "./components/BuyCreditsModal";
 import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
 import { updateArgumentMap, rateNode, chatWithModerator, parseConversation } from "./utils/claude";
+import { estimateNextTurnCents, formatCostCents } from "./utils/costEstimate";
 import { TACTICS } from "./utils/tactics.js";
 import { computeScores, computeScoreDelta, POINTS } from "./utils/scoring.js";
 import { playHappy, playSad, playBigWin } from "./utils/sounds.js";
@@ -1242,6 +1243,7 @@ export default function App() {
           <StatementInput
             currentSpeaker={currentSpeaker}
             speakerSummary={speakerSummary}
+            estimatedCost={user ? formatCostCents(estimateNextTurnCents(argumentMap)) : null}
             onSubmit={handleSubmit}
             onChatMessage={handleChatMessage}
             loading={loading}

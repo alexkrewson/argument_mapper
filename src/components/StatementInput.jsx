@@ -115,7 +115,7 @@ export default function StatementInput({
   onAddNode, onReviewChanges, changeLogCount,
   theme, nameEditable, currentName, onNameChange, onRefreshName,
   inputMode, onModeChange, onCombinedSubmit, combiningProgress,
-  showCoachMarks, onDismissCoachMarks,
+  showCoachMarks, onDismissCoachMarks, estimatedCost,
 }) {
   const [text, setText] = useState("");
   const [combinedText, setCombinedText] = useState("");
@@ -270,6 +270,9 @@ export default function StatementInput({
               ? (combiningProgress ? "Processing..." : "Thinking...")
               : (isCombined ? "Process" : "Submit")}
           </button>
+          {!loading && !directMode && estimatedCost && (
+            <span className="cost-estimate">~{estimatedCost}</span>
+          )}
         </div>
       </div>
 
