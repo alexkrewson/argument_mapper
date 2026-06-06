@@ -2,7 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { THEMES } from "../utils/themes.js";
 import { supabase } from "../utils/supabase";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, onStartTour }) {
+function formatCredits(cents) {
+  if (cents == null) return null;
+  if (cents < 0) return "0.00¢";
+  if (cents < 100) return `${Number(cents).toFixed(2)}¢`;
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, onStartTour, creditBalance, onBuyCredits }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -34,6 +41,14 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
             {user ? (
               <>
                 <div className="settings-user-email">{user.email}</div>
+                {creditBalance != null && (
+                  <div className="settings-credits-row">
+                    <span className="settings-credits-balance">{formatCredits(creditBalance)} remaining</span>
+                    <button className="settings-credits-buy" onClick={() => { onBuyCredits(); setOpen(false); }}>
+                      Buy credits
+                    </button>
+                  </div>
+                )}
                 <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
                   Sign out
                 </button>

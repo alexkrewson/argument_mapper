@@ -17,6 +17,7 @@ import SettingsPanel from "./components/SettingsPanel";
 import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
 import AIChangeLogModal from "./components/AIChangeLogModal";
 import AuthModal from "./components/AuthModal";
+import BuyCreditsModal from "./components/BuyCreditsModal";
 import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
 import { updateArgumentMap, rateNode, chatWithModerator, parseConversation } from "./utils/claude";
@@ -217,6 +218,8 @@ export default function App() {
   const [authInitialMode, setAuthInitialMode] = useState("signin");
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
   const [showCoachMarks, setShowCoachMarks] = useState(false);
+  const [creditBalance, setCreditBalance] = useState(null);
+  const [showBuyCredits, setShowBuyCredits] = useState(false);
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
   const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameMode") === "true");
@@ -239,6 +242,42 @@ export default function App() {
       const t = setTimeout(() => setShowCoachMarks(true), 800);
       return () => clearTimeout(t);
     }
+  }, []);
+
+  // Fetch credit balance when user signs in/out, and handle ?payment=success redirect
+  useEffect(() => {
+    if (!user) { setCreditBalance(null); return; }
+    supabase.from("profiles").select("credits_cents").eq("id", user.id).single()
+      .then(({ data }) => { if (data) setCreditBalance(data.credits_cents); });
+
+    // Handle Stripe redirect
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") === "success") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Re-fetch after a short delay to let the webhook land
+      setTimeout(() => {
+        supabase.from("profiles").select("credits_cents").eq("id", user.id).single()
+          .then(({ data }) => { if (data) setCreditBalance(data.credits_cents); });
+      }, 2000);
+    } else if (params.get("payment") === "cancelled") {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleCreditUpdate = useCallback((balance) => {
+    setCreditBalance(balance);
+  }, []);
+
+  const handleAiError = useCallback((err) => {
+    if (err.code === "sign_in_required") {
+      setShowAuthModal(true);
+      return true;
+    }
+    if (err.code === "out_of_credits") {
+      setShowBuyCredits(true);
+      return true;
+    }
+    return false;
   }, []);
 
   // Open reset-password modal when Supabase fires the PASSWORD_RECOVERY event
@@ -357,7 +396,8 @@ export default function App() {
         argumentMap,
         currentSpeaker,
         statement,
-        { a: resolvedTheme.a.name, b: resolvedTheme.b.name }
+        { a: resolvedTheme.a.name, b: resolvedTheme.b.name },
+        handleCreditUpdate
       );
 
       // Track original text for newly created nodes
@@ -461,7 +501,7 @@ export default function App() {
       );
     } catch (err) {
       console.error("Error calling Claude:", err);
-      setError(err.message);
+      if (!handleAiError(err)) setError(err.message);
       throw err; // Re-throw so StatementInput knows submission failed
     } finally {
       setLoading(false);
@@ -641,7 +681,7 @@ export default function App() {
     setError(null);
 
     try {
-      const { reply, updatedMap } = await chatWithModerator(argumentMap, updatedHistory, { a: resolvedTheme.a.name, b: resolvedTheme.b.name });
+      const { reply, updatedMap } = await chatWithModerator(argumentMap, updatedHistory, { a: resolvedTheme.a.name, b: resolvedTheme.b.name }, handleCreditUpdate);
       const assistantMsg = { role: "assistant", content: reply, mapUpdated: !!updatedMap };
       setChatMessages((prev) => [...prev, assistantMsg]);
       if (updatedMap) {
@@ -667,7 +707,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error chatting with moderator:", err);
-      setError(err.message);
+      if (!handleAiError(err)) setError(err.message);
       // Remove the optimistically-added user message on failure
       setChatMessages(chatMessages);
       throw err; // Re-throw so StatementInput knows submission failed
@@ -681,7 +721,7 @@ export default function App() {
     setError(null);
 
     try {
-      const turns = await parseConversation(conversationText, { a: resolvedTheme.a.name, b: resolvedTheme.b.name });
+      const turns = await parseConversation(conversationText, { a: resolvedTheme.a.name, b: resolvedTheme.b.name }, handleCreditUpdate);
       if (!turns.length) throw new Error("No turns found in conversation.");
 
       let workingMap = argumentMap;
@@ -693,7 +733,8 @@ export default function App() {
 
         const updatedMap = await updateArgumentMap(
           workingMap, workingSpeaker, turns[i].text,
-          { a: resolvedTheme.a.name, b: resolvedTheme.b.name }
+          { a: resolvedTheme.a.name, b: resolvedTheme.b.name },
+          handleCreditUpdate
         );
 
         const oldIds = new Set(workingMap.argument_map.nodes.map((n) => n.id));
@@ -717,7 +758,7 @@ export default function App() {
       setInputMode("turns");
       setActiveTab("map");
     } catch (err) {
-      setError(err.message);
+      if (!handleAiError(err)) setError(err.message);
     } finally {
       setLoading(false);
       setLoadingSpeaker(null);
@@ -873,7 +914,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} onStartTour={() => setShowCoachMarks(true)} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} onStartTour={() => setShowCoachMarks(true)} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} />
         </header>
         <nav className="tab-bar">
         <button
@@ -1213,6 +1254,9 @@ export default function App() {
 
       {/* Auth modal */}
       {showAuthModal && <AuthModal initialMode={authInitialMode} onClose={() => { setShowAuthModal(false); setAuthInitialMode("signin"); }} />}
+
+      {/* Buy credits modal */}
+      {showBuyCredits && <BuyCreditsModal onClose={() => setShowBuyCredits(false)} />}
     </div>
   );
 }

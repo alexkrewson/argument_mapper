@@ -15,15 +15,35 @@
  */
 
 import { TACTIC_KEYS } from "./tactics.js";
+import { supabase } from "./supabase.js";
 
-// Calls the Supabase Edge Function proxy — the API key never touches the browser.
 const API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-proxy`;
 
-function getAuthHeaders() {
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    const err = new Error("Please sign in to use AI features.");
+    err.code = "sign_in_required";
+    throw err;
+  }
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${import.meta.env.VITE_PROXY_SECRET}`,
+    "Authorization": `Bearer ${session.access_token}`,
   };
+}
+
+function handleProxyError(status, body) {
+  if (status === 401) {
+    const err = new Error("Please sign in to use AI features.");
+    err.code = "sign_in_required";
+    throw err;
+  }
+  if (status === 402) {
+    const err = new Error("You're out of credits. Add more to continue.");
+    err.code = "out_of_credits";
+    throw err;
+  }
+  throw new Error(`Claude API error (${status}): ${body}`);
 }
 
 /**
@@ -34,7 +54,7 @@ function getAuthHeaders() {
  * @param {string} statement    — The raw statement the user typed
  * @returns {object}            — Updated map with new nodes/edges added
  */
-export async function updateArgumentMap(currentMap, speaker, statement, speakerNames = { a: "Blue", b: "Green" }) {
+export async function updateArgumentMap(currentMap, speaker, statement, speakerNames = { a: "Blue", b: "Green" }, onCreditsUpdate = null) {
   const systemPrompt = `You are an argument mapping assistant for a two-person debate. You analyze statements and maintain a structured argument map as JSON following the Argument Mapping Spec v1.0.
 
 Your job:
@@ -175,7 +195,7 @@ Return the updated map JSON.`;
 
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 8000,
@@ -184,10 +204,12 @@ Return the updated map JSON.`;
     }),
   });
 
-  // Check for HTTP errors (bad key, rate limit, etc.)
+  const creditsHeader = response.headers.get("X-Credits-Remaining");
+  if (creditsHeader != null) onCreditsUpdate?.(parseFloat(creditsHeader));
+
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Claude API error (${response.status}): ${errorBody}`);
+    handleProxyError(response.status, errorBody);
   }
 
   const data = await response.json();
@@ -221,10 +243,10 @@ Return the updated map JSON.`;
  * @param {object} speakerNames — { a: "...", b: "..." }
  * @returns {Array<{ speaker: "Blue"|"Green", text: string }>}
  */
-export async function parseConversation(text, speakerNames) {
+export async function parseConversation(text, speakerNames, onCreditsUpdate = null) {
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-haiku-4-5-20251001",
       max_tokens: 2000,
@@ -238,9 +260,12 @@ If someone sends multiple consecutive messages, treat each as a separate object.
     }),
   });
 
+  const creditsHeader2 = response.headers.get("X-Credits-Remaining");
+  if (creditsHeader2 != null) onCreditsUpdate?.(parseFloat(creditsHeader2));
+
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Conversation parse error (${response.status}): ${errorBody}`);
+    handleProxyError(response.status, errorBody);
   }
 
   const data = await response.json();
@@ -260,7 +285,7 @@ If someone sends multiple consecutive messages, treat each as a separate object.
  * @param {Array}  chatHistory  — Array of { role: "user"|"assistant", content: string }
  * @returns {{ reply: string, updatedMap: object|null }}
  */
-export async function chatWithModerator(currentMap, chatHistory, speakerNames = { a: "Blue", b: "Green" }) {
+export async function chatWithModerator(currentMap, chatHistory, speakerNames = { a: "Blue", b: "Green" }, onCreditsUpdate = null) {
   const systemPrompt = `You are an AI debate moderator discussing an argument map with the user. You can explain your reasoning, discuss node classifications, answer questions about the map, and make edits when asked.
 
 Current argument map:
@@ -301,7 +326,7 @@ Rules:
 
   const response = await fetch(API_URL, {
     method: "POST",
-    headers: getAuthHeaders(),
+    headers: await getAuthHeaders(),
     body: JSON.stringify({
       model: "claude-sonnet-4-5-20250929",
       max_tokens: 4096,
@@ -310,9 +335,12 @@ Rules:
     }),
   });
 
+  const creditsHeader3 = response.headers.get("X-Credits-Remaining");
+  if (creditsHeader3 != null) onCreditsUpdate?.(parseFloat(creditsHeader3));
+
   if (!response.ok) {
     const errorBody = await response.text();
-    throw new Error(`Claude API error (${response.status}): ${errorBody}`);
+    handleProxyError(response.status, errorBody);
   }
 
   const data = await response.json();

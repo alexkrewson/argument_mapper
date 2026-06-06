@@ -2,6 +2,15 @@
 MAINTENANCE / DEV ENVIRONMENT TODO
 ================================================================================
 
+--- Set up custom SMTP before launch ---
+Supabase's built-in email service has rate limits and isn't meant for
+production. Before launching to real users, configure a proper SMTP provider
+so auth emails (signup confirmation, OTP codes) are reliable and come from a
+professional address. Resend (resend.com) is the recommended option — free
+tier covers small apps, easy setup, good deliverability. Requires a verified
+domain. Gmail SMTP works as a stopgap without a domain.
+Set up in: Supabase → Authentication → Emails → SMTP Settings.
+
 --- Consider removing Vercel MCP plugin ---
 The project deploys to GitHub Pages via GitHub Actions — Vercel is not used.
 The Vercel MCP server shows a setup warning on every Claude Code launch because

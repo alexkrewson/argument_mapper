@@ -3536,6 +3536,105 @@ button {
 [data-dark="true"] .settings-user-email { color: #92a1b5; }
 [data-dark="true"] .settings-section-label--themes { border-top-color: #334155; }
 
+/* --- Credit balance in settings panel --- */
+.settings-credits-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.5rem 0.35rem;
+}
+.settings-credits-balance {
+  font-size: 0.75rem;
+  color: #64748b;
+  flex: 1;
+}
+.settings-credits-buy {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background: #f1f5f9;
+  color: #0f172a;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.settings-credits-buy:hover { background: #e2e8f0; }
+[data-dark="true"] .settings-credits-balance { color: #92a1b5; }
+[data-dark="true"] .settings-credits-buy {
+  border-color: #334155; background: #1e293b; color: #f1f5f9;
+}
+[data-dark="true"] .settings-credits-buy:hover { background: #334155; }
+
+/* --- Buy Credits modal --- */
+.credits-modal {
+  max-width: 320px;
+  position: relative;
+  gap: 0.75rem;
+}
+.credits-modal-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.1rem 0.3rem;
+}
+.credits-modal-close:hover { color: #0f172a; }
+.credits-modal-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.15rem;
+  color: #0f172a;
+}
+.credits-modal-sub {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0 0 0.5rem;
+}
+.credits-packs {
+  display: flex;
+  gap: 0.5rem;
+}
+.credits-pack-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.6rem 0.4rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.credits-pack-btn:hover:not(:disabled) { background: #e2e8f0; border-color: #94a3b8; }
+.credits-pack-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.credits-pack-amount { font-size: 1rem; font-weight: 700; color: #0f172a; }
+.credits-pack-desc   { font-size: 0.65rem; color: #64748b; }
+.credits-modal-error {
+  font-size: 0.78rem;
+  color: #dc2626;
+  margin: 0;
+}
+.credits-modal-note {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+[data-dark="true"] .credits-modal-title  { color: #f1f5f9; }
+[data-dark="true"] .credits-modal-sub    { color: #92a1b5; }
+[data-dark="true"] .credits-pack-btn     { background: #1e293b; border-color: #334155; }
+[data-dark="true"] .credits-pack-btn:hover:not(:disabled) { background: #334155; }
+[data-dark="true"] .credits-pack-amount  { color: #f1f5f9; }
+[data-dark="true"] .credits-pack-desc    { color: #92a1b5; }
+[data-dark="true"] .credits-modal-close:hover { color: #f1f5f9; }
+
 /* --- About tab --- */
 .about-tab {
   display: flex;
