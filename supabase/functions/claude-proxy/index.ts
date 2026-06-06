@@ -63,7 +63,20 @@ Deno.serve(async (req) => {
   if (!anthropicKey) return new Response("Server misconfiguration", { status: 500, headers: CORS });
 
   const body = await req.text();
-  const anthropicResponse = await fetch(ANTHROPIC_API_URL, {
+
+  async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
+    const delays = [1000, 2000, 4000];
+    let lastResponse: Response | null = null;
+    for (let i = 0; i < maxRetries; i++) {
+      const response = await fetch(url, options);
+      if (response.status !== 529) return response;
+      lastResponse = response;
+      if (i < maxRetries - 1) await new Promise(r => setTimeout(r, delays[i]));
+    }
+    return lastResponse!;
+  }
+
+  const anthropicResponse = await fetchWithRetry(ANTHROPIC_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

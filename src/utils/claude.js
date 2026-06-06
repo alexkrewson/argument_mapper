@@ -256,7 +256,16 @@ export async function parseConversation(text, speakerNames, onCreditsUpdate = nu
 The first distinct speaker maps to "${speakerNames.a}" (use "Blue"). The second distinct speaker maps to "${speakerNames.b}" (use "Green").
 Return ONLY a JSON array — no explanation, no markdown fences:
 [{"speaker":"Blue","text":"..."},{"speaker":"Green","text":"..."},...]
-Strip any speaker labels, timestamps, or metadata from the text field — only the statement content.
+
+Handle any of these common formats:
+- WhatsApp: "[HH:MM, DD/MM/YYYY] Name: message" or "[date] Name: message"
+- iMessage/SMS: "Name\nmessage" blocks or just alternating messages
+- Slack: "Name [time]\nmessage" or "Name: message"
+- Discord: "Name — Today at HH:MM\nmessage"
+- Plain: "Name: message" on each line
+- Transcripts: "SPEAKER\nmessage" blocks
+
+Strip all timestamps, read receipts, reactions, and UI chrome from the text field — keep only the spoken content.
 If someone sends multiple consecutive messages, treat each as a separate object.`,
       messages: [{ role: "user", content: text }],
     }),
@@ -276,6 +285,63 @@ If someone sends multiple consecutive messages, treat each as a separate object.
     return JSON.parse(raw);
   } catch {
     throw new Error("Could not parse the conversation. Make sure it contains two distinct speakers.");
+  }
+}
+
+/**
+ * Extracts a conversation from a screenshot image using Claude vision.
+ * Returns turns in the same format as parseConversation.
+ */
+export async function extractConversationFromImage(imageBase64, mimeType, speakerNames, onCreditsUpdate = null) {
+  const headers = await getAuthHeaders();
+  const response = await fetch(API_URL, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 2000,
+      system: `Extract the conversation from this screenshot. Return ONLY a JSON array — no explanation, no markdown fences:
+[{"speaker":"Name","text":"message"},...]
+Rules:
+- Use the actual display names visible in the screenshot
+- Strip timestamps, read receipts, reactions, and all UI chrome
+- Preserve the exact message order
+- If someone sends multiple consecutive messages, make each a separate object
+- Include only spoken content`,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mimeType, data: imageBase64 } },
+          { type: "text", text: "Extract all conversation turns from this screenshot." }
+        ]
+      }]
+    }),
+  });
+
+  const creditsHeader = response.headers.get("X-Credits-Remaining");
+  if (creditsHeader != null) onCreditsUpdate?.(parseFloat(creditsHeader));
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    handleProxyError(response.status, errorBody);
+  }
+
+  const data = await response.json();
+  const raw = data.content[0].text.trim().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  try {
+    const extracted = JSON.parse(raw);
+    // Map first unique speaker → Blue, second → Green
+    const speakerMap = {};
+    let speakerCount = 0;
+    return extracted.map(turn => {
+      if (!(turn.speaker in speakerMap)) {
+        speakerMap[turn.speaker] = speakerCount === 0 ? "Blue" : "Green";
+        speakerCount++;
+      }
+      return { speaker: speakerMap[turn.speaker] ?? "Blue", text: turn.text };
+    });
+  } catch {
+    throw new Error("Could not extract conversation from screenshot. Try pasting the text instead.");
   }
 }
 
@@ -320,11 +386,9 @@ Rules:
 - When adding new nodes yourself (not on behalf of Blue or Green), always set "speaker": "Moderator".
 - The "speaker" JSON field must always be "Blue" or "Green" (internal identifiers). When referring to speakers in your reply or in node content, use their display names: "${speakerNames.a}" for Blue and "${speakerNames.b}" for Green.`;
 
-  // Build messages array from chat history
-  const messages = chatHistory.map((msg) => ({
-    role: msg.role,
-    content: msg.content,
-  }));
+  // Build messages array from chat history (truncate to last 20 to avoid token overflow)
+  const recentHistory = chatHistory.length > 20 ? chatHistory.slice(-20) : chatHistory;
+  const messages = recentHistory.map((msg) => ({ role: msg.role, content: msg.content }));
 
   const response = await fetch(API_URL, {
     method: "POST",
@@ -346,6 +410,14 @@ Rules:
   }
 
   const data = await response.json();
+
+  if (data.stop_reason === "max_tokens") {
+    return {
+      reply: "My response was too long and got cut off. Try asking a more focused question, or ask me to summarise the map first.",
+      updatedMap: null,
+    };
+  }
+
   const text = data.content[0].text;
   const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
 
@@ -356,8 +428,10 @@ Rules:
       updatedMap: parsed.argument_map ? { argument_map: parsed.argument_map } : null,
     };
   } catch (e) {
-    console.error("Failed to parse Claude response:", text);
-    throw new Error("Claude returned invalid JSON. Try again.");
+    if (text && text.trim().length > 0) {
+      return { reply: text.trim(), updatedMap: null };
+    }
+    throw new Error("The moderator didn't respond. Try sending your message again.");
   }
 }
 

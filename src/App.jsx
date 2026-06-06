@@ -10,8 +10,6 @@
 import { useState, useCallback, useMemo, useReducer, useRef, useEffect } from "react";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
-import NodeList from "./components/NodeList";
-import MapTreeView from "./components/MapTreeView";
 import NodeDetailPopup from "./components/NodeDetailPopup";
 import SettingsPanel from "./components/SettingsPanel";
 import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
@@ -20,7 +18,7 @@ import AuthModal from "./components/AuthModal";
 import BuyCreditsModal from "./components/BuyCreditsModal";
 import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
-import { updateArgumentMap, rateNode, chatWithModerator, parseConversation } from "./utils/claude";
+import { updateArgumentMap, rateNode, chatWithModerator, parseConversation, extractConversationFromImage } from "./utils/claude";
 import { estimateNextTurnCents, formatCostCents } from "./utils/costEstimate";
 import { TACTICS } from "./utils/tactics.js";
 import { computeScores, computeScoreDelta, POINTS } from "./utils/scoring.js";
@@ -733,23 +731,41 @@ export default function App() {
     }
   };
 
-  const handleCombinedSubmit = async (conversationText) => {
+  const handleCombinedSubmit = async (conversationText, images = []) => {
     setLoading(true);
     setError(null);
 
     try {
-      const turns = await parseConversation(conversationText, { a: resolvedTheme.a.name, b: resolvedTheme.b.name }, handleCreditUpdate);
-      if (!turns.length) throw new Error("No turns found in conversation.");
+      let allTurns = [];
+
+      // Extract turns from each image
+      for (const img of images) {
+        setCombiningProgress({ current: 0, total: null, extracting: true });
+        const imageTurns = await extractConversationFromImage(
+          img.base64, img.mimeType,
+          { a: resolvedTheme.a.name, b: resolvedTheme.b.name },
+          handleCreditUpdate
+        );
+        allTurns = [...allTurns, ...imageTurns];
+      }
+
+      // Also parse any text
+      if (conversationText.trim()) {
+        const textTurns = await parseConversation(conversationText, { a: resolvedTheme.a.name, b: resolvedTheme.b.name }, handleCreditUpdate);
+        allTurns = [...allTurns, ...textTurns];
+      }
+
+      if (!allTurns.length) throw new Error("No turns found. Make sure the screenshot contains a conversation with two distinct speakers.");
 
       let workingMap = argumentMap;
       let workingSpeaker = currentSpeaker;
 
-      for (let i = 0; i < turns.length; i++) {
-        setCombiningProgress({ current: i + 1, total: turns.length });
+      for (let i = 0; i < allTurns.length; i++) {
+        setCombiningProgress({ current: i + 1, total: allTurns.length });
         setLoadingSpeaker(workingSpeaker);
 
         const updatedMap = await updateArgumentMap(
-          workingMap, workingSpeaker, turns[i].text,
+          workingMap, workingSpeaker, allTurns[i].text,
           { a: resolvedTheme.a.name, b: resolvedTheme.b.name },
           handleCreditUpdate
         );
@@ -757,12 +773,19 @@ export default function App() {
         const oldIds = new Set(workingMap.argument_map.nodes.map((n) => n.id));
         const newNodes = updatedMap.argument_map.nodes.filter((n) => !oldIds.has(n.id));
         if (newNodes.length > 0) {
-          const turnText = turns[i].text;
+          const turnText = allTurns[i].text;
           setOriginalTexts((prev) => {
             const next = { ...prev };
             for (const n of newNodes) next[n.id] = turnText;
             return next;
           });
+        }
+
+        if (updatedMap._usage) {
+          const { input_tokens, output_tokens } = updatedMap._usage;
+          const costCents = input_tokens * 0.0003 + output_tokens * 0.0015;
+          setLastUsage({ input: input_tokens, output: output_tokens, costCents });
+          delete updatedMap._usage;
         }
 
         const cleanMap = sanitizeNodeContent(updatedMap, resolvedTheme);
@@ -942,12 +965,6 @@ export default function App() {
           Map
         </button>
         <button
-          className={`tab-btn${activeTab === "list" ? " tab-btn--active" : ""}`}
-          onClick={() => setActiveTab("list")}
-        >
-          List
-        </button>
-        <button
           className={`tab-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
           onClick={() => setActiveTab("moderator")}
         >
@@ -995,24 +1012,8 @@ export default function App() {
           />
         </div>
 
-        {activeTab === "list" && (
-          <div className="list-area" onClick={(e) => { if (e.target === e.currentTarget) toggleUI(); }}>
-            <MapTreeView
-              nodes={inner.nodes}
-              edges={inner.edges}
-              currentSpeaker={currentSpeaker}
-              onRate={handleRate}
-              onNodeClick={handleNodeClick}
-              loading={loading}
-              fadedNodeIds={fadedInfo.fadedNodeIds}
-              newNodeIds={newNodeIds}
-              theme={resolvedTheme}
-            />
-          </div>
-        )}
-
         {activeTab === "arguments" && (
-          <DebateHistory user={user} onLoadDebate={handleLoadDebate} onNewDebate={handleNewDebate} />
+          <DebateHistory user={user} onLoadDebate={handleLoadDebate} onNewDebate={handleNewDebate} currentNodeCount={inner.nodes.length} />
         )}
 
         {/* Always mounted so scroll position is preserved across tab switches */}

@@ -119,9 +119,11 @@ export default function StatementInput({
 }) {
   const [text, setText] = useState("");
   const [combinedText, setCombinedText] = useState("");
+  const [attachedImages, setAttachedImages] = useState([]);
   const [controlsExpanded, setControlsExpanded] = useState(false);
   const textareaRef  = useRef(null);
   const chevronRef   = useRef(null);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!loading) textareaRef.current?.focus();
@@ -150,13 +152,33 @@ export default function StatementInput({
 
   const handleCombinedProcess = async (e) => {
     e.preventDefault();
-    if (!combinedText.trim() || loading) return;
+    if ((!combinedText.trim() && attachedImages.length === 0) || loading) return;
     try {
-      await onCombinedSubmit(combinedText.trim());
+      await onCombinedSubmit(combinedText.trim(), attachedImages);
       setCombinedText("");
+      setAttachedImages([]);
     } catch {
-      // keep text
+      // keep text so user doesn't retype
     }
+  };
+
+  const processImageFile = (file) => {
+    if (!file || !file.type.startsWith("image/")) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const base64 = dataUrl.split(",")[1];
+      setAttachedImages(prev => [...prev, { base64, mimeType: file.type, preview: dataUrl }]);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handlePaste = (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imageItems = items.filter(item => item.type.startsWith("image/"));
+    if (imageItems.length === 0) return; // let normal text paste happen
+    e.preventDefault();
+    imageItems.forEach(item => processImageFile(item.getAsFile()));
   };
 
   const speakerColor = theme?.a && currentSpeaker === "Blue" ? theme.a.bg
@@ -234,9 +256,10 @@ export default function StatementInput({
           <textarea
             ref={textareaRef}
             autoFocus
-            placeholder={"Paste your conversation here. The first speaker will be treated as the current user.\n\nExample:\nAlex: I think remote work is more productive.\nJordan: Studies show office workers collaborate better.\nAlex: But those studies predate modern tooling."}
+            placeholder={"Paste your conversation here, or paste/attach a screenshot.\n\nSupports WhatsApp, iMessage, Slack, Discord, and plain text.\n\nExample:\nAlex: I think remote work is more productive.\nJordan: Studies show office workers collaborate better."}
             value={combinedText}
             onChange={(e) => setCombinedText(e.target.value)}
+            onPaste={handlePaste}
             disabled={loading}
             rows={5}
           />
@@ -261,10 +284,45 @@ export default function StatementInput({
             rows={3}
           />
         )}
+        {isCombined && attachedImages.length > 0 && (
+          <div className="combined-image-previews">
+            {attachedImages.map((img, i) => (
+              <div key={i} className="combined-image-thumb">
+                <img src={img.preview} alt={`Screenshot ${i + 1}`} />
+                <button
+                  type="button"
+                  className="combined-image-remove"
+                  onClick={() => setAttachedImages(prev => prev.filter((_, idx) => idx !== i))}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {isCombined && (
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={(e) => Array.from(e.target.files || []).forEach(processImageFile)}
+          />
+        )}
         <div className="input-btn-col">
+          {isCombined && (
+            <button
+              type="button"
+              className="combined-attach-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              title="Attach screenshot"
+            >
+              📎
+            </button>
+          )}
           <button
             type="submit"
-            disabled={loading || (isCombined ? !combinedText.trim() : !text.trim())}
+            disabled={loading || (isCombined ? (!combinedText.trim() && attachedImages.length === 0) : !text.trim())}
           >
             {loading
               ? (combiningProgress ? "Processing..." : "Thinking...")

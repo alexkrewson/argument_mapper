@@ -5,7 +5,7 @@ function formatDate(iso) {
   return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export default function DebateHistory({ user, onLoadDebate, onNewDebate }) {
+export default function DebateHistory({ user, onLoadDebate, onNewDebate, currentNodeCount = 0 }) {
   const [debates, setDebates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -94,7 +94,7 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate }) {
         return (
           <div className="history-row" key={d.id}>
             <div className="history-row-info">
-              <span className="history-row-title history-row-title--clickable" onClick={() => setConfirmLoad(d)}>
+              <span className="history-row-title history-row-title--clickable" onClick={() => currentNodeCount === 0 ? onLoadDebate(d) : setConfirmLoad(d)}>
                 {d.title}
               </span>
               <span className="history-row-meta">
