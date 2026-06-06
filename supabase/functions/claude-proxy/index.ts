@@ -98,9 +98,10 @@ Deno.serve(async (req) => {
   return new Response(responseText, {
     status: anthropicResponse.status,
     headers: {
-      "Content-Type":           "application/json",
+      "Content-Type":                "application/json",
       "Access-Control-Allow-Origin": "*",
-      "X-Credits-Remaining":    String(creditsRemaining),
+      "Access-Control-Expose-Headers": "X-Credits-Remaining",
+      "X-Credits-Remaining":         String(creditsRemaining),
     },
   });
 });

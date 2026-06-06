@@ -264,9 +264,17 @@ export default function App() {
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const refreshBalance = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase.from("profiles").select("credits_cents").eq("id", user.id).single();
+    if (data) setCreditBalance(data.credits_cents);
+  }, [user]);
+
   const handleCreditUpdate = useCallback((balance) => {
     setCreditBalance(balance);
-  }, []);
+    // Also re-fetch from DB shortly after to confirm deduction landed
+    setTimeout(refreshBalance, 1500);
+  }, [refreshBalance]);
 
   const handleAiError = useCallback((err) => {
     if (err.code === "sign_in_required") {
