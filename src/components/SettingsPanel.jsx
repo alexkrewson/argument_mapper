@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { THEMES } from "../utils/themes.js";
 import { supabase } from "../utils/supabase";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange }) {
+export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, onStartTour }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -44,6 +44,10 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
               </button>
             )}
           </div>
+          <div className="settings-section-label settings-section-label--themes">Help</div>
+          <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
+            Take a tour
+          </button>
           <div className="settings-section-label settings-section-label--themes">Game Mode</div>
           <label className="settings-toggle-row">
             <span className="settings-toggle-label">🎮 Points &amp; sounds</span>

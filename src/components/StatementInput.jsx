@@ -9,6 +9,17 @@
 
 import { useState, useRef, useEffect } from "react";
 import { speakerName } from "../utils/speakers.js";
+import CoachMarks from "./CoachMarks.jsx";
+
+const TOOLTIPS = {
+  Skip:       { title: "Skip Turn",     desc: "Pass to the other speaker without adding anything to the map." },
+  Undo:       { title: "Undo",          desc: "Remove the last submitted statement from the map." },
+  Redo:       { title: "Redo",          desc: "Restore a previously undone statement." },
+  "Add Node": { title: "Add Node",      desc: "Manually place a claim or argument onto the map." },
+  Combined:   { title: "Combined Mode", desc: "Paste a full conversation to process multiple turns at once." },
+  Turns:      { title: "Turns Mode",    desc: "Default mode — speakers alternate one statement at a time." },
+  Changes:    { title: "AI Changes",    desc: "Review recent edits the AI made to your argument map." },
+};
 
 const SkipIcon = () => (
   <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
@@ -53,14 +64,44 @@ const ChangesIcon = () => (
   </svg>
 );
 
-function CtrlBtn({ icon, label, onClick, disabled, active }) {
+function CtrlBtn({ icon, label, onClick, disabled, active, tooltipKey }) {
+  const [tipPos, setTipPos] = useState(null);
+  const timerRef = useRef(null);
+  const btnRef  = useRef(null);
+  const tooltip = TOOLTIPS[tooltipKey];
+
+  const startPress = () => {
+    if (!tooltip) return;
+    timerRef.current = setTimeout(() => {
+      const r = btnRef.current?.getBoundingClientRect();
+      if (r) setTipPos({ bottom: window.innerHeight - r.top + 10, cx: r.left + r.width / 2 });
+    }, 500);
+  };
+  const endPress = () => { clearTimeout(timerRef.current); setTipPos(null); };
+
   return (
     <button
+      ref={btnRef}
       type="button"
       className={`ctrl-btn${active ? " ctrl-btn--active" : ""}`}
       onClick={onClick}
       disabled={disabled}
+      onMouseDown={startPress}
+      onMouseUp={endPress}
+      onMouseLeave={endPress}
+      onTouchStart={startPress}
+      onTouchEnd={endPress}
+      onContextMenu={(e) => e.preventDefault()}
     >
+      {tipPos && tooltip && (
+        <div
+          className="ctrl-tooltip"
+          style={{ position: "fixed", bottom: tipPos.bottom, left: tipPos.cx, transform: "translateX(-50%)" }}
+        >
+          <strong>{tooltip.title}</strong>
+          <p>{tooltip.desc}</p>
+        </div>
+      )}
       <span className="ctrl-icon">{icon}</span>
       <span className="ctrl-label">{label}</span>
     </button>
@@ -74,15 +115,22 @@ export default function StatementInput({
   onAddNode, onReviewChanges, changeLogCount,
   theme, nameEditable, currentName, onNameChange, onRefreshName,
   inputMode, onModeChange, onCombinedSubmit, combiningProgress,
+  showCoachMarks, onDismissCoachMarks,
 }) {
   const [text, setText] = useState("");
   const [combinedText, setCombinedText] = useState("");
   const [controlsExpanded, setControlsExpanded] = useState(false);
-  const textareaRef = useRef(null);
+  const textareaRef  = useRef(null);
+  const chevronRef   = useRef(null);
 
   useEffect(() => {
     if (!loading) textareaRef.current?.focus();
   }, [loading]);
+
+  // Auto-expand controls when coach marks are active
+  useEffect(() => {
+    if (showCoachMarks) setControlsExpanded(true);
+  }, [showCoachMarks]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -135,13 +183,7 @@ export default function StatementInput({
             <>Considering {speakerName(loadingSpeaker, theme)}'s statement<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
           ) : nameEditable ? (
             <span className="name-edit-row">
-              <button
-                type="button"
-                className="name-refresh-btn"
-                onClick={onRefreshName}
-                title="Generate a new name"
-                style={{ color: speakerColor }}
-              >⟳</button>
+              <button type="button" className="name-refresh-btn" onClick={onRefreshName} title="Generate a new name" style={{ color: speakerColor }}>⟳</button>
               <input
                 className="name-edit-input"
                 type="text"
@@ -158,6 +200,7 @@ export default function StatementInput({
         </div>
         {!loading && !directMode && (
           <button
+            ref={chevronRef}
             type="button"
             className={`chevron-btn${controlsExpanded ? " chevron-btn--expanded" : ""}`}
             onClick={() => setControlsExpanded(v => !v)}
@@ -173,14 +216,14 @@ export default function StatementInput({
       {/* Collapsible controls row */}
       {!directMode && (
         <div className={`controls-row${controlsExpanded && !loading ? " controls-row--expanded" : ""}`}>
-          <CtrlBtn icon={<SkipIcon />}    label="Skip"     onClick={onSkipTurn}               disabled={isCombined} />
-          <CtrlBtn icon={<UndoIcon />}    label="Undo"     onClick={onUndo}                   disabled={!canUndo} />
-          <CtrlBtn icon={<RedoIcon />}    label="Redo"     onClick={onRedo}                   disabled={!canRedo} />
-          {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" onClick={onAddNode} />}
-          <CtrlBtn icon={<CombinedIcon />} label="Combined" onClick={() => onModeChange("combined")} active={isCombined}  />
-          <CtrlBtn icon={<TurnsIcon />}   label="Turns"    onClick={() => onModeChange("turns")}    active={!isCombined} />
+          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   disabled={isCombined} />
+          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       disabled={!canUndo} />
+          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       disabled={!canRedo} />
+          {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" tooltipKey="Add Node" onClick={onAddNode} />}
+          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} active={isCombined} />
+          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    active={!isCombined} />
           {changeLogCount > 0 && (
-            <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} onClick={onReviewChanges} />
+            <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} tooltipKey="Changes" onClick={onReviewChanges} />
           )}
         </div>
       )}
@@ -229,6 +272,14 @@ export default function StatementInput({
           </button>
         </div>
       </div>
+
+      {showCoachMarks && (
+        <CoachMarks
+          chevronRef={chevronRef}
+          textareaRef={textareaRef}
+          onDismiss={onDismissCoachMarks}
+        />
+      )}
     </form>
   );
 }

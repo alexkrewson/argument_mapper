@@ -216,6 +216,7 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState("signin");
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
+  const [showCoachMarks, setShowCoachMarks] = useState(false);
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
   const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameMode") === "true");
@@ -231,6 +232,14 @@ export default function App() {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [chatMessages]);
+
+  // Show coach marks on first launch
+  useEffect(() => {
+    if (!localStorage.getItem("argmap_coached")) {
+      const t = setTimeout(() => setShowCoachMarks(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, []);
 
   // Open reset-password modal when Supabase fires the PASSWORD_RECOVERY event
   useEffect(() => {
@@ -864,7 +873,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} onStartTour={() => setShowCoachMarks(true)} />
         </header>
         <nav className="tab-bar">
         <button
@@ -1196,6 +1205,8 @@ export default function App() {
             onModeChange={setInputMode}
             onCombinedSubmit={handleCombinedSubmit}
             combiningProgress={combiningProgress}
+            showCoachMarks={showCoachMarks}
+            onDismissCoachMarks={() => setShowCoachMarks(false)}
           />
         </footer>
       )}

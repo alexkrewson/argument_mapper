@@ -3412,6 +3412,84 @@ button {
 [data-dark="true"] .auth-toggle-link:hover { color: #f1f5f9; }
 [data-dark="true"] .auth-hint { color: #92a1b5; }
 
+/* Long-press tooltip */
+.ctrl-tooltip {
+  z-index: 400;
+  pointer-events: none;
+  background: #0f172a;
+  color: #f1f5f9;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  width: 160px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.35);
+  position: relative;
+}
+.ctrl-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid #0f172a;
+}
+.ctrl-tooltip strong { display: block; font-size: 0.8rem; margin-bottom: 3px; color: #f1f5f9; }
+.ctrl-tooltip p { font-size: 0.72rem; margin: 0; color: #94a3b8; line-height: 1.35; }
+
+/* Coach marks overlay */
+.coach-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.68);
+  z-index: 500;
+}
+.coach-callout {
+  background: #fff;
+  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  position: relative;
+}
+.coach-callout strong { display: block; font-size: 0.85rem; color: #0f172a; margin-bottom: 4px; }
+.coach-callout span { display: block; font-size: 0.78rem; color: #475569; line-height: 1.4; }
+.coach-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+.coach-arrow--down {
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #fff;
+}
+.coach-arrow--down-right {
+  bottom: -8px;
+  right: 10px;
+  border-left: 10px solid transparent;
+  border-top: 8px solid #fff;
+}
+.coach-got-it {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  color: #0f172a;
+  border: none;
+  border-radius: 24px;
+  padding: 0.65rem 2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.25);
+  white-space: nowrap;
+}
+.coach-got-it:hover { background: #f1f5f9; }
+
 [data-dark="true"] .chevron-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
 [data-dark="true"] .chevron-btn:hover { background: #334155; }
 [data-dark="true"] .ctrl-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
