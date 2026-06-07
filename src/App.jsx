@@ -1118,9 +1118,9 @@ export default function App() {
           <button
             className={`tab-btn${activeTab === "arguments" ? " tab-btn--active" : ""}`}
             onClick={() => setActiveTab("arguments")}
-            data-tooltip="Browse and load saved debates"
+            data-tooltip="Browse and load saved arguments"
           >
-            Arguments
+            History
           </button>
         )}
         <button
