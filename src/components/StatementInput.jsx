@@ -64,7 +64,7 @@ const ChangesIcon = () => (
   </svg>
 );
 
-function CtrlBtn({ icon, label, onClick, disabled, active, tooltipKey }) {
+function CtrlBtn({ icon, label, onClick, dormant, tooltipKey }) {
   const [tipPos, setTipPos] = useState(null);
   const timerRef = useRef(null);
   const btnRef  = useRef(null);
@@ -83,9 +83,8 @@ function CtrlBtn({ icon, label, onClick, disabled, active, tooltipKey }) {
     <button
       ref={btnRef}
       type="button"
-      className={`ctrl-btn${active ? " ctrl-btn--active" : ""}`}
-      onClick={onClick}
-      disabled={disabled}
+      className={`ctrl-btn${dormant ? " ctrl-btn--dormant" : ""}`}
+      onClick={dormant ? undefined : onClick}
       onMouseEnter={() => showTip(350)}
       onMouseLeave={hideTip}
       onTouchStart={() => showTip(600)}
@@ -197,12 +196,12 @@ export default function StatementInput({
       {/* Collapsible controls row — lives above the turn row so the chevron stays stationary */}
       {!directMode && (
         <div className={`controls-row${controlsExpanded && !loading ? " controls-row--expanded" : ""}`}>
-          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   disabled={isCombined} />
-          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       disabled={!canUndo} />
-          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       disabled={!canRedo} />
+          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   dormant={isCombined} />
+          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       dormant={!canUndo} />
+          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       dormant={!canRedo} />
           {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" tooltipKey="Add Node" onClick={onAddNode} />}
-          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} active={isCombined} />
-          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    active={!isCombined} />
+          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} dormant={isCombined} />
+          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    dormant={!isCombined} />
           {changeLogCount > 0 && (
             <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} tooltipKey="Changes" onClick={onReviewChanges} />
           )}

@@ -1080,14 +1080,8 @@
   min-width: 0;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
-.ctrl-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e1; }
-.ctrl-btn:disabled { opacity: 0.35; cursor: default; }
-.ctrl-btn--active {
-  color: var(--speaker-color);
-  border-color: var(--speaker-color);
-  background: #f8fafc;
-}
-.ctrl-btn--active:disabled { opacity: 1; }
+.ctrl-btn:hover:not(.ctrl-btn--dormant) { background: #f1f5f9; border-color: #cbd5e1; }
+.ctrl-btn--dormant { opacity: 0.38; cursor: default; }
 
 .ctrl-icon {
   display: flex;
@@ -3609,8 +3603,7 @@ button {
 [data-dark="true"] .chevron-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
 [data-dark="true"] .chevron-btn:hover { background: #334155; }
 [data-dark="true"] .ctrl-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
-[data-dark="true"] .ctrl-btn:hover:not(:disabled) { background: #334155; }
-[data-dark="true"] .ctrl-btn--active { background: #1e293b; }
+[data-dark="true"] .ctrl-btn:hover:not(.ctrl-btn--dormant) { background: #334155; }
 [data-dark="true"] .ctrl-label { color: #64748b; }
 [data-dark="true"] .save-debate-btn { color: #92a1b5; border-color: #334155; }
 [data-dark="true"] .save-debate-btn:hover { color: #f1f5f9; border-color: #64748b; }
