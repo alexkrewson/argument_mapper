@@ -426,11 +426,17 @@ export default function App() {
       if (newNodes.length > 0) {
         setOriginalTexts((prev) => {
           const next = { ...prev };
-          for (const n of newNodes) {
-            next[n.id] = statement;
-          }
+          for (const n of newNodes) next[n.id] = statement;
           return next;
         });
+        // Also embed in node metadata so original text survives save/load
+        const newNodeIdSet = new Set(newNodes.map((n) => n.id));
+        updatedMap.argument_map = {
+          ...updatedMap.argument_map,
+          nodes: updatedMap.argument_map.nodes.map((n) =>
+            newNodeIdSet.has(n.id) ? { ...n, metadata: { ...n.metadata, original_text: statement } } : n
+          ),
+        };
         const ids = new Set(newNodes.map((n) => n.id));
         setNewNodeIds(ids);
         clearTimeout(newNodeTimerRef.current);
@@ -855,6 +861,7 @@ export default function App() {
 
       let workingMap = argumentMap;
       let workingSpeaker = currentSpeaker;
+      const pendingConcessions = [];
 
       for (let i = 0; i < allTurns.length; i++) {
         setCombiningProgress({ current: i + 1, total: allTurns.length });
@@ -866,6 +873,7 @@ export default function App() {
           handleCreditUpdate
         );
 
+        // Embed original_text in new node metadata for persistence
         const oldIds = new Set(workingMap.argument_map.nodes.map((n) => n.id));
         const newNodes = updatedMap.argument_map.nodes.filter((n) => !oldIds.has(n.id));
         if (newNodes.length > 0) {
@@ -875,7 +883,31 @@ export default function App() {
             for (const n of newNodes) next[n.id] = turnText;
             return next;
           });
+          const newNodeIdSet = new Set(newNodes.map((n) => n.id));
+          updatedMap.argument_map = {
+            ...updatedMap.argument_map,
+            nodes: updatedMap.argument_map.nodes.map((n) =>
+              newNodeIdSet.has(n.id) ? { ...n, metadata: { ...n.metadata, original_text: turnText } } : n
+            ),
+          };
         }
+
+        // Detect implied concessions — strip ratings and queue for confirmation
+        const oldNodeRatings = new Map(workingMap.argument_map.nodes.map((n) => [n.id, n.rating]));
+        const strippedNodes = updatedMap.argument_map.nodes.map((n) => {
+          if (n.rating === "up" && oldNodeRatings.get(n.id) !== "up") {
+            pendingConcessions.push({ type: "other", nodeId: n.id, content: n.content, nodeSpeaker: n.speaker, concedingBy: workingSpeaker, agreedByText: n.metadata?.agreed_by?.text || null });
+            const { agreed_by, ...restMeta } = n.metadata || {};
+            return { ...n, rating: null, metadata: restMeta };
+          }
+          if (n.rating === "down" && oldNodeRatings.get(n.id) !== "down" && n.speaker === workingSpeaker) {
+            pendingConcessions.push({ type: "self", nodeId: n.id, content: n.content, nodeSpeaker: n.speaker, concedingBy: workingSpeaker, agreedByText: n.metadata?.conceded_by?.text || null });
+            const { conceded_by, ...restMeta } = n.metadata || {};
+            return { ...n, rating: null, metadata: restMeta };
+          }
+          return n;
+        });
+        updatedMap.argument_map = { ...updatedMap.argument_map, nodes: strippedNodes };
 
         if (updatedMap._usage) {
           const { input_tokens, output_tokens } = updatedMap._usage;
@@ -888,6 +920,10 @@ export default function App() {
         pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
         workingMap = cleanMap;
         workingSpeaker = workingSpeaker === "Blue" ? "Green" : "Blue";
+      }
+
+      if (pendingConcessions.length > 0) {
+        setConcessionQueue((prev) => [...prev, ...pendingConcessions]);
       }
       setCurrentSpeaker(workingSpeaker);
       setHasSubmitted({ a: true, b: true });
@@ -1286,7 +1322,7 @@ export default function App() {
           <NodeDetailPopup
             key={liveNode.id}
             node={liveNode}
-            originalText={originalTexts[liveNode.id]}
+            originalText={originalTexts[liveNode.id] ?? liveNode.metadata?.original_text}
             onClose={() => setSelectedNode(null)}
             fadedNodeIds={fadedInfo.fadedNodeIds}
             nodes={inner.nodes}

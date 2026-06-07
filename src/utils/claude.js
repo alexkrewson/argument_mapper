@@ -193,9 +193,21 @@ Self-concession detection (retracting own point):
 - Only flag clear, explicit self-retractions — not normal qualification, updating, or clarification.
 - If no self-concession is detected, leave all ratings unchanged.`;
 
+  // Strip display-only metadata fields before sending to keep token count down
+  const mapForApi = {
+    ...currentMap,
+    argument_map: {
+      ...currentMap.argument_map,
+      nodes: currentMap.argument_map.nodes.map((n) => {
+        const { original_text, ...restMeta } = n.metadata ?? {};
+        return { ...n, metadata: restMeta };
+      }),
+    },
+  };
+
   const displayName = speaker === "Blue" ? speakerNames.a : speakerNames.b;
   const userMessage = `Current argument map:
-${JSON.stringify(currentMap, null, 2)}
+${JSON.stringify(mapForApi, null, 2)}
 
 New statement from ${displayName} (speaker: "${speaker}"):
 "${statement}"

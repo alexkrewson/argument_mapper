@@ -1009,8 +1009,8 @@
   transition: background 0.15s, border-color 0.15s;
 }
 .chevron-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
-.chevron-btn svg { transition: transform 280ms ease-in-out; }
-.chevron-btn--expanded svg { transform: rotate(180deg); }
+.chevron-btn svg { transform: rotate(180deg); transition: transform 280ms ease-in-out; }
+.chevron-btn--expanded svg { transform: rotate(0deg); }
 
 /* Collapsible controls row */
 .controls-row {

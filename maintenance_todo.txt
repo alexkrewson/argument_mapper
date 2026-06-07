@@ -1,6 +1,44 @@
+
 ================================================================================
-MAINTENANCE / DEV ENVIRONMENT TODO
+Top Priority Ideas (below)
 ================================================================================
+
+--- BUG: Moderator chat stops responding ---
+Sometimes in moderator chat mode the AI stops responding entirely — no error
+message, just silence. Root cause unknown. Needs investigation: check whether
+the Edge Function is timing out, whether the chatHistory array is growing too
+large and hitting max_tokens, or whether the JSON parse is silently failing.
+Look at chatWithModerator() in src/utils/claude.js and the corresponding edge
+function. Add better error surfacing so the user sees something actionable
+instead of nothing.
+
+--- FEATURE: Retry logic for API overloaded errors ---
+Anthropic occasionally returns HTTP 529 (overloaded) during high-traffic
+periods. The current code has no retry logic, so users see a raw error.
+Fix: in the Edge Function (or in src/utils/claude.js), add exponential backoff
+retries — 3 attempts with 1s, 2s, 4s delays. Show the user a "retrying..."
+indicator rather than an immediate error. For sustained rate limit issues,
+request a limit increase from Anthropic once the app has real usage history.
+
+
+
+It would be cool if users could poste screenshots of chats for the combined mode. It would also be cool if they could paste text copied from chat apps that may not 
+
+Let's get rid of the List tab. I don't think it's useful enough to take up its space.
+
+
+
+If a user chooses a stored argument, and there is no current argument, there should not be a confirmation box about leaving the current argument
+
+
+
+
+
+================================================================================
+MAINTENANCE / DEV ENVIRONMENT TODO (Future Implementations)
+================================================================================
+
+I'd like the coach to show everything on the current tab, all the buttons and functions, in language that addresses mobile or web, depending on what is detected. They should also have coaching bubbles to show describe the tabs. There should be different coaching bubbles depending on which tab the user is currently on.
 
 --- Set up custom SMTP before launch ---
 Supabase's built-in email service has rate limits and isn't meant for
@@ -16,3 +54,19 @@ The project deploys to GitHub Pages via GitHub Actions — Vercel is not used.
 The Vercel MCP server shows a setup warning on every Claude Code launch because
 it needs authentication. If we're confident we won't move to Vercel, remove the
 plugin to eliminate the noise.
+
+--- FEATURE: User-provided API keys ---
+Allow users to paste their own Anthropic API key in a settings screen. The key
+would be stored in localStorage (stays on-device, never sent to our servers
+except as a request header to the Edge Function). The Edge Function would use
+the user-supplied key instead of the server key when one is present. This
+eliminates all API cost risk for the developer and lets power users run the app
+without any per-use charges. Implementation notes:
+  - Add a "Settings" screen or modal with an API key input field
+  - Validate the key format client-side (starts with "sk-ant-")
+  - Pass it as a custom header (e.g. X-User-Api-Key) to the Edge Function
+  - Edge Function checks for the header and prefers it over the env-var key
+  - Show a clear indicator in the UI when the user's own key is active
+  - Consider only supporting Anthropic keys for now; other providers
+    (OpenAI, Gemini) would require separate API request formats and
+    system prompt tuning and are a larger project

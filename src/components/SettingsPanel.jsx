@@ -14,14 +14,18 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
   const [copied, setCopied] = useState(false);
   const ref = useRef(null);
 
-  // Close on outside click
+  // Close on outside click or touch
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, [open]);
 
   return (

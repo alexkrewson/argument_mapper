@@ -3,8 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 
 // Claude Sonnet 4.5 pricing in cents per token (no markup initially — TODO: add markup before launch)
-const INPUT_CENTS_PER_TOKEN  = 0.000_003;  // $3 / MTok
-const OUTPUT_CENTS_PER_TOKEN = 0.000_015;  // $15 / MTok
+const INPUT_CENTS_PER_TOKEN  = 0.000_3;  // $3 / MTok  (= $3 / 1e6 tokens × 100 cents/$)
+const OUTPUT_CENTS_PER_TOKEN = 0.001_5;  // $15 / MTok
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
