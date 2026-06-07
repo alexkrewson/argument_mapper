@@ -9,9 +9,15 @@ function formatCredits(cents) {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
+const Chevron = ({ open }) => (
+  <span className="settings-section-chevron">{open ? "▲" : "▼"}</span>
+);
+
 export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, onStartTour, creditBalance, onBuyCredits, onCopyContext }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
   const ref = useRef(null);
@@ -45,98 +51,123 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
         <div className="settings-dropdown">
 
           {/* Account */}
-          <div className="settings-section-label">Account</div>
-          {user ? (
+          <button
+            className="settings-section-label settings-section-toggle"
+            onClick={() => setShowAccount(v => !v)}
+          >
+            Account <Chevron open={showAccount} />
+          </button>
+          {showAccount && (
             <>
-              {creditBalance != null && (
-                <div className="settings-credits-card">
-                  <span className="settings-credits-amount">{formatCredits(creditBalance)}</span>
-                  <span className="settings-credits-unit">remaining</span>
-                  <button className="settings-credits-buy" onClick={() => { onBuyCredits(); setOpen(false); }}>
-                    Top up
+              {user ? (
+                <>
+                  {creditBalance != null && (
+                    <div className="settings-credits-card">
+                      <span className="settings-credits-amount">{formatCredits(creditBalance)}</span>
+                      <span className="settings-credits-unit">remaining</span>
+                      <button className="settings-credits-buy" onClick={() => { onBuyCredits(); setOpen(false); }}>
+                        Top up
+                      </button>
+                    </div>
+                  )}
+                  <div className="settings-user-email">{user.email}</div>
+                  <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
+                    Sign out
                   </button>
-                </div>
+                </>
+              ) : (
+                <button className="theme-option" onClick={() => { onOpenAuth(); setOpen(false); }}>
+                  Sign in / Sign up
+                </button>
               )}
-              <div className="settings-user-email">{user.email}</div>
-              <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
-                Sign out
-              </button>
             </>
-          ) : (
-            <button className="theme-option" onClick={() => { onOpenAuth(); setOpen(false); }}>
-              Sign in / Sign up
-            </button>
           )}
 
           {/* Help */}
-          <div className="settings-section-label settings-section-label--themes">Help</div>
-          <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
-            Take a tour
-          </button>
-
-          {/* Advanced (collapsible) */}
           <button
-            className="settings-advanced-toggle"
-            onClick={() => setShowAdvanced(v => !v)}
+            className="settings-section-label settings-section-label--themes settings-section-toggle"
+            onClick={() => setShowHelp(v => !v)}
           >
-            Advanced {showAdvanced ? "▲" : "▼"}
+            Help <Chevron open={showHelp} />
           </button>
-          {showAdvanced && (
-            <div className="settings-advanced-content">
-              <div className="settings-section-label settings-section-label--sub">Game Mode</div>
+          {showHelp && (
+            <>
+              <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
+                Take a tour
+              </button>
+              <a
+                className="theme-option"
+                href="mailto:support@trolleysolution.com"
+                onClick={() => setOpen(false)}
+              >
+                Contact Developer
+              </a>
 
-              <label className="settings-toggle-row">
-                <span className="settings-toggle-label">Etiquette points</span>
-                <span
-                  className={`settings-toggle${gameMode ? " settings-toggle--on" : ""}`}
-                  onClick={() => onGameModeChange(!gameMode)}
-                  role="switch"
-                  aria-checked={gameMode}
-                  tabIndex={0}
-                  onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onGameModeChange(!gameMode); }}
-                >
-                  <span className="settings-toggle-thumb" />
-                </span>
-              </label>
+              {/* Advanced sub-section */}
+              <button
+                className="settings-advanced-toggle"
+                onClick={() => setShowAdvanced(v => !v)}
+              >
+                Advanced <Chevron open={showAdvanced} />
+              </button>
+              {showAdvanced && (
+                <div className="settings-advanced-content">
+                  <div className="settings-section-label settings-section-label--sub">Game Mode</div>
 
-              <label className={`settings-toggle-row${!gameMode ? " settings-toggle-row--dormant" : ""}`}>
-                <span className="settings-toggle-label">Point sounds</span>
-                <span
-                  className={`settings-toggle${gameSounds && gameMode ? " settings-toggle--on" : ""}`}
-                  onClick={() => { if (gameMode) onGameSoundsChange(!gameSounds); }}
-                  role="switch"
-                  aria-checked={gameSounds && gameMode}
-                  tabIndex={gameMode ? 0 : -1}
-                  onKeyDown={(e) => { if (gameMode && (e.key === " " || e.key === "Enter")) onGameSoundsChange(!gameSounds); }}
-                >
-                  <span className="settings-toggle-thumb" />
-                </span>
-              </label>
+                  <label className="settings-toggle-row">
+                    <span className="settings-toggle-label">Etiquette points</span>
+                    <span
+                      className={`settings-toggle${gameMode ? " settings-toggle--on" : ""}`}
+                      onClick={() => onGameModeChange(!gameMode)}
+                      role="switch"
+                      aria-checked={gameMode}
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onGameModeChange(!gameMode); }}
+                    >
+                      <span className="settings-toggle-thumb" />
+                    </span>
+                  </label>
 
-              {onCopyContext && (
-                <>
-                  <div className="settings-section-label settings-section-label--sub settings-section-label--spaced">Debug</div>
-                  <button
-                    className="theme-option"
-                    onClick={() => {
-                      onCopyContext();
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                  >
-                    {copied ? "✓ Copied!" : "Copy map JSON"}
-                  </button>
-                </>
+                  <label className={`settings-toggle-row${!gameMode ? " settings-toggle-row--dormant" : ""}`}>
+                    <span className="settings-toggle-label">Point sounds</span>
+                    <span
+                      className={`settings-toggle${gameSounds && gameMode ? " settings-toggle--on" : ""}`}
+                      onClick={() => { if (gameMode) onGameSoundsChange(!gameSounds); }}
+                      role="switch"
+                      aria-checked={gameSounds && gameMode}
+                      tabIndex={gameMode ? 0 : -1}
+                      onKeyDown={(e) => { if (gameMode && (e.key === " " || e.key === "Enter")) onGameSoundsChange(!gameSounds); }}
+                    >
+                      <span className="settings-toggle-thumb" />
+                    </span>
+                  </label>
+
+                  {onCopyContext && (
+                    <>
+                      <div className="settings-section-label settings-section-label--sub settings-section-label--spaced">Debug</div>
+                      <button
+                        className="theme-option"
+                        onClick={() => {
+                          onCopyContext();
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      >
+                        {copied ? "✓ Copied!" : "Copy map JSON"}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
 
-          {/* Themes (collapsible, default collapsed) */}
+          {/* Themes */}
           <button
-            className="settings-section-label settings-section-label--themes settings-themes-toggle"
+            className="settings-section-label settings-section-label--themes settings-section-toggle"
             onClick={() => setShowThemes(v => !v)}
           >
-            Themes <span className="settings-themes-chevron">{showThemes ? "▲" : "▼"}</span>
+            Themes <Chevron open={showThemes} />
           </button>
           {showThemes && (
             <>

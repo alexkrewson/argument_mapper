@@ -88,6 +88,10 @@
   cursor: pointer;
   text-align: left;
   transition: background 0.1s;
+  text-decoration: none;
+  color: inherit;
+  font-size: inherit;
+  box-sizing: border-box;
 }
 
 .theme-option:hover    { background: #f8fafc; }
@@ -3724,10 +3728,26 @@ button {
 [data-dark="true"] .settings-credits-buy:hover { background: #334155; }
 
 /* --- Advanced expander in settings --- */
-.settings-advanced-toggle {
-  display: block;
+/* Unified collapsible section header for all settings sections */
+.settings-section-toggle {
+  display: flex;
   width: 100%;
-  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  justify-content: space-between;
+  align-items: center;
+}
+.settings-section-toggle:hover { color: #64748b; }
+.settings-section-chevron { font-size: 0.55rem; opacity: 0.7; }
+[data-dark="true"] .settings-section-toggle:hover { color: #92a1b5; }
+
+/* Advanced sub-toggle — same look as section label but indented inside a section */
+.settings-advanced-toggle {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
   font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -4088,18 +4108,6 @@ button {
 
 .settings-toggle-row--dormant { opacity: 0.38; }
 .settings-toggle-row--dormant .settings-toggle { cursor: default; }
-
-/* Themes section collapsible toggle */
-.settings-themes-toggle {
-  display: flex;
-  width: 100%;
-  background: none;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  justify-content: space-between;
-}
-.settings-themes-chevron { font-size: 0.55rem; opacity: 0.7; }
 
 .settings-section-label--spaced { margin-top: 0.4rem; }
 
