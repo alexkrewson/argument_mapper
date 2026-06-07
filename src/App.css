@@ -93,13 +93,17 @@
 .theme-option:hover    { background: #f8fafc; }
 .theme-option--active  { background: #f1f5f9; }
 
-.theme-swatch-split {
-  width: 22px;
-  height: 14px;
-  border-radius: 4px;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+.theme-swatches {
+  display: flex;
+  gap: 3px;
   flex-shrink: 0;
-  display: inline-block;
+}
+
+.theme-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0, 0, 0, 0.12);
 }
 
 .theme-label {
@@ -2051,7 +2055,6 @@
   color: #475569;
 }
 [data-dark="true"] .theme-active-check { color: #f1f5f9; }
-[data-dark="true"] .theme-swatch-split { border-color: rgba(255,255,255,0.15); }
 
 [data-dark="true"] .input-row textarea {
   background: #1e293b;
@@ -4082,6 +4085,25 @@ button {
 .settings-toggle--on .settings-toggle-thumb {
   transform: translateX(16px);
 }
+
+.settings-toggle-row--dormant { opacity: 0.38; }
+.settings-toggle-row--dormant .settings-toggle { cursor: default; }
+
+/* Themes section collapsible toggle */
+.settings-themes-toggle {
+  display: flex;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  justify-content: space-between;
+}
+.settings-themes-chevron { font-size: 0.55rem; opacity: 0.7; }
+
+.settings-section-label--spaced { margin-top: 0.4rem; }
+
+.settings-advanced-content { padding-left: 0.25rem; }
 
 /* Game toast overlay */
 .game-toast {

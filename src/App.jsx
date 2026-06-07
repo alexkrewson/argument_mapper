@@ -237,6 +237,7 @@ export default function App() {
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
   const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameMode") === "true");
+  const [gameSounds, setGameSounds] = useState(() => localStorage.getItem("gameSounds") === "true");
   const [gameToast, setGameToast] = useState(null); // { speaker, delta, key } | null
   const gameToastTimerRef = useRef(null);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
@@ -386,6 +387,11 @@ export default function App() {
     localStorage.setItem("gameMode", val ? "true" : "false");
   }, []);
 
+  const handleGameSoundsChange = useCallback((val) => {
+    setGameSounds(val);
+    localStorage.setItem("gameSounds", val ? "true" : "false");
+  }, []);
+
   const triggerGameFeedback = useCallback((nodesBefore, nodesAfter, speaker) => {
     if (!gameMode) return;
     const delta = computeScoreDelta(nodesBefore, nodesAfter);
@@ -393,11 +399,13 @@ export default function App() {
     if (d === 0) return;
     clearTimeout(gameToastTimerRef.current);
     setGameToast({ speaker, delta: d, key: Date.now() });
-    if (d >= 18) playBigWin();       // self-retraction or huge gain
-    else if (d > 0) playHappy();
-    else playSad();
+    if (gameSounds) {
+      if (d >= 18) playBigWin();
+      else if (d > 0) playHappy();
+      else playSad();
+    }
     gameToastTimerRef.current = setTimeout(() => setGameToast(null), 2400);
-  }, [gameMode]);
+  }, [gameMode, gameSounds]);
 
   /**
    * Called when a user submits a new statement.
@@ -1097,7 +1105,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} onStartTour={() => setShowCoachMarks(true)} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} onStartTour={() => setShowCoachMarks(true)} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
         </header>
         <nav className="tab-bar">
         <button
