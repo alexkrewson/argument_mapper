@@ -121,64 +121,64 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
                   {SUPPORT_EMAIL}<br/>copied to clipboard
                 </div>
               )}
-
-              {/* Advanced sub-section */}
-              <button
-                className="settings-advanced-toggle"
-                onClick={() => setShowAdvanced(v => !v)}
-              >
-                Advanced <Chevron open={showAdvanced} />
-              </button>
-              {showAdvanced && (
-                <div className="settings-advanced-content">
-                  <div className="settings-section-label settings-section-label--sub">Game Mode</div>
-
-                  <label className="settings-toggle-row">
-                    <span className="settings-toggle-label">Etiquette points</span>
-                    <span
-                      className={`settings-toggle${gameMode ? " settings-toggle--on" : ""}`}
-                      onClick={() => onGameModeChange(!gameMode)}
-                      role="switch"
-                      aria-checked={gameMode}
-                      tabIndex={0}
-                      onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onGameModeChange(!gameMode); }}
-                    >
-                      <span className="settings-toggle-thumb" />
-                    </span>
-                  </label>
-
-                  <label className={`settings-toggle-row${!gameMode ? " settings-toggle-row--dormant" : ""}`}>
-                    <span className="settings-toggle-label">Point sounds</span>
-                    <span
-                      className={`settings-toggle${gameSounds && gameMode ? " settings-toggle--on" : ""}`}
-                      onClick={() => { if (gameMode) onGameSoundsChange(!gameSounds); }}
-                      role="switch"
-                      aria-checked={gameSounds && gameMode}
-                      tabIndex={gameMode ? 0 : -1}
-                      onKeyDown={(e) => { if (gameMode && (e.key === " " || e.key === "Enter")) onGameSoundsChange(!gameSounds); }}
-                    >
-                      <span className="settings-toggle-thumb" />
-                    </span>
-                  </label>
-
-                  {onCopyContext && (
-                    <>
-                      <div className="settings-section-label settings-section-label--sub settings-section-label--spaced">Debug</div>
-                      <button
-                        className="theme-option"
-                        onClick={() => {
-                          onCopyContext();
-                          setCopied(true);
-                          setTimeout(() => setCopied(false), 2000);
-                        }}
-                      >
-                        {copied ? "✓ Copied!" : "Copy map JSON"}
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
             </>
+          )}
+
+          {/* Advanced */}
+          <button
+            className="settings-section-label settings-section-label--themes settings-section-toggle"
+            onClick={() => setShowAdvanced(v => !v)}
+          >
+            Advanced <Chevron open={showAdvanced} />
+          </button>
+          {showAdvanced && (
+            <div className="settings-advanced-content">
+              <div className="settings-section-label settings-section-label--sub">Game Mode</div>
+
+              <label className="settings-toggle-row">
+                <span className="settings-toggle-label">Etiquette points</span>
+                <span
+                  className={`settings-toggle${gameMode ? " settings-toggle--on" : ""}`}
+                  onClick={() => onGameModeChange(!gameMode)}
+                  role="switch"
+                  aria-checked={gameMode}
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onGameModeChange(!gameMode); }}
+                >
+                  <span className="settings-toggle-thumb" />
+                </span>
+              </label>
+
+              <label className={`settings-toggle-row${!gameMode ? " settings-toggle-row--dormant" : ""}`}>
+                <span className="settings-toggle-label">Point sounds</span>
+                <span
+                  className={`settings-toggle${gameSounds && gameMode ? " settings-toggle--on" : ""}`}
+                  onClick={() => { if (gameMode) onGameSoundsChange(!gameSounds); }}
+                  role="switch"
+                  aria-checked={gameSounds && gameMode}
+                  tabIndex={gameMode ? 0 : -1}
+                  onKeyDown={(e) => { if (gameMode && (e.key === " " || e.key === "Enter")) onGameSoundsChange(!gameSounds); }}
+                >
+                  <span className="settings-toggle-thumb" />
+                </span>
+              </label>
+
+              {onCopyContext && (
+                <>
+                  <div className="settings-section-label settings-section-label--sub settings-section-label--spaced">Debug</div>
+                  <button
+                    className="theme-option"
+                    onClick={() => {
+                      onCopyContext();
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                  >
+                    {copied ? "✓ Copied!" : "Copy map JSON"}
+                  </button>
+                </>
+              )}
+            </div>
           )}
 
           {/* Themes */}
@@ -204,7 +204,10 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
                         className={`theme-option${key === currentThemeKey ? " theme-option--active" : ""}`}
                         onClick={() => { onThemeChange(key); setOpen(false); }}
                       >
-                        <span className="theme-swatches">
+                        <span
+                          className={`theme-swatches${theme.dark ? " theme-swatches--dark" : ""}`}
+                          style={{ backgroundColor: theme.panelBg }}
+                        >
                           <span className="theme-swatch" style={{ backgroundColor: theme.a.bg }} />
                           <span className="theme-swatch" style={{ backgroundColor: theme.b.bg }} />
                         </span>

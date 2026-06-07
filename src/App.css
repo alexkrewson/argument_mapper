@@ -101,13 +101,19 @@
   display: flex;
   gap: 3px;
   flex-shrink: 0;
+  padding: 3px 4px;
+  border-radius: 5px;
 }
 
 .theme-swatch {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  border: 1.5px solid rgba(0, 0, 0, 0.12);
+  border: 1.5px solid rgba(0, 0, 0, 0.15);
+}
+
+.theme-swatches--dark .theme-swatch {
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .theme-label {
@@ -3751,26 +3757,6 @@ button {
 .settings-section-chevron { font-size: 0.55rem; opacity: 0.7; }
 [data-dark="true"] .settings-section-toggle:hover { color: #92a1b5; }
 
-/* Advanced sub-toggle — same look as section label but indented inside a section */
-.settings-advanced-toggle {
-  display: flex;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: #94a3b8;
-  padding: 0.35rem 0.5rem 0.2rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  margin-top: 0.15rem;
-}
-.settings-advanced-toggle:hover { color: #64748b; }
-[data-dark="true"] .settings-advanced-toggle { color: #475569; }
-[data-dark="true"] .settings-advanced-toggle:hover { color: #64748b; }
 
 /* --- Buy Credits modal --- */
 .credits-modal {
@@ -4120,7 +4106,7 @@ button {
 
 .settings-section-label--spaced { margin-top: 0.4rem; }
 
-.settings-advanced-content { padding-left: 0.25rem; }
+.settings-advanced-content { padding-left: 0; }
 
 /* Game toast overlay */
 .game-toast {

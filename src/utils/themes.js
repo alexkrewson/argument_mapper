@@ -9,6 +9,8 @@
  * border — a slightly deeper shade of the same hue; used for badges,
  *          gauge markers, and subtle accents (not rendered as a visible
  *          border on cards or nodes — border-width is 0).
+ * panelBg — background color for theme swatches in the settings panel,
+ *           representing the app's chrome/background in that theme.
  *
  * All node colors are calm, earthy, and muted — never electric or
  * fluorescent. Vivid badge colors (type badges, contradiction chips) are
@@ -18,44 +20,52 @@
 export const THEMES = {
   classic: {
     label: "Classic",
+    panelBg: "#eaf0f7",
     a: { name: "Blue",   bg: "#6a8ca8", border: "#4a6882" },  // dusty steel blue
     b: { name: "Green",  bg: "#7a9c78", border: "#5a7658" },  // sage green
   },
   ocean: {
     label: "Ocean",
+    panelBg: "#e6f2f5",
     a: { name: "Teal",   bg: "#5a7898", border: "#3c5872" },  // deep ocean slate
     b: { name: "Coral",  bg: "#b87c68", border: "#8a5444" },  // warm sand coral
   },
   sunset: {
     label: "Sunset",
+    panelBg: "#fdf0e0",
     a: { name: "Amber",  bg: "#c49a6c", border: "#927244" },  // warm caramel
     b: { name: "Violet", bg: "#9478a8", border: "#6c5280" },  // dusty mauve
   },
   forest: {
     label: "Forest",
+    panelBg: "#e8f2e8",
     a: { name: "Sage",   bg: "#5a8460", border: "#3a6040" },  // deep moss
     b: { name: "Rust",   bg: "#9c6450", border: "#724030" },  // muted terracotta
   },
   dusk: {
     label: "Dusk",
+    panelBg: "#ede8f5",
     a: { name: "Indigo", bg: "#8878a8", border: "#645684" },  // dusty periwinkle
     b: { name: "Rose",   bg: "#ac748c", border: "#845a6a" },  // dusty rose
   },
   night: {
     label: "Night",
     dark: true,
+    panelBg: "#192635",
     a: { name: "Azure",  bg: "#6a8eaa", border: "#486a84" },  // muted steel blue
     b: { name: "Jade",   bg: "#5a8a7a", border: "#386858" },  // dusty pine
   },
   midnight: {
     label: "Midnight",
     dark: true,
+    panelBg: "#1a1830",
     a: { name: "Violet", bg: "#7868a0", border: "#564878" },  // dusty iris
     b: { name: "Plum",   bg: "#9c6878", border: "#744858" },  // dusty plum
   },
   ember: {
     label: "Ember",
     dark: true,
+    panelBg: "#1e1508",
     a: { name: "Amber",          bg: "#b87040", border: "#7a4820" },
     b: { name: "Teal",           bg: "#3d8c7a", border: "#255c50" },
   },
