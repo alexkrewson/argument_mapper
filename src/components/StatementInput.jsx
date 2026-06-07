@@ -211,7 +211,6 @@ export default function StatementInput({
       {/* Turn indicator row */}
       <div className="turn-row">
         <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#475569" : speakerColor }}>
-          {!loading && <span className="speaker-dot" style={{ background: activeColor }} />}
           {loading && combiningProgress ? (
             <>Processing turn {combiningProgress.current} of {combiningProgress.total}<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
           ) : loading && loadingSpeaker ? (
@@ -254,12 +253,12 @@ export default function StatementInput({
           <textarea
             ref={textareaRef}
             autoFocus
-            placeholder={"Paste your conversation here, or paste/attach a screenshot.\n\nSupports WhatsApp, iMessage, Slack, Discord, and plain text.\n\nExample:\nAlex: I think remote work is more productive.\nJordan: Studies show office workers collaborate better."}
+            placeholder="Paste a conversation or attach a screenshot — WhatsApp, iMessage, Slack, Discord, plain text..."
             value={combinedText}
             onChange={(e) => setCombinedText(e.target.value)}
             onPaste={handlePaste}
             disabled={loading}
-            rows={5}
+            rows={3}
           />
         ) : (
           <textarea

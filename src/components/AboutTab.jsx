@@ -168,16 +168,16 @@ export default function AboutTab({ isActive }) {
 
         <h3 id="combined-mode">Combined Mode</h3>
         <p>
-          Combined mode lets you import a conversation that already happened — paste a full chat log and
+          Combined mode lets you import a conversation that already happened — paste a full chat log (or attach a screenshot) and
           get the complete argument map built in one go.
         </p>
         <ol>
           <li>Click <strong>Combined</strong> in the input bar (next to Skip Turn).</li>
-          <li>Paste the full conversation — speaker labels, timestamps, and all.</li>
+          <li>Paste the full conversation — speaker labels, timestamps, and all — or use the 📎 button to attach a screenshot from WhatsApp, iMessage, Slack, Discord, or any chat app.</li>
           <li>Hit <strong>Process</strong>. Progress shows as "Processing turn N of M…"</li>
         </ol>
         <p>
-          Behind the scenes: Claude Haiku first parses the raw text into an ordered list of attributed turns,
+          Behind the scenes: Claude Haiku first parses the raw text (or extracts text from a screenshot image) into an ordered list of attributed turns,
           stripping speaker labels and metadata. Then Claude Sonnet runs the full argument map analysis for
           each turn sequentially, building the graph progressively just as if the debate had happened live.
         </p>
@@ -190,8 +190,6 @@ export default function AboutTab({ isActive }) {
         <dl>
           <dt>Map</dt>
           <dd>Live visual graph of the debate. Click any node to see its details. Click the background to hide/show the header and footer for a cleaner view.</dd>
-          <dt>List</dt>
-          <dd>Tree view of all nodes, indented by parent-child relationship. Includes tactic badges, fading, and concede buttons. Good for mobile or dense debates.</dd>
           <dt>Moderator</dt>
           <dd>Side-by-side speaker breakdowns — scores (Game Mode), style analysis, and event log — plus an AI chat where you can ask Claude anything about the debate.</dd>
           <dt>History</dt>
@@ -264,7 +262,7 @@ export default function AboutTab({ isActive }) {
 
         <h3 id="game-mode">Game Mode</h3>
         <p>
-          Enable <strong>🎮 Points &amp; sounds</strong> in the ⚙ settings menu. The setting persists across sessions.
+          Enable <strong>Etiquette points</strong> (and optionally <strong>Point sounds</strong>) under <strong>Advanced</strong> in the ⚙ settings menu. Settings persist across sessions.
         </p>
         <p><strong>What changes in Game Mode:</strong></p>
         <ul>

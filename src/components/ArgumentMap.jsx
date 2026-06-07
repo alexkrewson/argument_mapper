@@ -261,6 +261,14 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   const themeRef = useRef(theme);
   useEffect(() => { themeRef.current = theme; }, [theme]);
 
+  // Update stylesheet and badge colors in-place when theme changes (no remount/viewport reset)
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.style(buildStylesheet(theme));
+    cy.nodes().emit('data');
+  }, [theme]);
+
   // tplRef holds the badge template function. It's updated on every render so
   // that HMR-patched code takes effect immediately without needing a remount.
   const tplRef = useRef(null);
@@ -688,11 +696,6 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       });
     }
   }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds]);
-
-  // Theme stylesheet is baked in at init time (buildStylesheet(themeRef.current)).
-  // App.jsx passes key={themeKey} so this component remounts on every theme change,
-  // giving a fresh cy with the correct stylesheet — no in-place cy.style() call
-  // needed (which would trigger resetToDefault() and corrupt the renderer).
 
   // Pulse new nodes after layout settles — kept separate so clearing newNodeIds
   // doesn't re-trigger the layout above.
