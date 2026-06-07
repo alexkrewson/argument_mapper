@@ -195,6 +195,21 @@ export default function StatementInput({
       style={{ "--speaker-color": activeColor, "--speaker-glow": activeGlow }}
       onSubmit={isCombined ? handleCombinedProcess : handleSubmit}
     >
+      {/* Collapsible controls row — lives above the turn row so the chevron stays stationary */}
+      {!directMode && (
+        <div className={`controls-row${controlsExpanded && !loading ? " controls-row--expanded" : ""}`}>
+          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   disabled={isCombined} />
+          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       disabled={!canUndo} />
+          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       disabled={!canRedo} />
+          {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" tooltipKey="Add Node" onClick={onAddNode} />}
+          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} active={isCombined} />
+          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    active={!isCombined} />
+          {changeLogCount > 0 && (
+            <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} tooltipKey="Changes" onClick={onReviewChanges} />
+          )}
+        </div>
+      )}
+
       {/* Turn indicator row */}
       <div className="turn-row">
         <div className="speaker-label" style={{ color: loading && loadingSpeaker ? "#475569" : speakerColor }}>
@@ -234,21 +249,6 @@ export default function StatementInput({
           </button>
         )}
       </div>
-
-      {/* Collapsible controls row */}
-      {!directMode && (
-        <div className={`controls-row${controlsExpanded && !loading ? " controls-row--expanded" : ""}`}>
-          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   disabled={isCombined} />
-          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       disabled={!canUndo} />
-          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       disabled={!canRedo} />
-          {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" tooltipKey="Add Node" onClick={onAddNode} />}
-          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} active={isCombined} />
-          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    active={!isCombined} />
-          {changeLogCount > 0 && (
-            <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} tooltipKey="Changes" onClick={onReviewChanges} />
-          )}
-        </div>
-      )}
 
       {/* Input row */}
       <div className="input-row">

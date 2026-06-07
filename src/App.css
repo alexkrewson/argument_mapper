@@ -1012,13 +1012,14 @@
 .chevron-btn svg { transform: rotate(180deg); transition: transform 280ms ease-in-out; }
 .chevron-btn--expanded svg { transform: rotate(0deg); }
 
-/* Collapsible controls row */
+/* Collapsible controls row — appears above the turn row; form grows upward so chevron stays put */
 .controls-row {
   display: flex;
   gap: 0.35rem;
   overflow: hidden;
   max-height: 0;
   opacity: 0;
+  padding-right: 38px; /* leave space on right to align with chevron column below */
   margin-bottom: 0;
   transition: max-height 280ms ease-in-out, opacity 200ms ease-in-out, margin-bottom 280ms ease-in-out;
 }
