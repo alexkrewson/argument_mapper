@@ -70,14 +70,14 @@ function CtrlBtn({ icon, label, onClick, disabled, active, tooltipKey }) {
   const btnRef  = useRef(null);
   const tooltip = TOOLTIPS[tooltipKey];
 
-  const startPress = () => {
+  const showTip = (delay) => {
     if (!tooltip) return;
     timerRef.current = setTimeout(() => {
       const r = btnRef.current?.getBoundingClientRect();
       if (r) setTipPos({ bottom: window.innerHeight - r.top + 10, cx: r.left + r.width / 2 });
-    }, 500);
+    }, delay);
   };
-  const endPress = () => { clearTimeout(timerRef.current); setTipPos(null); };
+  const hideTip = () => { clearTimeout(timerRef.current); setTipPos(null); };
 
   return (
     <button
@@ -86,11 +86,10 @@ function CtrlBtn({ icon, label, onClick, disabled, active, tooltipKey }) {
       className={`ctrl-btn${active ? " ctrl-btn--active" : ""}`}
       onClick={onClick}
       disabled={disabled}
-      onMouseDown={startPress}
-      onMouseUp={endPress}
-      onMouseLeave={endPress}
-      onTouchStart={startPress}
-      onTouchEnd={endPress}
+      onMouseEnter={() => showTip(350)}
+      onMouseLeave={hideTip}
+      onTouchStart={() => showTip(600)}
+      onTouchEnd={hideTip}
       onContextMenu={(e) => e.preventDefault()}
     >
       {tipPos && tooltip && (
