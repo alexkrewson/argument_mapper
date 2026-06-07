@@ -241,16 +241,13 @@ function runLayout(cy, onDone) {
     nodeSep: 80,
     rankSep: 75,
     padding: 40,
-    animate: true,
-    animationDuration: 200,
-    fit: false, // fitToSafeZone handles viewport after animation
+    animate: false,
+    fit: false,
   });
   layout.one("layoutstop", () => {
     applyEdgeCurves(cy);
-    setTimeout(() => {
-      fitToSafeZone(cy);
-      if (onDone) onDone();
-    }, 220);
+    fitToSafeZone(cy);
+    if (onDone) onDone();
   });
   layout.run();
 }
