@@ -14,6 +14,10 @@ import dagre from "cytoscape-dagre";
 import { TACTICS } from "../utils/tactics.js";
 import { fmtNodeId } from "../utils/format.js";
 
+// Persists viewport across remounts triggered by theme key changes.
+// Saved in the init-effect cleanup, restored in the first fitToSafeZone call.
+let _savedViewport = null;
+
 // Layout constants (px).
 // BADGE_BASE_TOP = top/left inset for badges inside the node (the "margin" rule).
 // NODE_WIDTH     = Cytoscape node width (matches stylesheet width: 260).
@@ -243,10 +247,13 @@ function runLayout(cy, onDone) {
   });
   layout.one("layoutstop", () => {
     applyEdgeCurves(cy);
-    // Wait for node animations to settle, then fit to the safe zone
-    // (excluding the header and footer overlay areas).
     setTimeout(() => {
-      fitToSafeZone(cy);
+      if (_savedViewport) {
+        cy.viewport(_savedViewport);
+        _savedViewport = null;
+      } else {
+        fitToSafeZone(cy);
+      }
       if (onDone) onDone();
     }, 220);
   });
@@ -260,14 +267,6 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   useEffect(() => { onToggleUIRef.current = onToggleUI; }, [onToggleUI]);
   const themeRef = useRef(theme);
   useEffect(() => { themeRef.current = theme; }, [theme]);
-
-  // Update stylesheet and badge colors in-place when theme changes (no remount/viewport reset)
-  useEffect(() => {
-    const cy = cyRef.current;
-    if (!cy) return;
-    cy.style(buildStylesheet(theme));
-    cy.nodes().emit('data');
-  }, [theme]);
 
   // tplRef holds the badge template function. It's updated on every render so
   // that HMR-patched code takes effect immediately without needing a remount.
@@ -504,6 +503,9 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       el.removeEventListener("touchend",   onTouchEnd,   { capture: true });
       el.removeEventListener("dblclick", onDblClick, { capture: true });
       el.removeEventListener("contextmenu", onContextMenu, { capture: true });
+      if (cy.nodes().length > 0) {
+        _savedViewport = { zoom: cy.zoom(), pan: { ...cy.pan() } };
+      }
       cy.destroy();
       cyRef.current = null;
     };
