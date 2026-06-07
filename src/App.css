@@ -93,17 +93,13 @@
 .theme-option:hover    { background: #f8fafc; }
 .theme-option--active  { background: #f1f5f9; }
 
-.theme-swatches {
-  display: flex;
-  gap: 3px;
-  flex-shrink: 0;
-}
-
-.theme-swatch {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
+.theme-swatch-split {
+  width: 22px;
+  height: 14px;
+  border-radius: 4px;
   border: 1.5px solid rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+  display: inline-block;
 }
 
 .theme-label {
@@ -116,7 +112,16 @@
 .theme-names {
   font-size: 0.7rem;
   color: #94a3b8;
-  margin-left: auto;
+  flex: 1;
+  text-align: right;
+}
+
+.theme-active-check {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #0f172a;
+  flex-shrink: 0;
+  margin-left: 0.3rem;
 }
 
 /* --- Top bar: title row + tab bar slide together as one fixed overlay --- */
@@ -2045,6 +2050,8 @@
 [data-dark="true"] .theme-names {
   color: #475569;
 }
+[data-dark="true"] .theme-active-check { color: #f1f5f9; }
+[data-dark="true"] .theme-swatch-split { border-color: rgba(255,255,255,0.15); }
 
 [data-dark="true"] .input-row textarea {
   background: #1e293b;
@@ -3671,15 +3678,25 @@ button {
   font-family: monospace;
 }
 
-/* --- Credit balance in settings panel --- */
-.settings-credits-row {
+/* --- Credit balance card in settings panel --- */
+.settings-credits-card {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.2rem 0.5rem 0.35rem;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.45rem 0.6rem;
+  margin: 0.1rem 0 0.2rem;
+  background: #f1f5f9;
+  border-radius: 7px;
+  border: 1px solid #e2e8f0;
 }
-.settings-credits-balance {
-  font-size: 0.75rem;
+.settings-credits-amount {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-variant-numeric: tabular-nums;
+}
+.settings-credits-unit {
+  font-size: 0.7rem;
   color: #64748b;
   flex: 1;
 }
@@ -3688,17 +3705,40 @@ button {
   padding: 0.15rem 0.5rem;
   border-radius: 4px;
   border: 1px solid #cbd5e1;
-  background: #f1f5f9;
+  background: #fff;
   color: #0f172a;
   cursor: pointer;
   white-space: nowrap;
+  align-self: center;
 }
 .settings-credits-buy:hover { background: #e2e8f0; }
-[data-dark="true"] .settings-credits-balance { color: #92a1b5; }
+[data-dark="true"] .settings-credits-card { background: #1e293b; border-color: #334155; }
+[data-dark="true"] .settings-credits-amount { color: #f1f5f9; }
+[data-dark="true"] .settings-credits-unit { color: #64748b; }
 [data-dark="true"] .settings-credits-buy {
-  border-color: #334155; background: #1e293b; color: #f1f5f9;
+  border-color: #475569; background: #0f172a; color: #f1f5f9;
 }
 [data-dark="true"] .settings-credits-buy:hover { background: #334155; }
+
+/* --- Advanced expander in settings --- */
+.settings-advanced-toggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  padding: 0.35rem 0.5rem 0.2rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.15rem;
+}
+.settings-advanced-toggle:hover { color: #64748b; }
+[data-dark="true"] .settings-advanced-toggle { color: #475569; }
+[data-dark="true"] .settings-advanced-toggle:hover { color: #64748b; }
 
 /* --- Buy Credits modal --- */
 .credits-modal {

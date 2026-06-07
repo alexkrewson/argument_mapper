@@ -12,6 +12,7 @@ function formatCredits(cents) {
 export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, onStartTour, creditBalance, onBuyCredits, onCopyContext }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const ref = useRef(null);
 
   // Close on outside click or touch
@@ -45,15 +46,16 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
             <div className="settings-section-label">Account</div>
             {user ? (
               <>
-                <div className="settings-user-email">{user.email}</div>
                 {creditBalance != null && (
-                  <div className="settings-credits-row">
-                    <span className="settings-credits-balance">{formatCredits(creditBalance)} remaining</span>
+                  <div className="settings-credits-card">
+                    <span className="settings-credits-amount">{formatCredits(creditBalance)}</span>
+                    <span className="settings-credits-unit">remaining</span>
                     <button className="settings-credits-buy" onClick={() => { onBuyCredits(); setOpen(false); }}>
-                      Buy credits
+                      Top up
                     </button>
                   </div>
                 )}
+                <div className="settings-user-email">{user.email}</div>
                 <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
                   Sign out
                 </button>
@@ -64,22 +66,34 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
               </button>
             )}
           </div>
+
           <div className="settings-section-label settings-section-label--themes">Help</div>
           <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
             Take a tour
           </button>
           {onCopyContext && (
-            <button
-              className="theme-option"
-              onClick={() => {
-                onCopyContext();
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-              }}
-            >
-              {copied ? "✓ Copied!" : "Copy map JSON (debug)"}
-            </button>
+            <>
+              <button
+                className="settings-advanced-toggle"
+                onClick={() => setShowAdvanced(v => !v)}
+              >
+                Advanced {showAdvanced ? "▲" : "▼"}
+              </button>
+              {showAdvanced && (
+                <button
+                  className="theme-option"
+                  onClick={() => {
+                    onCopyContext();
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? "✓ Copied!" : "Copy map JSON (debug)"}
+                </button>
+              )}
+            </>
           )}
+
           <div className="settings-section-label settings-section-label--themes">Game Mode</div>
           <label className="settings-toggle-row">
             <span className="settings-toggle-label">🎮 Points &amp; sounds</span>
@@ -94,6 +108,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
               <span className="settings-toggle-thumb" />
             </span>
           </label>
+
           <div className="settings-section-label settings-section-label--themes">Themes</div>
           {[false, true].map((isDark) => {
             const entries = Object.entries(THEMES).filter(([, t]) => !!t.dark === isDark);
@@ -109,14 +124,13 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
                     className={`theme-option${key === currentThemeKey ? " theme-option--active" : ""}`}
                     onClick={() => { onThemeChange(key); setOpen(false); }}
                   >
-                    <span className="theme-swatches">
-                      <span className="theme-swatch" style={{ backgroundColor: theme.a.bg }} />
-                      <span className="theme-swatch" style={{ backgroundColor: theme.b.bg }} />
-                    </span>
+                    <span
+                      className="theme-swatch-split"
+                      style={{ background: `linear-gradient(to right, ${theme.a.bg} 50%, ${theme.b.bg} 50%)` }}
+                    />
                     <span className="theme-label">{theme.label}</span>
-                    <span className="theme-names">
-                      {theme.a.name} · {theme.b.name}
-                    </span>
+                    <span className="theme-names">{theme.a.name} · {theme.b.name}</span>
+                    {key === currentThemeKey && <span className="theme-active-check">✓</span>}
                   </button>
                 ))}
               </div>
