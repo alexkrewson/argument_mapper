@@ -202,9 +202,10 @@ function pulseNode(el, color) {
 // Heights of the fixed overlays (header + tab bar, and footer input area).
 // We always reserve this space so nodes are never hidden behind them,
 // even when the UI is slid away.
-const HEADER_H = 90;   // matches .app-top-spacer height in CSS
-const FOOTER_H = 110;  // approximate .app-footer height
-const SIDE_PAD = 30;   // left/right breathing room
+// cy.height() is app-main height (spacer already excluded from flex layout).
+// No header overlay inside cy container — just a small top breathing room.
+const HEADER_H = 12;
+const SIDE_PAD = 30;
 
 function fitToSafeZone(cy) {
   const eles = cy.elements();
@@ -212,8 +213,11 @@ function fitToSafeZone(cy) {
   const bb = eles.boundingBox();
   const W = cy.width();
   const H = cy.height();
+  // Measure the actual footer height so we respect both collapsed and expanded states
+  const footerEl = document.querySelector(".app-footer");
+  const footerH = footerEl ? footerEl.offsetHeight : 130;
   const safeW = W - 2 * SIDE_PAD;
-  const safeH = H - HEADER_H - FOOTER_H;
+  const safeH = H - HEADER_H - footerH;
   if (safeW <= 0 || safeH <= 0) return;
 
   const zoom = Math.min(
