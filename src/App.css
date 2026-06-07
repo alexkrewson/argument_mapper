@@ -57,7 +57,7 @@
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
   padding: 0.5rem;
   z-index: 70;
-  min-width: 190px;
+  width: 215px;
 }
 
 .settings-section-label {
@@ -90,7 +90,7 @@
   transition: background 0.1s;
   text-decoration: none;
   color: inherit;
-  font-size: inherit;
+  font-size: 0.82rem;
   box-sizing: border-box;
 }
 
@@ -3638,6 +3638,15 @@ button {
 [data-dark="true"] .save-status--saving { color: #92a1b5; }
 [data-dark="true"] .save-status--saved  { color: #4ade80; }
 
+/* --- Settings panel: contact developer copy popup --- */
+.settings-email-copied {
+  font-size: 0.7rem;
+  color: #22c55e;
+  padding: 0.15rem 0.5rem 0.3rem;
+  line-height: 1.35;
+}
+[data-dark="true"] .settings-email-copied { color: #4ade80; }
+
 /* --- Settings panel: account section --- */
 .settings-user-email {
   font-size: 0.75rem;
@@ -4076,7 +4085,7 @@ button {
   cursor: pointer;
 }
 .settings-toggle-label {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
 }
 .settings-toggle {
   position: relative;

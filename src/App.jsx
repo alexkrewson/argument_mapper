@@ -236,7 +236,7 @@ export default function App() {
   const [lastUsage, setLastUsage] = useState(null); // { input, output, costCents }
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
-  const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameMode") === "true");
+  const [gameMode, setGameMode] = useState(() => localStorage.getItem("gameModePoints") === "true");
   const [gameSounds, setGameSounds] = useState(() => localStorage.getItem("gameSounds") === "true");
   const [gameToast, setGameToast] = useState(null); // { speaker, delta, key } | null
   const gameToastTimerRef = useRef(null);
@@ -384,7 +384,7 @@ export default function App() {
 
   const handleGameModeChange = useCallback((val) => {
     setGameMode(val);
-    localStorage.setItem("gameMode", val ? "true" : "false");
+    localStorage.setItem("gameModePoints", val ? "true" : "false");
   }, []);
 
   const handleGameSoundsChange = useCallback((val) => {

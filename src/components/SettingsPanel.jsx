@@ -13,9 +13,19 @@ const Chevron = ({ open }) => (
   <span className="settings-section-chevron">{open ? "▲" : "▼"}</span>
 );
 
+const CopyIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: "auto" }}>
+    <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+    <path d="M11 5V3a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h2"/>
+  </svg>
+);
+
+const SUPPORT_EMAIL = "support@trolleysolution.com";
+
 export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, onStartTour, creditBalance, onBuyCredits, onCopyContext }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [emailCopied, setEmailCopied] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -95,13 +105,22 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
               <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
                 Take a tour
               </button>
-              <a
+              <button
                 className="theme-option"
-                href="mailto:support@trolleysolution.com"
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  navigator.clipboard.writeText(SUPPORT_EMAIL);
+                  setEmailCopied(true);
+                  setTimeout(() => setEmailCopied(false), 2500);
+                }}
               >
                 Contact Developer
-              </a>
+                <CopyIcon />
+              </button>
+              {emailCopied && (
+                <div className="settings-email-copied">
+                  {SUPPORT_EMAIL}<br/>copied to clipboard
+                </div>
+              )}
 
               {/* Advanced sub-section */}
               <button
