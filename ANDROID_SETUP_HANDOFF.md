@@ -131,10 +131,18 @@ The Argument Mapper is a Vite/React app with a Capacitor Android project scaffol
 
 To rebuild web assets and sync to Android before running:
 ```bash
-npm run build
+npm run build:mobile   # ⚠️ NOT "npm run build" — see warning below
 npx cap sync android
 ```
 Then run from Android Studio.
+
+> **⚠️ BLANK SCREEN BUG**: Always use `npm run build:mobile` (sets `BUILD_TARGET=mobile`),
+> never plain `npm run build`, when building for Android. The difference is the Vite `base`
+> path: web builds use `/argument_mapper/` (GitHub Pages path) while mobile builds use `./`
+> (relative, required for APK local file loading). Using the web build produces an APK that
+> opens to a blank white screen because assets can't be found at `/argument_mapper/`.
+>
+> To build the full APK in one command: `npm run build:apk`
 
 ---
 
