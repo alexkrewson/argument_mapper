@@ -1,8 +1,8 @@
-# Argument Mapper
+# iDisagree
 
 A browser-based debate tool for two participants. Statements are analyzed by Claude (Anthropic), structured into a live argument graph, and tracked for rhetorical tactics, concessions, contradictions, and logical consistency. An optional Game Mode scores both participants in real time.
 
-**[Live app →](https://alexkrewson.github.io/argument_mapper/)**  
+**[Live app →](https://idisagree.trolleysolution.com/)**  
 **[Full feature guide →](QUICKSTART.md)**
 
 ---

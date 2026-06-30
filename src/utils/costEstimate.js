@@ -3,8 +3,8 @@
 
 const SYSTEM_PROMPT_TOKENS = 3500; // approximate — the updateArgumentMap prompt is very long
 const USER_MSG_TOKENS      = 300;  // statement + wrapper text
-const INPUT_CENTS_PER_TOKEN  = 0.0003;
-const OUTPUT_CENTS_PER_TOKEN = 0.0015;
+const INPUT_CENTS_PER_TOKEN  = 0.0006;
+const OUTPUT_CENTS_PER_TOKEN = 0.0030;
 
 export function estimateNextTurnCents(currentMap) {
   const mapJson    = JSON.stringify(currentMap ?? {});

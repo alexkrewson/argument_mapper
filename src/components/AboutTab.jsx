@@ -148,7 +148,7 @@ export default function AboutTab({ isActive }) {
       <div className="about-scroll" ref={divRef}
         onScroll={() => { savedScroll.current = divRef.current.scrollTop; }}>
       <div className="about-content">
-        <h2 id="about">Argument Mapper</h2>
+        <h2 id="about">iDisagree</h2>
         <p className="about-lead">
           A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude)
           analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics,
@@ -412,9 +412,9 @@ export default function AboutTab({ isActive }) {
         {/* ── Technical Overview ─────────────────────────────── */}
         <h3 id="technical">Technical Overview</h3>
         <p>
-          Argument Mapper is a fully client-side React application backed by Supabase for auth and persistence,
+          iDisagree is a fully client-side React application backed by Supabase for auth and persistence,
           with all AI calls routed through a secure server-side proxy. There is no traditional application server —
-          the app is a static build deployed to GitHub Pages.
+          the app is a static build deployed to Cloudflare Pages.
         </p>
 
         <h4 id="tech-stack">Tech Stack</h4>
@@ -425,7 +425,7 @@ export default function AboutTab({ isActive }) {
             <tr><td><strong>Supabase</strong></td><td>PostgreSQL database for debate storage, Supabase Auth for user accounts, and Supabase Edge Functions (Deno runtime) as the AI proxy.</td></tr>
             <tr><td><strong>Claude (Anthropic)</strong></td><td>Claude Sonnet for full argument map analysis each turn; Claude Haiku for fast conversation parsing in Combined mode.</td></tr>
             <tr><td><strong>Web Audio API</strong></td><td>Synthesizes Game Mode sounds entirely in the browser — no audio files. Happy arpeggios, sad descending chords, and a fanfare for big wins.</td></tr>
-            <tr><td><strong>GitHub Pages</strong></td><td>Hosts the static build. Deployed from the <code>master</code> branch via GitHub Actions.</td></tr>
+            <tr><td><strong>Cloudflare Pages</strong></td><td>Hosts the static build. Deployed automatically from the <code>master</code> branch on every push.</td></tr>
           </tbody>
         </table>
 
@@ -473,15 +473,15 @@ export default function AboutTab({ isActive }) {
 
         <h4 id="tech-hosting">Hosting &amp; Deployment</h4>
         <p>
-          The Vite build outputs a static <code>dist/</code> folder. GitHub Pages serves it from the
-          repository root. Pushing to <code>master</code> triggers a GitHub Actions workflow that builds
-          and deploys automatically. The Supabase Edge Function is deployed separately via the Supabase CLI.
+          The Vite build outputs a static <code>dist/</code> folder. Cloudflare Pages serves it from
+          Cloudflare's global CDN. Pushing to <code>master</code> triggers an automatic build and deploy.
+          The Supabase Edge Function is deployed separately via the Supabase CLI.
         </p>
 
         {/* ── Philosophy ─────────────────────────────────────── */}
         <h3 id="philosophy">Philosophy</h3>
         <p>
-          Argument Mapper exists to help people have more productive disagreements.
+          iDisagree exists to help people have more productive disagreements.
         </p>
 
         <h4 id="phil-problem">The Problem</h4>
@@ -498,7 +498,7 @@ export default function AboutTab({ isActive }) {
 
         <h4 id="phil-approach">The Approach</h4>
         <p>
-          Argument Mapper imposes structure. Every statement becomes a node. Every node has a type, a
+          iDisagree imposes structure. Every statement becomes a node. Every node has a type, a
           parent, and a speaker. The graph makes the logical shape of the debate visible and persistent:
           you can see at a glance what supports what, what challenges what, and where the conversation
           has genuinely moved.

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Argument Mapper</string>
-    <string name="title_activity_main">Argument Mapper</string>
+    <string name="app_name">iDisagree</string>
+    <string name="title_activity_main">iDisagree</string>
     <string name="package_name">com.alexkrewson.argumentmapper</string>
     <string name="custom_url_scheme">com.alexkrewson.argumentmapper</string>
 </resources>

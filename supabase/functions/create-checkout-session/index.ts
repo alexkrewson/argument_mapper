@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
       price_data: {
         currency: "usd",
         product_data: {
-          name: "Argument Mapper AI Credits",
+          name: "iDisagree AI Credits",
           description: `${amount_cents >= 100 ? `$${(amount_cents / 100).toFixed(2)}` : `${amount_cents}¢`} of AI processing credits`,
         },
         unit_amount: amount_cents,  // Stripe uses cents
@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
       quantity: 1,
     }],
     mode: "payment",
-    success_url: success_url || "https://alexkrewson.github.io/argument_mapper/?payment=success&session_id={CHECKOUT_SESSION_ID}",
-    cancel_url:  cancel_url  || "https://alexkrewson.github.io/argument_mapper/?payment=cancelled",
+    success_url: success_url || "https://idisagree.trolleysolution.com/?payment=success&session_id={CHECKOUT_SESSION_ID}",
+    cancel_url:  cancel_url  || "https://idisagree.trolleysolution.com/?payment=cancelled",
     client_reference_id: user.id,
     metadata: {
       user_id:      user.id,

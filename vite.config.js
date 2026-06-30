@@ -3,5 +3,5 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  base: process.env.BUILD_TARGET === 'mobile' ? './' : '/argument_mapper/',
+  base: process.env.BUILD_TARGET === 'mobile' ? './' : '/',
 })

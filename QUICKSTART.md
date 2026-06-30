@@ -1,4 +1,4 @@
-# Argument Mapper — Feature Guide
+# iDisagree — Feature Guide
 
 # Running Anroid Studio
 ~/android-studio/bin/studio.sh.

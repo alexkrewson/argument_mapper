@@ -3,36 +3,22 @@
 Top Priority Ideas (below)
 ================================================================================
 
---- BUG: Moderator chat stops responding ---
-Sometimes in moderator chat mode the AI stops responding entirely — no error
-message, just silence. Root cause unknown. Needs investigation: check whether
-the Edge Function is timing out, whether the chatHistory array is growing too
-large and hitting max_tokens, or whether the JSON parse is silently failing.
-Look at chatWithModerator() in src/utils/claude.js and the corresponding edge
-function. Add better error surfacing so the user sees something actionable
-instead of nothing.
-
---- FEATURE: Retry logic for API overloaded errors ---
-Anthropic occasionally returns HTTP 529 (overloaded) during high-traffic
-periods. The current code has no retry logic, so users see a raw error.
-Fix: in the Edge Function (or in src/utils/claude.js), add exponential backoff
-retries — 3 attempts with 1s, 2s, 4s delays. Show the user a "retrying..."
-indicator rather than an immediate error. For sustained rate limit issues,
-request a limit increase from Anthropic once the app has real usage history.
-
-
-
-It would be cool if users could poste screenshots of chats for the combined mode. It would also be cool if they could paste text copied from chat apps that may not 
-
-Let's get rid of the List tab. I don't think it's useful enough to take up its space.
-
-
-
-If a user chooses a stored argument, and there is no current argument, there should not be a confirmation box about leaving the current argument
-
-
-
-
+--- Pre-launch checklist: Android closed testing (14-day / 12-tester rule) ---
+Google Play requires 12 opt-in testers to run a closed test for 14 consecutive
+days before a personal app can be promoted to production. Services like
+Testflight alternatives (BetaTesting.com, Tester Work, etc.) can be paid to
+supply compliant testers. Steps needed before submitting:
+  [ ] Change all instances of "Argument Mapper" to "iDisagree"
+  [ ] Remove initial tutorial showing what things do
+  [ ] Host app on idisagree.trolleysolution.com (domain purchased, not yet set up)
+        - Configure DNS for the domain
+        - Update GitHub Pages / deployment target or set up redirect
+        - Update Stripe success/cancel URLs in create-checkout-session/index.ts
+        - Update Supabase allowed redirect URLs for auth
+  [ ] Set up custom SMTP (see note below) so auth emails work reliably
+  [ ] Build and sign a release APK (npm run build:apk) pointing at new domain
+  [ ] Upload APK to Google Play Console as a closed testing track
+  [ ] Recruit 12 testers and run for 14 days
 
 ================================================================================
 MAINTENANCE / DEV ENVIRONMENT TODO (Future Implementations)
@@ -64,7 +50,7 @@ eliminates all API cost risk for the developer and lets power users run the app
 without any per-use charges. Implementation notes:
   - Add a "Settings" screen or modal with an API key input field
   - Validate the key format client-side (starts with "sk-ant-")
-  - Pass it as a custom header (e.g. X-User-Api-Key) to the Edge Function
+  - Pass it as a custom header (e.g. X-Us   er-Api-Key) to the Edge Function
   - Edge Function checks for the header and prefers it over the env-var key
   - Show a clear indicator in the UI when the user's own key is active
   - Consider only supporting Anthropic keys for now; other providers

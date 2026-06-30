@@ -1099,7 +1099,7 @@ export default function App() {
           {theme.lcars && <div className="lcars-rail" />}
           <div className="app-top-content">
           <header className="app-header">
-          <h1>Argument Mapper</h1>
+          <h1>iDisagree</h1>
           {saveStatus && (
             <span className={`save-status save-status--${saveStatus}`}>
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
