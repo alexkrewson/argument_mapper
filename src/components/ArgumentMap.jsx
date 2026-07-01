@@ -250,6 +250,7 @@ function runLayout(cy, onDone) {
   });
   layout.one("layoutstop", () => {
     applyEdgeCurves(cy);
+    cy.resize(); // re-measure container in case it was display:none when last resized
     fitToSafeZone(cy);
     if (onDone) onDone();
   });
@@ -682,29 +683,39 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     // Always run a full fresh layout so dagre re-centers and symmetrically
     // repositions all nodes whenever the graph structure changes.
     if (cy.nodes().length > 0) {
+      const doLayout = () => runLayout(cy, () => {
+        const nonSeqNodes = cy.nodes().filter((n) => n.data("non_sequitur"));
+        if (nonSeqNodes.length === 0) return;
+        const connectedNodes = cy.nodes().filter((n) => !n.data("non_sequitur"));
+        const bb = connectedNodes.length > 0 ? connectedNodes.boundingBox() : { x2: 0, y1: 0 };
+        const rightX = bb.x2 + 80 + NODE_WIDTH / 2;
+        nonSeqNodes.forEach((n, i) => {
+          n.position({ x: rightX, y: bb.y1 + i * (n.height() + 40) });
+        });
+        fitToSafeZone(cy);
+      });
+
       if (_savedViewport) {
-        // Theme remount: restore positions directly — no layout animation needed
+        // Theme remount: restore positions directly — no layout animation needed.
+        // But if no node IDs match (a new debate was loaded alongside the theme change),
+        // fall through to a fresh layout instead.
+        const savedVp = _savedViewport;
+        _savedViewport = null;
+        let restoredCount = 0;
         cy.batch(() => {
           cy.nodes().forEach(n => {
-            const pos = _savedViewport.nodePositions[n.id()];
-            if (pos) n.position(pos);
+            const pos = savedVp.nodePositions[n.id()];
+            if (pos) { n.position(pos); restoredCount++; }
           });
         });
-        applyEdgeCurves(cy);
-        cy.viewport({ zoom: _savedViewport.zoom, pan: _savedViewport.pan });
-        _savedViewport = null;
+        if (restoredCount > 0) {
+          applyEdgeCurves(cy);
+          cy.viewport({ zoom: savedVp.zoom, pan: savedVp.pan });
+        } else {
+          doLayout();
+        }
       } else {
-        runLayout(cy, () => {
-          const nonSeqNodes = cy.nodes().filter((n) => n.data("non_sequitur"));
-          if (nonSeqNodes.length === 0) return;
-          const connectedNodes = cy.nodes().filter((n) => !n.data("non_sequitur"));
-          const bb = connectedNodes.length > 0 ? connectedNodes.boundingBox() : { x2: 0, y1: 0 };
-          const rightX = bb.x2 + 80 + NODE_WIDTH / 2;
-          nonSeqNodes.forEach((n, i) => {
-            n.position({ x: rightX, y: bb.y1 + i * (n.height() + 40) });
-          });
-          fitToSafeZone(cy);
-        });
+        doLayout();
       }
     }
   }, [nodes, edges, fadedNodeIds, contradictionFadedIds, walkbackFadedIds]);
