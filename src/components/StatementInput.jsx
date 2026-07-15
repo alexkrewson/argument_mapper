@@ -9,7 +9,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { speakerName } from "../utils/speakers.js";
-import CoachMarks from "./CoachMarks.jsx";
 
 const TOOLTIPS = {
   Skip:       { title: "Skip Turn",     desc: "Pass to the other speaker without adding anything to the map." },
@@ -113,7 +112,7 @@ export default function StatementInput({
   onAddNode, onReviewChanges, changeLogCount,
   theme, nameEditable, currentName, onNameChange, onRefreshName,
   inputMode, onModeChange, onCombinedSubmit, combiningProgress,
-  showCoachMarks, onDismissCoachMarks, estimatedCost,
+  estimatedCost,
 }) {
   const [text, setText] = useState("");
   const [combinedText, setCombinedText] = useState("");
@@ -126,11 +125,6 @@ export default function StatementInput({
   useEffect(() => {
     if (!loading) textareaRef.current?.focus();
   }, [loading]);
-
-  // Auto-expand controls when coach marks are active
-  useEffect(() => {
-    if (showCoachMarks) setControlsExpanded(true);
-  }, [showCoachMarks]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -330,14 +324,6 @@ export default function StatementInput({
           )}
         </div>
       </div>
-
-      {showCoachMarks && (
-        <CoachMarks
-          chevronRef={chevronRef}
-          textareaRef={textareaRef}
-          onDismiss={onDismissCoachMarks}
-        />
-      )}
     </form>
   );
 }

@@ -230,7 +230,6 @@ export default function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authInitialMode, setAuthInitialMode] = useState("signin");
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
-  const [showCoachMarks, setShowCoachMarks] = useState(false);
   const [creditBalance, setCreditBalance] = useState(null);
   const [showBuyCredits, setShowBuyCredits] = useState(false);
   const [lastUsage, setLastUsage] = useState(null); // { input, output, costCents }
@@ -250,14 +249,6 @@ export default function App() {
       chatLogRef.current.scrollTop = chatLogRef.current.scrollHeight;
     }
   }, [chatMessages]);
-
-  // Show coach marks on first launch
-  useEffect(() => {
-    if (!localStorage.getItem("argmap_coached")) {
-      const t = setTimeout(() => setShowCoachMarks(true), 800);
-      return () => clearTimeout(t);
-    }
-  }, []);
 
   // Fetch credit balance when user signs in/out, and handle ?payment=success redirect
   useEffect(() => {
@@ -1105,7 +1096,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} onStartTour={() => setShowCoachMarks(true)} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
         </header>
         <nav className="tab-bar">
         <button
@@ -1428,8 +1419,6 @@ export default function App() {
             onModeChange={setInputMode}
             onCombinedSubmit={handleCombinedSubmit}
             combiningProgress={combiningProgress}
-            showCoachMarks={showCoachMarks}
-            onDismissCoachMarks={() => setShowCoachMarks(false)}
           />
         </footer>
       )}

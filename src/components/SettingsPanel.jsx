@@ -22,7 +22,7 @@ const CopyIcon = () => (
 
 const SUPPORT_EMAIL = "support@trolleysolution.com";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, onStartTour, creditBalance, onBuyCredits, onCopyContext }) {
+export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, creditBalance, onBuyCredits, onCopyContext }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
@@ -102,9 +102,6 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
           </button>
           {showHelp && (
             <>
-              <button className="theme-option" onClick={() => { onStartTour(); setOpen(false); }}>
-                Take a tour
-              </button>
               <button
                 className="theme-option"
                 onClick={() => {

@@ -20,6 +20,15 @@ supply compliant testers. Steps needed before submitting:
   [ ] Upload APK to Google Play Console as a closed testing track
   [ ] Recruit 12 testers and run for 14 days
 
+
+================================================================================
+Questions
+================================================================================
+
+For the 12 testers and 14 days, are they expected to purchase tokens for the testing? Or would I need to somehow increase their tokens in the back end? What's normal? I will be using a testing service that charges me $20 and assigns testers to test my app.
+
+
+
 ================================================================================
 MAINTENANCE / DEV ENVIRONMENT TODO (Future Implementations)
 ================================================================================
