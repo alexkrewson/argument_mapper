@@ -78,4 +78,4 @@ export const THEMES = {
   // },
 };
 
-export const DEFAULT_THEME_KEY = "classic";
+export const DEFAULT_THEME_KEY = "ember";

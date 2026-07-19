@@ -200,7 +200,9 @@ export default function App() {
   const toggleUI = useCallback(() => setUiVisible((v) => !v), []);
 
   const [themeKey, setThemeKey] = useState(() => localStorage.getItem("theme") ?? DEFAULT_THEME_KEY);
-  const theme = useMemo(() => THEMES[themeKey] ?? THEMES[DEFAULT_THEME_KEY], [themeKey]);
+  const [previewThemeKey, setPreviewThemeKey] = useState(null);
+  const activeThemeKey = previewThemeKey ?? themeKey;
+  const theme = useMemo(() => THEMES[activeThemeKey] ?? THEMES[DEFAULT_THEME_KEY], [activeThemeKey]);
 
   const [playerNames, setPlayerNames] = useState({ a: "User A", b: "User B" });
   const [hasSubmitted, setHasSubmitted] = useState({ a: false, b: false });
@@ -215,6 +217,7 @@ export default function App() {
   const handleThemeChange = useCallback((key) => {
     setThemeKey(key);
     localStorage.setItem("theme", key);
+    setPreviewThemeKey(null);
   }, []);
   useEffect(() => {
     document.documentElement.setAttribute("data-dark",  theme.dark  ? "true" : "false");
@@ -1096,7 +1099,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} onThemePreviewStart={setPreviewThemeKey} onThemePreviewEnd={() => setPreviewThemeKey(null)} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
         </header>
         <nav className="tab-bar">
         <button

@@ -6,10 +6,9 @@ Top Priority Ideas (below)
 --- Pre-launch checklist: Android closed testing (14-day / 12-tester rule) ---
 Google Play requires 12 opt-in testers to run a closed test for 14 consecutive
 days before a personal app can be promoted to production. Services like
-Testflight alternatives (BetaTesting.com, Tester Work, etc.) can be paid to
+Testflight alternatives (BetaTesting.com, Tester Work, etc.) can be paid to 
 supply compliant testers. Steps needed before submitting:
-  [ ] Change all instances of "Argument Mapper" to "iDisagree"
-  [ ] Remove initial tutorial showing what things do
+
   [ ] Host app on idisagree.trolleysolution.com (domain purchased, not yet set up)
         - Configure DNS for the domain
         - Update GitHub Pages / deployment target or set up redirect

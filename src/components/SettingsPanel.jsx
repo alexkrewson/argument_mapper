@@ -22,7 +22,7 @@ const CopyIcon = () => (
 
 const SUPPORT_EMAIL = "support@trolleysolution.com";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, creditBalance, onBuyCredits, onCopyContext }) {
+export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemePreviewStart, onThemePreviewEnd, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, creditBalance, onBuyCredits, onCopyContext }) {
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
@@ -36,7 +36,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); onThemePreviewEnd?.(); }
     };
     document.addEventListener("mousedown", handler);
     document.addEventListener("touchstart", handler, { passive: true });
@@ -186,7 +186,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
             Themes <Chevron open={showThemes} />
           </button>
           {showThemes && (
-            <>
+            <div onMouseLeave={() => onThemePreviewEnd?.()}>
               {[false, true].map((isDark) => {
                 const entries = Object.entries(THEMES).filter(([, t]) => !!t.dark === isDark);
                 if (entries.length === 0) return null;
@@ -199,6 +199,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
                       <button
                         key={key}
                         className={`theme-option${key === currentThemeKey ? " theme-option--active" : ""}`}
+                        onMouseEnter={() => onThemePreviewStart?.(key)}
                         onClick={() => { onThemeChange(key); setOpen(false); }}
                       >
                         <span
@@ -216,7 +217,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, user, on
                   </div>
                 );
               })}
-            </>
+            </div>
           )}
 
         </div>
