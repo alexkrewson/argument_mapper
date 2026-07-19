@@ -510,6 +510,16 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     };
   }, []);
 
+  // Re-apply the stylesheet whenever the theme changes (including live hover-preview)
+  // without rebuilding the graph — preserves zoom/pan. Firing cy.style() also emits a
+  // "style" event, which cytoscape-node-html-label listens for to refresh badge HTML
+  // (colors there are read fresh from themeRef.current on every call).
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.style(buildStylesheet(theme)).update();
+  }, [theme]);
+
   // Wire up node tap → onNodeClick; background mouse-click → toggleUI (desktop)
   useEffect(() => {
     const cy = cyRef.current;

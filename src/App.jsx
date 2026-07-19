@@ -1145,7 +1145,6 @@ export default function App() {
             Hidden via inline style when another tab is active. */}
         <div className="graph-area" style={activeTab !== "map" ? { display: "none" } : undefined}>
           <ArgumentMap
-            key={themeKey}
             nodes={inner.nodes}
             edges={inner.edges}
             onNodeClick={handleNodeClick}
