@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — iDisagree</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --border: #e2e8f0;
+    --link: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --text: #f1f5f9;
+      --muted: #92a1b5;
+      --border: #1e293b;
+      --link: #7dd3fc;
+    }
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  main {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 24px 96px;
+  }
+  h1 { font-size: 1.75rem; margin-bottom: 4px; }
+  h2 { font-size: 1.15rem; margin-top: 2.5em; border-top: 1px solid var(--border); padding-top: 1.5em; }
+  p, li { color: var(--text); }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 2em; }
+  a { color: var(--link); }
+  ul { padding-left: 1.3em; }
+  code { background: var(--border); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.9em; }
+  table { border-collapse: collapse; width: 100%; margin: 1em 0; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.02em; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Privacy Policy</h1>
+<p class="meta">iDisagree · Last updated July 24, 2026</p>
+
+<p>
+  iDisagree ("we", "our", "the app") is an argument-mapping tool that uses AI to structure
+  and analyze debates. This page explains what data we collect, why, and how you can control it.
+  It applies to both the web app at <a href="https://idisagree.trolleysolution.com">idisagree.trolleysolution.com</a>
+  and the Android app.
+</p>
+
+<h2>What we collect</h2>
+<table>
+  <thead><tr><th>Data</th><th>Why we collect it</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Email address</td>
+      <td>Used to create and sign in to your account (via Supabase Auth). We don't collect your name, phone number, or any other profile information.</td>
+    </tr>
+    <tr>
+      <td>Password</td>
+      <td>Stored as a salted hash by our authentication provider (Supabase Auth) — we never see or store your password in plain text.</td>
+    </tr>
+    <tr>
+      <td>Your arguments / debate content</td>
+      <td>The statements you enter and the argument map built from them (nodes, speakers, structure) are saved to your account so you can revisit them from the History tab.</td>
+    </tr>
+    <tr>
+      <td>AI credit balance &amp; purchase records</td>
+      <td>We track how many credits you have and deduct them as you use AI features. When you buy credits, we store the amount purchased and a Stripe transaction reference — never your card number.</td>
+    </tr>
+    <tr>
+      <td>Theme &amp; sound preferences</td>
+      <td>Saved only in your browser or device's local storage. This never leaves your device or reaches our servers.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  If you use the app without signing in ("guest mode"), your work stays in the app's memory for that
+  session only — nothing is sent to our servers until you sign in and it auto-saves.
+</p>
+
+<h2>How your content is used</h2>
+<p>
+  Each statement you submit is sent, along with the current state of your argument map, to
+  <a href="https://www.anthropic.com/legal/privacy">Anthropic's Claude API</a> so it can generate the
+  updated map, detect contradictions and rhetorical tactics, and power the Moderator tab. This is the
+  core function of the app — your content isn't sent anywhere else, isn't sold, and isn't used for
+  advertising. Under Anthropic's standard API terms, content sent to the API is not used to train their
+  models. See Anthropic's own privacy policy (linked above) for details on how they handle API data.
+</p>
+
+<h2>Payments</h2>
+<p>
+  AI credit purchases are handled entirely by <a href="https://stripe.com/privacy">Stripe</a>. When you
+  buy credits, you're taken to a Stripe-hosted checkout page — your card details go directly to Stripe
+  and never touch our servers. We only receive confirmation that a payment succeeded and the amount, so
+  we can add the corresponding credits to your account.
+</p>
+
+<h2>Who we share data with</h2>
+<p>We use a small number of service providers to run the app, each of which processes data on our behalf:</p>
+<ul>
+  <li><strong>Supabase</strong> — database, authentication, and server-side functions.</li>
+  <li><strong>Anthropic</strong> — AI processing of your debate content (see above).</li>
+  <li><strong>Stripe</strong> — payment processing for credit purchases.</li>
+  <li><strong>Cloudflare</strong> — hosts and serves the web app.</li>
+</ul>
+<p>We don't sell your data or share it with advertisers.</p>
+
+<h2>Data security</h2>
+<p>
+  All traffic to and from the app is encrypted (HTTPS). Your debates and account data are protected by
+  row-level security in our database, meaning only you can read or write your own data — not even other
+  signed-in users can see it.
+</p>
+
+<h2>Your controls</h2>
+<ul>
+  <li>Delete individual debates any time from the History tab.</li>
+  <li>
+    Delete all of your data — every saved debate and your credit balance — instantly and permanently
+    from <strong>Settings → Account → Delete my data</strong>. Your sign-in (email + password) stays
+    active so you can keep using it if you choose to; if you'd like your sign-in removed too, contact us
+    below and we'll take care of it.
+  </li>
+</ul>
+
+<h2>Children's privacy</h2>
+<p>
+  iDisagree is not directed at children under 13, and we do not knowingly collect data from anyone
+  under 13.
+</p>
+
+<h2>Changes to this policy</h2>
+<p>
+  If this policy changes, we'll update the date at the top of this page. Continued use of the app after
+  a change means you accept the updated policy.
+</p>
+
+<h2>Contact</h2>
+<p>
+  Questions about this policy or your data: <a href="mailto:support@trolleysolution.com">support@trolleysolution.com</a>.
+</p>
+
+</main>
+</body>
+</html>

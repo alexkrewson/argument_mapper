@@ -3612,6 +3612,20 @@ button {
 [data-dark="true"] .settings-user-email { color: #92a1b5; }
 [data-dark="true"] .settings-section-label--themes { border-top-color: #334155; }
 
+.settings-delete-confirm {
+  padding: 0.35rem 0.5rem 0.5rem;
+}
+.settings-delete-confirm p {
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: #64748b;
+  margin: 0 0 0.5rem;
+}
+.settings-delete-error {
+  color: #dc2626 !important;
+}
+[data-dark="true"] .settings-delete-confirm p:not(.settings-delete-error) { color: #92a1b5; }
+
 /* --- Cost estimate below submit button --- */
 .cost-estimate {
   display: block;

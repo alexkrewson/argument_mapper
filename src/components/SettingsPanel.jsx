@@ -30,13 +30,45 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
   const [showHelp, setShowHelp] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
   const ref = useRef(null);
+
+  const handleDeleteData = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error("Not signed in.");
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${session.access_token}` },
+        }
+      );
+      if (!resp.ok) throw new Error("Couldn't delete your data. Try again.");
+      await supabase.auth.signOut();
+      setConfirmDelete(false);
+      setOpen(false);
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Close on outside click or touch
   useEffect(() => {
     if (!open) return;
     const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) { setOpen(false); onThemePreviewEnd?.(); }
+      if (ref.current && !ref.current.contains(e.target)) {
+        setOpen(false);
+        onThemePreviewEnd?.();
+        setConfirmDelete(false);
+        setDeleteError(null);
+      }
     };
     document.addEventListener("mousedown", handler);
     document.addEventListener("touchstart", handler, { passive: true });
@@ -84,6 +116,25 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                   <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
                     Sign out
                   </button>
+                  {!confirmDelete ? (
+                    <button className="theme-option" onClick={() => setConfirmDelete(true)}>
+                      Delete my data
+                    </button>
+                  ) : (
+                    <div className="settings-delete-confirm">
+                      <p>
+                        Permanently deletes all your saved debates and credit balance.
+                        Your sign-in itself isn't affected. This can't be undone.
+                      </p>
+                      {deleteError && <p className="settings-delete-error">{deleteError}</p>}
+                      <button className="theme-option" onClick={handleDeleteData} disabled={deleting}>
+                        {deleting ? "Deleting…" : "Yes, delete everything"}
+                      </button>
+                      <button className="theme-option" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
                 </>
               ) : (
                 <button className="theme-option" onClick={() => { onOpenAuth(); setOpen(false); }}>
