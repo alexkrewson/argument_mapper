@@ -9,15 +9,34 @@ days before a personal app can be promoted to production. Services like
 Testflight alternatives (BetaTesting.com, Tester Work, etc.) can be paid to 
 supply compliant testers. Steps needed before submitting:
 
-  [ ] Host app on idisagree.trolleysolution.com (domain purchased, not yet set up)
-        - Configure DNS for the domain
-        - Update GitHub Pages / deployment target or set up redirect
-        - Update Stripe success/cancel URLs in create-checkout-session/index.ts
-        - Update Supabase allowed redirect URLs for auth
+  [x] Host app on idisagree.trolleysolution.com — live on Cloudflare Pages
+        (project "idisagree"), not GitHub Pages (that workflow was removed
+        2026-06-30). Domain's DNS confirmed on Cloudflare.
+        - [x] DNS configured (Cloudflare nameservers confirmed 2026-07-24)
+        - [x] Deployment target is Cloudflare Pages, deploying from `master`
+        - [x] Stripe success/cancel URLs in create-checkout-session/index.ts
+              already default to https://idisagree.trolleysolution.com/...
+        - [ ] Update Supabase allowed redirect URLs for auth — NOT verified
+              yet either way, couldn't check via CLI (no stored access token
+              found locally). Check Supabase Dashboard > Authentication >
+              URL Configuration > Site URL / Redirect URLs.
   [ ] Set up custom SMTP (see note below) so auth emails work reliably
-  [ ] Build and sign a release APK (npm run build:apk) pointing at new domain
-  [ ] Upload APK to Google Play Console as a closed testing track
+  [ ] Set up support@trolleysolution.com forwarding to Gmail via Cloudflare
+        Email Routing (domain's DNS is already on Cloudflare, no MX record
+        exists yet). Dashboard: trolleysolution.com > Email > Email Routing >
+        Create address > support@trolleysolution.com > Send to Gmail. This is
+        the contact address used in the privacy policy (public/privacy.html)
+        and the in-app "Contact Developer" button.
+  [x] Build and sign a release bundle pointing at the new domain — done
+        2026-07-24 via `npm run build:aab:release` (Play Store wants an AAB,
+        not an APK). Output: android/app/build/outputs/bundle/release/
+        app-release.aab. Verified signed with the real release keystore
+        (idisagree-release.jks, alias "idisagree"), not a debug key.
+  [ ] Upload the AAB to Google Play Console as a closed testing track
   [ ] Recruit 12 testers and run for 14 days
+  [ ] Add privacy policy URL + fill out Data Safety form in Play Console
+        (public/privacy.html added 2026-07-24, needs to be live at
+        idisagree.trolleysolution.com/privacy.html before submitting)
 
 
 ================================================================================
@@ -25,6 +44,11 @@ Questions
 ================================================================================
 
 For the 12 testers and 14 days, are they expected to purchase tokens for the testing? Or would I need to somehow increase their tokens in the back end? What's normal? I will be using a testing service that charges me $20 and assigns testers to test my app.
+
+RESOLVED 2026-07-24: raised the global starter-credit default from $0.50 to
+$2.00 (migration 20260724160038_raise_starter_credits.sql) so every new
+signup — testers included — gets enough headroom to actually exercise AI
+features without needing to pay. No per-tester setup needed.
 
 
 
@@ -44,7 +68,7 @@ domain. Gmail SMTP works as a stopgap without a domain.
 Set up in: Supabase → Authentication → Emails → SMTP Settings.
 
 --- Consider removing Vercel MCP plugin ---
-The project deploys to GitHub Pages via GitHub Actions — Vercel is not used.
+The project deploys to Cloudflare Pages — Vercel is not used.
 The Vercel MCP server shows a setup warning on every Claude Code launch because
 it needs authentication. If we're confident we won't move to Vercel, remove the
 plugin to eliminate the noise.

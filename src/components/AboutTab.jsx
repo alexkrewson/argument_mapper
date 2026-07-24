@@ -371,7 +371,7 @@ export default function AboutTab({ isActive }) {
         </p>
         <p>
           Credits can be purchased from the <strong>⚙ settings</strong> menu. New accounts
-          receive $0.50 of free starter credits.
+          receive $2.00 of free starter credits.
         </p>
 
         <h3 id="other-controls">Other Controls</h3>
