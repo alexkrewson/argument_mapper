@@ -15,6 +15,9 @@ export default defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
+  workers: 1, // one test opens a real external Stripe tab — parallel workers
+              // fight over browser resources and cause unrelated timeouts.
+              // Robustness over speed here, per project preference.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"], ["html", { open: "never" }]],

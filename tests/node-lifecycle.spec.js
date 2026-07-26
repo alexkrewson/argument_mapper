@@ -19,6 +19,16 @@ test.describe("Node lifecycle — manual add/edit/rate/undo/redo/delete", () => 
     await page.getByTestId("tab-history").click();
     await page.getByTestId("history-new-argument").click();
 
+    // Capture this test's own debate ID from the very first auto-save
+    // response, so cleanup can delete it by exact ID rather than by
+    // "whichever History row looks newest" — that assumption is what caused
+    // a real user debate to get deleted by mistake during earlier test
+    // development (a race between this test's debounced auto-save and the
+    // History list's ordering). Never delete-by-position again.
+    const insertResponsePromise = page.waitForResponse(
+      (res) => res.url().includes("/rest/v1/debates") && res.request().method() === "POST"
+    );
+
     // ── Add node_1 (root claim) ─────────────────────────────────────────
     await page.getByTestId("controls-chevron").click();
     await page.getByTestId("ctrl-add-node").click();
@@ -27,6 +37,13 @@ test.describe("Node lifecycle — manual add/edit/rate/undo/redo/delete", () => 
 
     await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
     await expect(page.locator(".type-badge")).toHaveCount(1);
+
+    // App.jsx calls .insert(row).select().single(), so PostgREST returns a
+    // single JSON object here, not an array.
+    const insertResponse = await insertResponsePromise;
+    const insertedRow = await insertResponse.json();
+    const debateId = insertedRow.id;
+    expect(debateId).toBeTruthy();
 
     // ── Add node_2, parented to node_1 ──────────────────────────────────
     await page.getByTestId("ctrl-add-node").click();
@@ -98,19 +115,18 @@ test.describe("Node lifecycle — manual add/edit/rate/undo/redo/delete", () => 
     await expect(page.locator(".type-badge")).toHaveCount(0);
     await expect(page.locator("text=No statements yet.")).toBeVisible();
 
-    // ── Clean up the auto-saved History row this test created ───────────
+    // ── Clean up the exact History row this test created, by ID ─────────
     // Doubles as a test of the History delete confirm/cancel flow.
-    await page.waitForTimeout(2000); // let the 1.5s auto-save debounce settle
     await page.getByTestId("tab-history").click();
-    const firstRow = page.getByTestId("history-row").first();
-    await expect(firstRow).toBeVisible();
+    const ownRow = page.locator(`[data-debate-id="${debateId}"]`);
+    await expect(ownRow).toBeVisible();
 
-    await firstRow.getByTestId("history-delete-btn").click();
+    await ownRow.getByTestId("history-delete-btn").click();
     await page.getByTestId("history-delete-confirm-cancel").click();
-    await expect(firstRow).toBeVisible();
+    await expect(ownRow).toBeVisible();
 
-    await firstRow.getByTestId("history-delete-btn").click();
+    await ownRow.getByTestId("history-delete-btn").click();
     await page.getByTestId("history-delete-confirm-yes").click();
-    await page.waitForTimeout(500);
+    await expect(page.locator(`[data-debate-id="${debateId}"]`)).toHaveCount(0);
   });
 });
