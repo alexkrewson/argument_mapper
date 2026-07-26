@@ -107,9 +107,9 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                 <>
                   {creditBalance != null && (
                     <div className="settings-credits-card">
-                      <span className="settings-credits-amount">{formatCredits(creditBalance)}</span>
+                      <span className="settings-credits-amount" data-testid="settings-credits-amount">{formatCredits(creditBalance)}</span>
                       <span className="settings-credits-unit">remaining</span>
-                      <button className="settings-credits-buy" onClick={() => { onBuyCredits(); setOpen(false); }}>
+                      <button className="settings-credits-buy" data-testid="settings-buy-credits" onClick={() => { onBuyCredits(); setOpen(false); }}>
                         Top up
                       </button>
                     </div>
@@ -119,20 +119,20 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                     Sign out
                   </button>
                   {!confirmDelete ? (
-                    <button className="theme-option" onClick={() => setConfirmDelete(true)}>
+                    <button className="theme-option" data-testid="settings-delete-data-btn" onClick={() => setConfirmDelete(true)}>
                       Delete my data
                     </button>
                   ) : (
-                    <div className="settings-delete-confirm">
+                    <div className="settings-delete-confirm" data-testid="settings-delete-confirm">
                       <p>
                         Permanently deletes all your saved debates and credit balance.
                         Your sign-in itself isn't affected. This can't be undone.
                       </p>
                       {deleteError && <p className="settings-delete-error">{deleteError}</p>}
-                      <button className="theme-option" onClick={handleDeleteData} disabled={deleting}>
+                      <button className="theme-option" data-testid="settings-delete-confirm-yes" onClick={handleDeleteData} disabled={deleting}>
                         {deleting ? "Deleting…" : "Yes, delete everything"}
                       </button>
-                      <button className="theme-option" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                      <button className="theme-option" data-testid="settings-delete-confirm-cancel" onClick={() => setConfirmDelete(false)} disabled={deleting}>
                         Cancel
                       </button>
                     </div>
@@ -150,6 +150,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
           <button
             className="settings-section-label settings-section-label--themes settings-section-toggle"
             onClick={() => setShowHelp(v => !v)}
+            data-testid="settings-help-toggle"
           >
             Help <Chevron open={showHelp} />
           </button>
@@ -157,6 +158,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
             <>
               <button
                 className="theme-option"
+                data-testid="settings-contact-dev"
                 onClick={() => {
                   navigator.clipboard.writeText(SUPPORT_EMAIL);
                   setEmailCopied(true);
@@ -167,7 +169,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                 <CopyIcon />
               </button>
               {emailCopied && (
-                <div className="settings-email-copied">
+                <div className="settings-email-copied" data-testid="settings-email-copied">
                   {SUPPORT_EMAIL}<br/>copied to clipboard
                 </div>
               )}
@@ -178,6 +180,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
           <button
             className="settings-section-label settings-section-label--themes settings-section-toggle"
             onClick={() => setShowAdvanced(v => !v)}
+            data-testid="settings-advanced-toggle"
           >
             Advanced <Chevron open={showAdvanced} />
           </button>
@@ -194,6 +197,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                   aria-checked={gameMode}
                   tabIndex={0}
                   onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") onGameModeChange(!gameMode); }}
+                  data-testid="settings-game-mode-toggle"
                 >
                   <span className="settings-toggle-thumb" />
                 </span>
@@ -208,6 +212,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                   aria-checked={gameSounds && gameMode}
                   tabIndex={gameMode ? 0 : -1}
                   onKeyDown={(e) => { if (gameMode && (e.key === " " || e.key === "Enter")) onGameSoundsChange(!gameSounds); }}
+                  data-testid="settings-game-sounds-toggle"
                 >
                   <span className="settings-toggle-thumb" />
                 </span>
@@ -218,6 +223,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                   <div className="settings-section-label settings-section-label--sub settings-section-label--spaced">Debug</div>
                   <button
                     className="theme-option"
+                    data-testid="settings-copy-json"
                     onClick={() => {
                       onCopyContext();
                       setCopied(true);
@@ -235,6 +241,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
           <button
             className="settings-section-label settings-section-label--themes settings-section-toggle"
             onClick={() => setShowThemes(v => !v)}
+            data-testid="settings-themes-toggle"
           >
             Themes <Chevron open={showThemes} />
           </button>
@@ -254,6 +261,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                         className={`theme-option${key === currentThemeKey ? " theme-option--active" : ""}`}
                         onMouseEnter={() => onThemePreviewStart?.(key)}
                         onClick={() => { onThemeChange(key); setOpen(false); }}
+                        data-testid={`theme-option-${key}`}
                       >
                         <span
                           className={`theme-swatches${theme.dark ? " theme-swatches--dark" : ""}`}

@@ -97,11 +97,12 @@ export default function NodeDetailPopup({
             <div className="popup-edit-actions">
               <button
                 className="popup-edit-cancel-btn"
+                data-testid="node-edit-cancel"
                 onClick={isNew ? onClose : () => setEditMode(false)}
               >
                 Cancel
               </button>
-              <button className="popup-edit-save-btn" onClick={handleSave}>
+              <button className="popup-edit-save-btn" data-testid="node-edit-save" onClick={handleSave}>
                 {isNew ? "Add" : "Save"}
               </button>
             </div>
@@ -117,6 +118,7 @@ export default function NodeDetailPopup({
               placeholder="Enter the node statement…"
               rows={3}
               autoFocus
+              data-testid="node-edit-content"
             />
           </div>
 
@@ -127,6 +129,7 @@ export default function NodeDetailPopup({
               className="popup-edit-select"
               value={editType}
               onChange={(e) => setEditType(e.target.value)}
+              data-testid="node-edit-type"
             >
               {NODE_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -143,6 +146,7 @@ export default function NodeDetailPopup({
               className="popup-edit-select popup-edit-flag-select"
               value={editParent}
               onChange={(e) => setEditParent(e.target.value)}
+              data-testid="node-edit-parent"
             >
               <option value="">(none — root node)</option>
               {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
@@ -163,6 +167,7 @@ export default function NodeDetailPopup({
                   type="button"
                   className={`tactic-toggle tactic-${tac.type}${editTactics.includes(key) ? " tactic-toggle--on" : ""}`}
                   onClick={() => toggleTactic(key)}
+                  data-testid={`node-edit-tactic-${key}`}
                 >
                   {tac.symbol} {tac.name}
                 </button>
@@ -185,6 +190,7 @@ export default function NodeDetailPopup({
                     setEditContradicts(firstOther?.id ?? "");
                   }
                 }}
+                data-testid="node-edit-contradicts-toggle"
               >
                 ⚠️ Contradicts a node
               </button>
@@ -193,6 +199,7 @@ export default function NodeDetailPopup({
                   className="popup-edit-select popup-edit-flag-select"
                   value={editContradicts}
                   onChange={(e) => setEditContradicts(e.target.value)}
+                  data-testid="node-edit-contradicts-select"
                 >
                   {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
                     <option key={n.id} value={n.id}>
@@ -219,6 +226,7 @@ export default function NodeDetailPopup({
                     setEditGoalposts(firstOther?.id ?? "");
                   }
                 }}
+                data-testid="node-edit-goalposts-toggle"
               >
                 🥅 Moves the goalposts
               </button>
@@ -227,6 +235,7 @@ export default function NodeDetailPopup({
                   className="popup-edit-select popup-edit-flag-select"
                   value={editGoalposts}
                   onChange={(e) => setEditGoalposts(e.target.value)}
+                  data-testid="node-edit-goalposts-select"
                 >
                   {nodes?.filter((n) => n.id !== (isNew ? null : node?.id)).map((n) => (
                     <option key={n.id} value={n.id}>
@@ -246,6 +255,7 @@ export default function NodeDetailPopup({
                 type="button"
                 className={`flag-toggle flag-toggle--nonsequitur${editNonSequitur ? " flag-toggle--on" : ""}`}
                 onClick={() => setEditNonSequitur((prev) => !prev)}
+                data-testid="node-edit-nonsequitur-toggle"
               >
                 ⚡ Doesn't logically follow
               </button>
@@ -264,6 +274,7 @@ export default function NodeDetailPopup({
                   if (id && !editTwins.includes(id)) setEditTwins((prev) => [...prev, id]);
                   e.target.value = "";
                 }}
+                data-testid="node-edit-twin-select"
               >
                 <option value="">Link a twin node…</option>
                 {nodes?.filter((n) => n.id !== node?.id && !editTwins.includes(n.id)).map((n) => (
@@ -320,6 +331,7 @@ export default function NodeDetailPopup({
                 if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTag(); }
               }}
               placeholder="Add tag — Enter or comma to confirm"
+              data-testid="node-edit-tag-input"
             />
           </div>
 
@@ -428,11 +440,12 @@ export default function NodeDetailPopup({
                 onClick={() => setEditMode(true)}
                 title="Edit node"
                 aria-label="Edit node"
+                data-testid="node-view-edit-btn"
               >
                 ✏
               </button>
             )}
-            <button className="popup-close" onClick={onClose} aria-label="Close">
+            <button className="popup-close" data-testid="node-view-close-btn" onClick={onClose} aria-label="Close">
               &times;
             </button>
           </div>
@@ -661,6 +674,7 @@ export default function NodeDetailPopup({
                 className={`concede-btn${isActive ? " concede-btn--active" : ""}`}
                 onClick={() => onRate(node.id, ratingType)}
                 disabled={loading}
+                data-testid="node-concede-btn"
               >
                 {isActive ? `✓ ${btnText}` : btnText}
               </button>
@@ -709,7 +723,7 @@ export default function NodeDetailPopup({
           const directChildren = nodes?.filter(n => edges?.some(e => e.from === n.id && e.to === node.id)) ?? [];
           if (deleteStep === 0) return (
             <div className="popup-section popup-delete-row">
-              <button className="delete-node-btn" onClick={() => setDeleteStep(1)}>
+              <button className="delete-node-btn" data-testid="node-delete-btn" onClick={() => setDeleteStep(1)}>
                 Delete node
               </button>
             </div>
@@ -718,8 +732,8 @@ export default function NodeDetailPopup({
             <div className="popup-section popup-delete-confirm">
               <p className="delete-confirm-text">Delete <strong>{fmtNodeId(node.id)}</strong>?</p>
               <div className="delete-confirm-btns">
-                <button className="delete-cancel-btn" onClick={() => setDeleteStep(0)}>Cancel</button>
-                <button className="delete-confirm-btn" onClick={() => directChildren.length > 0 ? setDeleteStep(2) : onDelete(node.id)}>
+                <button className="delete-cancel-btn" data-testid="node-delete-cancel-btn" onClick={() => setDeleteStep(0)}>Cancel</button>
+                <button className="delete-confirm-btn" data-testid="node-delete-confirm-btn" onClick={() => directChildren.length > 0 ? setDeleteStep(2) : onDelete(node.id)}>
                   Delete
                 </button>
               </div>
@@ -732,8 +746,8 @@ export default function NodeDetailPopup({
                 Their descendants will also be deleted.
               </p>
               <div className="delete-confirm-btns">
-                <button className="delete-cancel-btn" onClick={() => setDeleteStep(0)}>Cancel</button>
-                <button className="delete-confirm-btn" onClick={() => onDelete(node.id)}>Delete all</button>
+                <button className="delete-cancel-btn" data-testid="node-delete-cancel-btn" onClick={() => setDeleteStep(0)}>Cancel</button>
+                <button className="delete-confirm-btn" data-testid="node-delete-confirm-btn" onClick={() => onDelete(node.id)}>Delete all</button>
               </div>
             </div>
           );

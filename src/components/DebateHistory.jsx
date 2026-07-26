@@ -79,10 +79,10 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
             <div className="concession-modal-header">Delete forever?</div>
             <p className="concession-modal-body">Are you sure you want to delete this conversation forever?</p>
             <div className="concession-modal-actions">
-              <button className="concession-btn-confirm" onClick={() => handleDelete(confirmDelete)}>
+              <button className="concession-btn-confirm" data-testid="history-delete-confirm-yes" onClick={() => handleDelete(confirmDelete)}>
                 Delete
               </button>
-              <button className="concession-btn-dismiss" onClick={() => setConfirmDelete(null)}>
+              <button className="concession-btn-dismiss" data-testid="history-delete-confirm-cancel" onClick={() => setConfirmDelete(null)}>
                 Cancel
               </button>
             </div>

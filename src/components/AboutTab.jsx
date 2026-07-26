@@ -98,6 +98,7 @@ export default function AboutTab({ isActive }) {
           className="about-nav-toggle"
           onClick={() => setCollapsed(v => !v)}
           title={collapsed ? "Expand navigation" : "Collapse navigation"}
+          data-testid="about-nav-toggle"
         >{collapsed ? "▶" : "◀"}</button>
 
         {!collapsed && (
@@ -113,6 +114,7 @@ export default function AboutTab({ isActive }) {
                   <div
                     className={`about-nav-link${isParentActive ? " about-nav-link--active" : ""}${section.sub ? " about-nav-link--parent" : ""}`}
                     onClick={() => { scrollTo(section.id); if (!section.sub) return; }}
+                    data-testid={`about-nav-link-${section.id}`}
                   >
                     <span className="about-nav-label" onClick={() => scrollTo(section.id)}>
                       {section.label}

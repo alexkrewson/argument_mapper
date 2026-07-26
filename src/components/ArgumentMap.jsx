@@ -322,7 +322,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const nonSeqHtml = data.non_sequitur ? `<span title="This statement doesn't logically connect to the argument" style="${cs("#dc2626")}">⚡ non-sequitur</span>` : "";
       const chipRow = (chipHtml || nonSeqHtml) ? `<div style="${rowStyle}">${chipHtml}${nonSeqHtml}</div>` : "";
 
-      return `<div style="position:absolute;top:${BADGE_BASE_TOP}px;left:${BADGE_BASE_TOP}px;display:flex;flex-direction:column;gap:${GAP}px;pointer-events:none;width:${BADGE_AVAIL}px;opacity:${data.faded ? 0.25 : 1};">
+      return `<div data-node-id="${data.id}" style="position:absolute;top:${BADGE_BASE_TOP}px;left:${BADGE_BASE_TOP}px;display:flex;flex-direction:column;gap:${GAP}px;pointer-events:none;width:${BADGE_AVAIL}px;opacity:${data.faded ? 0.25 : 1};">
         ${primaryRow}${chipRow}
       </div>`;
     };

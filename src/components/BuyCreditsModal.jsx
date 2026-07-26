@@ -55,7 +55,7 @@ export default function BuyCreditsModal({ onClose }) {
   return (
     <div className="concession-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="concession-modal credits-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="credits-modal-close" onClick={onClose}>✕</button>
+        <button className="credits-modal-close" data-testid="credits-modal-close" onClick={onClose}>✕</button>
         <h2 className="credits-modal-title">Buy AI Credits</h2>
         <p className="credits-modal-sub">Credits are deducted based on actual token usage.</p>
 
@@ -66,6 +66,7 @@ export default function BuyCreditsModal({ onClose }) {
               className="credits-pack-btn"
               onClick={() => handleBuy(pack.cents)}
               disabled={loading}
+              data-testid={`credits-pack-${pack.cents}`}
             >
               <span className="credits-pack-amount">{pack.label}</span>
               <span className="credits-pack-desc">{pack.desc}</span>
@@ -73,7 +74,7 @@ export default function BuyCreditsModal({ onClose }) {
           ))}
         </div>
 
-        {error && <p className="credits-modal-error">{error}</p>}
+        {error && <p className="credits-modal-error" data-testid="credits-modal-error">{error}</p>}
 
         <p className="credits-modal-note">
           You'll be taken to Stripe's secure checkout in a new tab. Credits appear in your account within seconds of payment.

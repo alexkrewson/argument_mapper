@@ -137,11 +137,11 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
         ) : mode === "signup" ? (
           <form className="auth-form" onSubmit={handleSignUp}>
             <input className="auth-input" type="email" placeholder="Email" value={email}
-              onChange={(e) => setEmail(e.target.value)} required autoFocus />
+              onChange={(e) => setEmail(e.target.value)} required autoFocus data-testid="auth-email" />
             <input className="auth-input" type="password" placeholder="Password" value={password}
-              onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+              onChange={(e) => setPassword(e.target.value)} required minLength={6} data-testid="auth-password" />
             {error && <p className="auth-error">{error}</p>}
-            <button className="concession-btn-confirm" type="submit" disabled={loading}>
+            <button className="concession-btn-confirm" type="submit" disabled={loading} data-testid="auth-submit">
               {loading ? "..." : "Create account"}
             </button>
             <button type="button" className="auth-toggle-link"

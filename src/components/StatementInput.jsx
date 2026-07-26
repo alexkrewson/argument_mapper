@@ -212,7 +212,7 @@ export default function StatementInput({
             <>Considering {speakerName(loadingSpeaker, theme)}'s statement<span className="thinking-dots"><span>.</span><span>.</span><span>.</span></span></>
           ) : nameEditable ? (
             <span className="name-edit-row">
-              <button type="button" className="name-refresh-btn" onClick={onRefreshName} title="Generate a new name" style={{ color: speakerColor }}>⟳</button>
+              <button type="button" className="name-refresh-btn" data-testid="speaker-name-refresh" onClick={onRefreshName} title="Generate a new name" style={{ color: speakerColor }}>⟳</button>
               <input
                 className="name-edit-input"
                 type="text"
@@ -221,6 +221,7 @@ export default function StatementInput({
                 size={Math.max(6, (currentName || "Your name").length + 1)}
                 onChange={(e) => onNameChange(e.target.value)}
                 style={{ color: speakerColor, borderColor: `${speakerColor}60` }}
+                data-testid="speaker-name-input"
               /><span>'s turn</span>
             </span>
           ) : (
