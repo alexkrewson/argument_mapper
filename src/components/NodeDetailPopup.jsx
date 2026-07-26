@@ -36,6 +36,7 @@ export default function NodeDetailPopup({
   const [editContradicts, setEditContradicts] = useState(node?.metadata?.contradicts ?? "");
   const [editGoalposts,   setEditGoalposts]   = useState(node?.metadata?.moves_goalposts_from ?? "");
   const [editTwins,       setEditTwins]       = useState(node?.metadata?.twins ?? []);
+  const [editNonSequitur, setEditNonSequitur] = useState(node?.metadata?.non_sequitur ?? false);
 
   // Escape: cancel edit, or close popup
   useEffect(() => {
@@ -69,6 +70,7 @@ export default function NodeDetailPopup({
       contradicts: editContradicts || null,
       moves_goalposts_from: editGoalposts || null,
       twins: editTwins,
+      non_sequitur: editNonSequitur,
     }, editParent || null);
     if (!isNew) setEditMode(false);
   };
@@ -233,6 +235,20 @@ export default function NodeDetailPopup({
                   ))}
                 </select>
               )}
+            </div>
+          </div>
+
+          {/* Non-sequitur flag */}
+          <div className="popup-section">
+            <h4>Non-sequitur</h4>
+            <div className="popup-edit-flag-row">
+              <button
+                type="button"
+                className={`flag-toggle flag-toggle--nonsequitur${editNonSequitur ? " flag-toggle--on" : ""}`}
+                onClick={() => setEditNonSequitur((prev) => !prev)}
+              >
+                ⚡ Doesn't logically follow
+              </button>
             </div>
           </div>
 
@@ -406,7 +422,7 @@ export default function NodeDetailPopup({
             ))}
           </div>
           <div className="popup-header-actions">
-            {onSave && (
+            {onSave && node.speaker === currentSpeaker && (
               <button
                 className="popup-edit-btn"
                 onClick={() => setEditMode(true)}
@@ -689,7 +705,7 @@ export default function NodeDetailPopup({
         )}
 
         {/* Delete */}
-        {onDelete && (() => {
+        {onDelete && node.speaker === currentSpeaker && (() => {
           const directChildren = nodes?.filter(n => edges?.some(e => e.from === n.id && e.to === node.id)) ?? [];
           if (deleteStep === 0) return (
             <div className="popup-section popup-delete-row">

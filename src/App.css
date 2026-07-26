@@ -2468,6 +2468,12 @@ button {
   color: #b45309;
   background: #fffbeb;
 }
+.flag-toggle--nonsequitur.flag-toggle--on {
+  opacity: 1;
+  border-color: #dc2626;
+  color: #dc2626;
+  background: #fef2f2;
+}
 
 .popup-edit-flag-select {
   width: 100%;
@@ -2571,6 +2577,11 @@ button {
   border-color: #f59e0b;
   color: #f59e0b;
   background: #1c1006;
+}
+[data-dark="true"] .flag-toggle--nonsequitur.flag-toggle--on {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: #1c0606;
 }
 
 /* ── LCARS — edit controls ────────────────────────────────────────────── */

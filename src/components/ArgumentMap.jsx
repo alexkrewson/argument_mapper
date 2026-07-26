@@ -703,10 +703,13 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const doLayout = () => runLayout(cy, () => {
         // dagre dumps zero-edge nodes at an arbitrary extreme position (rank 0,
         // ordered by array index) — pull them back next to the connected graph
-        // instead of leaving them wherever dagre happened to put them. This
-        // covers both AI-flagged non-sequiturs and any other orphan node
-        // (e.g. a root claim the model forgot to attach an edge to).
-        const strayNodes = cy.nodes().filter((n) => n.data("non_sequitur") || n.degree() === 0);
+        // instead of leaving them wherever dagre happened to put them. Only
+        // genuinely edge-less nodes get this treatment: a non-sequitur node
+        // that *does* have a real edge (the model isn't always reliable about
+        // leaving them disconnected) must stay in the normal tree layout, or
+        // its position relative to its connected neighbor becomes meaningless
+        // — stacking it by array order can put a child above its parent.
+        const strayNodes = cy.nodes().filter((n) => n.degree() === 0);
         if (strayNodes.length === 0) return;
         const connectedNodes = cy.nodes().not(strayNodes);
         const bb = connectedNodes.length > 0 ? connectedNodes.boundingBox() : { x2: 0, y1: 0 };

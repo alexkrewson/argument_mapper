@@ -664,6 +664,8 @@ export default function App() {
         else delete meta.moves_goalposts_from;
         if (newTwins.size > 0) meta.twins = [...newTwins];
         else delete meta.twins;
+        if (data.non_sequitur) meta.non_sequitur = true;
+        else delete meta.non_sequitur;
         return { ...n, content: data.content, type: data.type, metadata: meta };
       }
       if (addedTwins.includes(n.id)) {
