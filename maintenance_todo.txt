@@ -23,28 +23,31 @@ supply compliant testers. Steps needed before submitting:
               entries. Site URL left as packing_list's GitHub Pages URL
               (fallback default only, doesn't block argument_mapper since
               its redirect URL is now explicitly allow-listed).
-  [ ] Set up custom SMTP (see note below) so auth emails work reliably —
+  [x] Set up custom SMTP (see note below) so auth emails work reliably —
         DNS side confirmed DONE 2026-07-24 (all 3 Resend/SES domain-verification
         records live: MX + SPF TXT on send.trolleysolution.com, DKIM TXT on
-        resend._domainkey.trolleysolution.com). NOT verified: whether Supabase
-        Dashboard > Authentication > Emails > SMTP Settings was actually
-        pointed at Resend (host/port/API key) — that's a dashboard toggle,
-        not stored in this repo, couldn't check via CLI. To confirm: check
-        the "From" address on a real signup/reset email — if it's
-        noreply@mail.app.supabase.io, SMTP isn't wired up yet; if it's
-        @trolleysolution.com, it's done.
-  [ ] Set up support@trolleysolution.com forwarding to Gmail via Cloudflare
-        Email Routing (domain's DNS is already on Cloudflare, no MX record
-        exists yet). Dashboard: trolleysolution.com > Email > Email Routing >
-        Create address > support@trolleysolution.com > Send to Gmail. This is
-        the contact address used in the privacy policy (public/privacy.html)
-        and the in-app "Contact Developer" button.
-  [x] Build and sign a release bundle pointing at the new domain — done
-        2026-07-24 via `npm run build:aab:release` (Play Store wants an AAB,
-        not an APK). Output: android/app/build/outputs/bundle/release/
-        app-release.aab. Verified signed with the real release keystore
-        (idisagree-release.jks, alias "idisagree"), not a debug key.
-  [ ] Upload the AAB to Google Play Console as a closed testing track
+        resend._domainkey.trolleysolution.com). CONFIRMED 2026-07-26: Alex
+        checked the Supabase Dashboard > Authentication > Emails > SMTP
+        Settings screen — pointed at Resend and working.
+  [x] Set up support@trolleysolution.com forwarding to Gmail via Cloudflare
+        Email Routing. CONFIRMED 2026-07-26: Alex checked
+        support@trolleysolution.com — forwarding works. This is the contact
+        address used in the privacy policy (public/privacy.html) and the
+        in-app "Contact Developer" button.
+  [x] Build and sign a release bundle pointing at the new domain — rebuilt
+        2026-07-26 via `npm run build:aab:release` (Play Store wants an AAB,
+        not an APK) to pick up commits 46eb07d (fixed broken native Stripe
+        checkout redirect — Capacitor's WebView reports window.location.origin
+        as https://localhost, so the Jul-24 build would have sent testers to a
+        dead redirect after paying) and 90c0d4a (fixed a same-speaker-only
+        edit/delete permissions bug and non-sequitur node layout). Output:
+        android/app/build/outputs/bundle/release/app-release.aab. Verified
+        signed with the real release keystore (idisagree-release.jks, alias
+        "idisagree"), not a debug key.
+  [ ] Upload the AAB to Google Play Console as a closed testing track — ON
+        HOLD per Alex 2026-07-26: not submitting yet, wants automated Android
+        testing worked out on his machine first. The AAB above is ready to go
+        whenever he is.
   [ ] Recruit 12 testers and run for 14 days
   [ ] Add privacy policy URL + fill out Data Safety form in Play Console
         (public/privacy.html added 2026-07-24, needs to be live at
@@ -70,17 +73,14 @@ MAINTENANCE / DEV ENVIRONMENT TODO (Future Implementations)
 
 I'd like the coach to show everything on the current tab, all the buttons and functions, in language that addresses mobile or web, depending on what is detected. They should also have coaching bubbles to show describe the tabs. There should be different coaching bubbles depending on which tab the user is currently on.
 
---- Set up custom SMTP before launch ---
+--- Set up custom SMTP before launch — DONE ---
 Supabase's built-in email service has rate limits and isn't meant for
-production. Before launching to real users, configure a proper SMTP provider
-so auth emails (signup confirmation, OTP codes) are reliable and come from a
-professional address. Resend (resend.com) is the recommended option — free
-tier covers small apps, easy setup, good deliverability. Requires a verified
-domain. Gmail SMTP works as a stopgap without a domain.
+production. Resend (resend.com) is what got set up — free tier covers small
+apps, easy setup, good deliverability, domain already verified.
 Set up in: Supabase → Authentication → Emails → SMTP Settings.
-UPDATE 2026-07-24: domain verification DNS records for Resend are already
-live (see checklist item above) — just need to confirm the Supabase-side
-SMTP Settings screen was actually filled in and saved.
+UPDATE 2026-07-24: domain verification DNS records for Resend confirmed live.
+UPDATE 2026-07-26: Alex confirmed in the Supabase Dashboard that SMTP
+Settings is pointed at Resend and working. Closed out.
 
 --- Consider removing Vercel MCP plugin ---
 The project deploys to Cloudflare Pages — Vercel is not used.
