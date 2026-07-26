@@ -6,6 +6,7 @@ import { test, expect } from "@playwright/test";
 // `npm run test:e2e:full` (or `playwright test --grep @costly`).
 test.describe("New argument — combined input mode", () => {
   test("creates an argument from a 4-line A/B conversation @costly", async ({ page }) => {
+    test.setTimeout(240_000); // 4 sequential AI turns can take well over a minute
     await page.goto("/");
     await page.getByTestId("tab-history").click();
     await page.getByTestId("history-new-argument").click();
@@ -23,10 +24,15 @@ test.describe("New argument — combined input mode", () => {
     await page.getByTestId("combined-textarea").fill(conversation);
     await page.getByTestId("statement-submit").click();
 
-    // Processing runs turn-by-turn; poll until the "Processing turn N of 4" indicator clears.
-    await expect(page.locator("text=/Processing turn/i")).toHaveCount(0, { timeout: 90_000 });
-
+    // Processing runs turn-by-turn and can genuinely take a couple of minutes on
+    // production. Rather than trust the transient "Processing turn N of 4" label
+    // (which can outlive the actual work), poll for the real outcome: nodes
+    // landing on the map. The AI may decompose a single statement into more than
+    // one node (e.g. a rebuttal split into premise + conclusion), so assert a
+    // floor, not an exact count — 4 statements in means at least 4 nodes out.
     const nodeBadges = page.locator(".type-badge");
-    await expect(nodeBadges).toHaveCount(4, { timeout: 15_000 });
+    await expect(async () => {
+      expect(await nodeBadges.count()).toBeGreaterThanOrEqual(4);
+    }).toPass({ timeout: 220_000, intervals: [5_000] });
   });
 });
