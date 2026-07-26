@@ -73,6 +73,62 @@ MAINTENANCE / DEV ENVIRONMENT TODO (Future Implementations)
 
 I'd like the coach to show everything on the current tab, all the buttons and functions, in language that addresses mobile or web, depending on what is detected. They should also have coaching bubbles to show describe the tabs. There should be different coaching bubbles depending on which tab the user is currently on.
 
+--- PLAN (not yet built): mock the Thorough E2E tier's backend ---
+2026-07-26 alignment review against /home/alex/apps/shared/testing-guidelines.md
+found the biggest gap: that doc wants the "Thorough" test tier (tests/*.spec.js
+minus @costly) to run against a fully mocked backend — "zero cost and zero
+flakiness from real network dependencies" — and treats this as the preferred
+foundation, not an optional nicety. Right now every test in this suite,
+including the free ones, hits the real production Supabase project and reads/
+writes real rows in the real `debates` table. That's the direct cause of the
+2026-07-26 incident where a test's cleanup step deleted a real user debate
+(see [[feedback_test_cleanup_by_id]] in Claude's project memory / git log
+8cdf5ce) — mocking would have made that bug inert instead of destructive.
+Alex asked for this scoped out before any code changes. Proposed shape:
+
+  What gets mocked (via Playwright's page.route() intercepting requests to
+  *.supabase.co):
+    - Auth (/auth/v1/*) — sign-in returns a canned session object. This
+      actually makes tests/auth.setup.js simpler/faster than today: inject a
+      fake session directly into localStorage (matching the
+      sb-<ref>-auth-token key we already inspected the shape of) instead of
+      doing a real network round-trip at all.
+    - The `debates` table (/rest/v1/debates, Accept-Profile: argument_mapper)
+      — GET/POST/PATCH/DELETE served from an in-memory fixture, reset per
+      test. This is the one that matters most: it's what node-lifecycle.spec.js
+      and history.spec.js touch, and what caused the real-data-loss bug.
+
+  What probably stays real even after this:
+    - Stripe Checkout session creation (buy-credits.spec.js) — the shared doc
+      explicitly sanctions "open a checkout session, verify it, close without
+      paying" as an acceptable real-integration test even in Thorough, since
+      it can't actually charge anything. Could still mock it for speed/
+      determinism if preferred — flagging as a decision point, not a given.
+    - Everything tagged @costly (new-argument-combined, messy-arguments) —
+      by definition these need the real Claude/AI pipeline to be meaningful;
+      mocking them would defeat the point of the test.
+
+  Open questions to resolve before implementation:
+    - Fixture data shape: hand-write a small set of representative `debates`
+      rows (few nodes, many nodes, various node types/flags) so tests have
+      something realistic to assert against, vs. deriving fixtures from a
+      real export.
+    - How to keep mocked fixtures from silently drifting out of sync with the
+      real Supabase schema over time — the shared doc's own answer is
+      "should be checked against production periodically too," so this
+      wouldn't replace occasional real-backend runs, just make routine ones
+      free and safe.
+    - Whether to build this incrementally (mock `debates` first since it's
+      the highest-risk one, decide on auth/Stripe after) or all at once.
+
+  Separately, and independent of mocking: Alex declined (2026-07-26) to set
+  up a dedicated test account for now, so .env.test still points at his real
+  account. Mocking the Thorough tier would make that mostly moot for those
+  tests (no real backend touched at all) — but @costly tests still need a
+  real account, so a dedicated one remains worth revisiting for that tier
+  specifically, to stop spending Alex's personal credit balance and cluttering
+  his real History on every costly run.
+
 --- Set up custom SMTP before launch — DONE ---
 Supabase's built-in email service has rate limits and isn't meant for
 production. Resend (resend.com) is what got set up — free tier covers small

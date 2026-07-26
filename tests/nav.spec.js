@@ -20,4 +20,15 @@ test.describe("Navigation & settings", () => {
     await expect(page.getByTestId("settings-user-email")).toBeVisible();
     await expect(page.getByTestId("settings-signout")).toBeVisible();
   });
+
+  test("signed-in session persists across a reload", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("tab-history")).toBeVisible(); // auth-gated, proves signed in
+
+    await page.reload();
+    await expect(page.getByTestId("tab-history")).toBeVisible();
+    await page.getByTestId("settings-btn").click();
+    await page.getByTestId("settings-account-toggle").click();
+    await expect(page.getByTestId("settings-user-email")).toBeVisible();
+  });
 });

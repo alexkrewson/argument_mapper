@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
 // the default `npm run test:e2e` script — run it deliberately via
 // `npm run test:e2e:full` (or `playwright test --grep @costly`).
 test.describe("New argument — combined input mode", () => {
-  test("creates an argument from a 4-line A/B conversation @costly", async ({ page }) => {
+  test("creates an argument from a 4-line A/B conversation @costly", async ({ page }, testInfo) => {
     test.setTimeout(240_000); // 4 sequential AI turns can take well over a minute
     await page.goto("/");
     await page.getByTestId("tab-history").click();
@@ -24,15 +24,24 @@ test.describe("New argument — combined input mode", () => {
     await page.getByTestId("combined-textarea").fill(conversation);
     await page.getByTestId("statement-submit").click();
 
-    // Processing runs turn-by-turn and can genuinely take a couple of minutes on
-    // production. Rather than trust the transient "Processing turn N of 4" label
-    // (which can outlive the actual work), poll for the real outcome: nodes
-    // landing on the map. The AI may decompose a single statement into more than
-    // one node (e.g. a rebuttal split into premise + conclusion), so assert a
-    // floor, not an exact count — 4 statements in means at least 4 nodes out.
+    // Combined mode processes every turn sequentially in one background loop,
+    // then App.jsx auto-switches inputMode back to "turns" when the whole
+    // thing finishes (src/App.jsx:934) — waiting for the plain statement
+    // textarea to reappear is the real completion signal. A node-count
+    // threshold is not enough: it can pass after turn 1 while turns 2-4 are
+    // still running, and since Playwright tears the page down at the end of
+    // the test, that would silently truncate the AI's in-flight work and
+    // save a half-processed debate to the account.
+    await expect(page.getByTestId("statement-textarea")).toBeVisible({ timeout: 220_000 });
+
+    // The AI may decompose a single statement into more than one node (e.g. a
+    // rebuttal split into premise + conclusion), so assert a floor, not an
+    // exact count — 4 statements in means at least 4 nodes out.
     const nodeBadges = page.locator(".type-badge");
-    await expect(async () => {
-      expect(await nodeBadges.count()).toBeGreaterThanOrEqual(4);
-    }).toPass({ timeout: 220_000, intervals: [5_000] });
+    expect(await nodeBadges.count()).toBeGreaterThanOrEqual(4);
+
+    await page.waitForTimeout(1500); // let the auto-fit layout animation settle
+    const screenshot = await page.screenshot({ fullPage: true });
+    await testInfo.attach("final-map.png", { body: screenshot, contentType: "image/png" });
   });
 });
