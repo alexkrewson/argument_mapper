@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "../utils/supabase";
+
+const PROD_ORIGIN = "https://idisagree.trolleysolution.com";
 
 const PACKS = [
   { label: "50¢", cents: 50,  desc: "Starter" },
@@ -18,7 +21,12 @@ export default function BuyCreditsModal({ onClose }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Please sign in first.");
 
-      const origin     = `${window.location.origin}${window.location.pathname}`;
+      // Capacitor's Android/iOS WebView reports window.location.origin as
+      // https://localhost regardless of the real deployed domain, so the
+      // native app must use the production origin instead.
+      const origin     = Capacitor.isNativePlatform()
+        ? `${PROD_ORIGIN}/`
+        : `${window.location.origin}${window.location.pathname}`;
       const successUrl = `${origin}?payment=success&session_id={CHECKOUT_SESSION_ID}`;
       const cancelUrl  = `${origin}?payment=cancelled`;
 

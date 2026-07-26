@@ -16,11 +16,23 @@ supply compliant testers. Steps needed before submitting:
         - [x] Deployment target is Cloudflare Pages, deploying from `master`
         - [x] Stripe success/cancel URLs in create-checkout-session/index.ts
               already default to https://idisagree.trolleysolution.com/...
-        - [ ] Update Supabase allowed redirect URLs for auth — NOT verified
-              yet either way, couldn't check via CLI (no stored access token
-              found locally). Check Supabase Dashboard > Authentication >
-              URL Configuration > Site URL / Redirect URLs.
-  [ ] Set up custom SMTP (see note below) so auth emails work reliably
+        - [x] Update Supabase allowed redirect URLs for auth — verified
+              2026-07-24: added `https://idisagree.trolleysolution.com/**` to
+              Redirect URLs (Dashboard > Authentication > URL Configuration),
+              alongside the existing packing_list and reddit-comment-cluster
+              entries. Site URL left as packing_list's GitHub Pages URL
+              (fallback default only, doesn't block argument_mapper since
+              its redirect URL is now explicitly allow-listed).
+  [ ] Set up custom SMTP (see note below) so auth emails work reliably —
+        DNS side confirmed DONE 2026-07-24 (all 3 Resend/SES domain-verification
+        records live: MX + SPF TXT on send.trolleysolution.com, DKIM TXT on
+        resend._domainkey.trolleysolution.com). NOT verified: whether Supabase
+        Dashboard > Authentication > Emails > SMTP Settings was actually
+        pointed at Resend (host/port/API key) — that's a dashboard toggle,
+        not stored in this repo, couldn't check via CLI. To confirm: check
+        the "From" address on a real signup/reset email — if it's
+        noreply@mail.app.supabase.io, SMTP isn't wired up yet; if it's
+        @trolleysolution.com, it's done.
   [ ] Set up support@trolleysolution.com forwarding to Gmail via Cloudflare
         Email Routing (domain's DNS is already on Cloudflare, no MX record
         exists yet). Dashboard: trolleysolution.com > Email > Email Routing >
@@ -66,6 +78,9 @@ professional address. Resend (resend.com) is the recommended option — free
 tier covers small apps, easy setup, good deliverability. Requires a verified
 domain. Gmail SMTP works as a stopgap without a domain.
 Set up in: Supabase → Authentication → Emails → SMTP Settings.
+UPDATE 2026-07-24: domain verification DNS records for Resend are already
+live (see checklist item above) — just need to confirm the Supabase-side
+SMTP Settings screen was actually filled in and saved.
 
 --- Consider removing Vercel MCP plugin ---
 The project deploys to Cloudflare Pages — Vercel is not used.

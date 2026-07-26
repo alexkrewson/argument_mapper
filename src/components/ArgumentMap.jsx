@@ -250,9 +250,16 @@ function runLayout(cy, onDone) {
   });
   layout.one("layoutstop", () => {
     applyEdgeCurves(cy);
-    cy.resize(); // re-measure container in case it was display:none when last resized
-    fitToSafeZone(cy);
-    if (onDone) onDone();
+    // Defer to the next paint frame: on the very first render (e.g. loading a
+    // debate with content already present at mount) the container hasn't been
+    // laid out yet, so cy.width()/height() can read stale/zero here even
+    // though a resize() call is made — causing fitToSafeZone's zoom/pan to
+    // silently no-op and leaving the viewport at cytoscape's raw defaults.
+    requestAnimationFrame(() => {
+      cy.resize(); // re-measure container in case it was display:none when last resized
+      fitToSafeZone(cy);
+      if (onDone) onDone();
+    });
   });
   layout.run();
 }
@@ -694,14 +701,25 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     // repositions all nodes whenever the graph structure changes.
     if (cy.nodes().length > 0) {
       const doLayout = () => runLayout(cy, () => {
-        const nonSeqNodes = cy.nodes().filter((n) => n.data("non_sequitur"));
-        if (nonSeqNodes.length === 0) return;
-        const connectedNodes = cy.nodes().filter((n) => !n.data("non_sequitur"));
+        // dagre dumps zero-edge nodes at an arbitrary extreme position (rank 0,
+        // ordered by array index) — pull them back next to the connected graph
+        // instead of leaving them wherever dagre happened to put them. This
+        // covers both AI-flagged non-sequiturs and any other orphan node
+        // (e.g. a root claim the model forgot to attach an edge to).
+        const strayNodes = cy.nodes().filter((n) => n.data("non_sequitur") || n.degree() === 0);
+        if (strayNodes.length === 0) return;
+        const connectedNodes = cy.nodes().not(strayNodes);
         const bb = connectedNodes.length > 0 ? connectedNodes.boundingBox() : { x2: 0, y1: 0 };
         const rightX = bb.x2 + 80 + NODE_WIDTH / 2;
-        nonSeqNodes.forEach((n, i) => {
+        strayNodes.forEach((n, i) => {
           n.position({ x: rightX, y: bb.y1 + i * (n.height() + 40) });
         });
+        // Edge bends were computed against the pre-reposition coordinates —
+        // any edge touching a moved node (e.g. a non-sequitur with an
+        // attached edge) now has a stale curve-style/segment path relative
+        // to its node's new position, which renders as a plain diagonal
+        // line instead of a clean right-angle bend. Recompute after moving.
+        applyEdgeCurves(cy);
         fitToSafeZone(cy);
       });
 
