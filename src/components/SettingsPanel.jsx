@@ -85,17 +85,19 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
         onClick={() => setOpen((v) => !v)}
         title="Settings"
         aria-label="Settings"
+        data-testid="settings-btn"
       >
         ⚙
       </button>
 
       {open && (
-        <div className="settings-dropdown">
+        <div className="settings-dropdown" data-testid="settings-dropdown">
 
           {/* Account */}
           <button
             className="settings-section-label settings-section-toggle"
             onClick={() => setShowAccount(v => !v)}
+            data-testid="settings-account-toggle"
           >
             Account <Chevron open={showAccount} />
           </button>
@@ -112,8 +114,8 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                       </button>
                     </div>
                   )}
-                  <div className="settings-user-email">{user.email}</div>
-                  <button className="theme-option" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
+                  <div className="settings-user-email" data-testid="settings-user-email">{user.email}</div>
+                  <button className="theme-option" data-testid="settings-signout" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
                     Sign out
                   </button>
                   {!confirmDelete ? (
@@ -137,7 +139,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                   )}
                 </>
               ) : (
-                <button className="theme-option" onClick={() => { onOpenAuth(); setOpen(false); }}>
+                <button className="theme-option" data-testid="settings-signin-open" onClick={() => { onOpenAuth(); setOpen(false); }}>
                   Sign in / Sign up
                 </button>
               )}

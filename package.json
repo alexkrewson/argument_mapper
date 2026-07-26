@@ -12,7 +12,10 @@
     "build:apk:release": "npm run sync:android && cd android && ./gradlew assembleRelease",
     "build:aab:release": "npm run sync:android && cd android && ./gradlew bundleRelease",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test --grep-invert @costly",
+    "test:e2e:full": "playwright test",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
@@ -29,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@playwright/test": "^1.62.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",

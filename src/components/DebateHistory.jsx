@@ -33,7 +33,7 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
   };
 
   const newArgBtn = (
-    <button className="history-new-btn" onClick={onNewDebate}>+ New Argument</button>
+    <button className="history-new-btn" data-testid="history-new-argument" onClick={onNewDebate}>+ New Argument</button>
   );
 
   if (loading) {
@@ -63,10 +63,10 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
             <div className="concession-modal-header">Load debate?</div>
             <p className="concession-modal-body">This will replace your current debate. Any unsaved progress will be lost.</p>
             <div className="concession-modal-actions">
-              <button className="concession-btn-confirm" onClick={() => { onLoadDebate(confirmLoad); setConfirmLoad(null); }}>
+              <button className="concession-btn-confirm" data-testid="history-confirm-load" onClick={() => { onLoadDebate(confirmLoad); setConfirmLoad(null); }}>
                 Load anyway
               </button>
-              <button className="concession-btn-dismiss" onClick={() => setConfirmLoad(null)}>
+              <button className="concession-btn-dismiss" data-testid="history-cancel-load" onClick={() => setConfirmLoad(null)}>
                 Cancel
               </button>
             </div>
@@ -92,9 +92,9 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
       {debates.map((d) => {
         const nodeCount = d.map_data?.map?.argument_map?.nodes?.length ?? 0;
         return (
-          <div className="history-row" key={d.id}>
+          <div className="history-row" key={d.id} data-testid="history-row" data-debate-id={d.id}>
             <div className="history-row-info">
-              <span className="history-row-title history-row-title--clickable" onClick={() => currentNodeCount === 0 ? onLoadDebate(d) : setConfirmLoad(d)}>
+              <span className="history-row-title history-row-title--clickable" data-testid="history-row-title" onClick={() => currentNodeCount === 0 ? onLoadDebate(d) : setConfirmLoad(d)}>
                 {d.title}
               </span>
               <span className="history-row-meta">
@@ -104,7 +104,7 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
               </span>
             </div>
             <div className="history-row-actions">
-              <button className="history-delete-btn" onClick={() => setConfirmDelete(d.id)} title="Delete">✕</button>
+              <button className="history-delete-btn" data-testid="history-delete-btn" onClick={() => setConfirmDelete(d.id)} title="Delete">✕</button>
             </div>
           </div>
         );

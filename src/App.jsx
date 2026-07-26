@@ -1108,6 +1108,7 @@ export default function App() {
           className={`tab-btn${activeTab === "map" ? " tab-btn--active" : ""}`}
           onClick={() => setActiveTab("map")}
           data-tooltip="View the visual argument map"
+          data-testid="tab-map"
         >
           Map
         </button>
@@ -1115,6 +1116,7 @@ export default function App() {
           className={`tab-btn${activeTab === "moderator" ? " tab-btn--active" : ""}`}
           onClick={() => setActiveTab("moderator")}
           data-tooltip="Chat with the AI moderator for analysis"
+          data-testid="tab-moderator"
         >
           Moderator
         </button>
@@ -1123,6 +1125,7 @@ export default function App() {
             className={`tab-btn${activeTab === "arguments" ? " tab-btn--active" : ""}`}
             onClick={() => setActiveTab("arguments")}
             data-tooltip="Browse and load saved arguments"
+            data-testid="tab-history"
           >
             History
           </button>
@@ -1131,6 +1134,7 @@ export default function App() {
           className={`tab-btn${activeTab === "about" ? " tab-btn--active" : ""}`}
           onClick={() => setActiveTab("about")}
           data-tooltip="App guide, pricing, and credits"
+          data-testid="tab-about"
         >
           About
         </button>

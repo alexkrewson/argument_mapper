@@ -63,7 +63,7 @@ const ChangesIcon = () => (
   </svg>
 );
 
-function CtrlBtn({ icon, label, onClick, dormant, tooltipKey }) {
+function CtrlBtn({ icon, label, onClick, dormant, tooltipKey, testId }) {
   const [tipPos, setTipPos] = useState(null);
   const timerRef = useRef(null);
   const btnRef  = useRef(null);
@@ -89,6 +89,7 @@ function CtrlBtn({ icon, label, onClick, dormant, tooltipKey }) {
       onTouchStart={() => showTip(600)}
       onTouchEnd={hideTip}
       onContextMenu={(e) => e.preventDefault()}
+      data-testid={testId}
     >
       {tipPos && tooltip && (
         <div
@@ -190,14 +191,14 @@ export default function StatementInput({
       {/* Collapsible controls row — lives above the turn row so the chevron stays stationary */}
       {!directMode && (
         <div className={`controls-row${controlsExpanded && !loading ? " controls-row--expanded" : ""}`}>
-          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   dormant={isCombined} />
-          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       dormant={!canUndo} />
-          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       dormant={!canRedo} />
-          {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" tooltipKey="Add Node" onClick={onAddNode} />}
-          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} dormant={isCombined} />
-          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    dormant={!isCombined} />
+          <CtrlBtn icon={<SkipIcon />}     label="Skip"     tooltipKey="Skip"     onClick={onSkipTurn}                   dormant={isCombined} testId="ctrl-skip" />
+          <CtrlBtn icon={<UndoIcon />}     label="Undo"     tooltipKey="Undo"     onClick={onUndo}                       dormant={!canUndo} testId="ctrl-undo" />
+          <CtrlBtn icon={<RedoIcon />}     label="Redo"     tooltipKey="Redo"     onClick={onRedo}                       dormant={!canRedo} testId="ctrl-redo" />
+          {!isCombined && <CtrlBtn icon={<AddNodeIcon />} label="Add Node" tooltipKey="Add Node" onClick={onAddNode} testId="ctrl-add-node" />}
+          <CtrlBtn icon={<CombinedIcon />} label="Combined" tooltipKey="Combined" onClick={() => onModeChange("combined")} dormant={isCombined} testId="ctrl-combined" />
+          <CtrlBtn icon={<TurnsIcon />}    label="Turns"    tooltipKey="Turns"    onClick={() => onModeChange("turns")}    dormant={!isCombined} testId="ctrl-turns" />
           {changeLogCount > 0 && (
-            <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} tooltipKey="Changes" onClick={onReviewChanges} />
+            <CtrlBtn icon={<ChangesIcon />} label={`Changes (${changeLogCount})`} tooltipKey="Changes" onClick={onReviewChanges} testId="ctrl-changes" />
           )}
         </div>
       )}
@@ -233,6 +234,7 @@ export default function StatementInput({
             className={`chevron-btn${controlsExpanded ? " chevron-btn--expanded" : ""}`}
             onClick={() => setControlsExpanded(v => !v)}
             aria-label={controlsExpanded ? "Hide controls" : "Show controls"}
+            data-testid="controls-chevron"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="2,4 6,8 10,4"/>
@@ -253,6 +255,7 @@ export default function StatementInput({
             onPaste={handlePaste}
             disabled={loading}
             rows={3}
+            data-testid="combined-textarea"
           />
         ) : (
           <textarea
@@ -273,6 +276,7 @@ export default function StatementInput({
             }}
             disabled={loading}
             rows={3}
+            data-testid="statement-textarea"
           />
         )}
         {isCombined && attachedImages.length > 0 && (
@@ -314,6 +318,7 @@ export default function StatementInput({
           <button
             type="submit"
             disabled={loading || (isCombined ? (!combinedText.trim() && attachedImages.length === 0) : !text.trim())}
+            data-testid="statement-submit"
           >
             {loading
               ? (combiningProgress ? "Processing..." : "Thinking...")

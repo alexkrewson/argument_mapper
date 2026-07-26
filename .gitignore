@@ -8,8 +8,15 @@ pnpm-debug.log*
 lerna-debug.log*
 
 .env
+.env.test
 keys.local.txt
 node_modules
+
+# Playwright
+playwright/.auth
+playwright-report
+test-results
+blob-report
 dist
 dist-ssr
 *.local

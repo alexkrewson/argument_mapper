@@ -117,18 +117,18 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
         ) : mode === "signin" ? (
           <form className="auth-form" onSubmit={handleSignIn}>
             <input className="auth-input" type="email" placeholder="Email" value={email}
-              onChange={(e) => setEmail(e.target.value)} required autoFocus />
+              onChange={(e) => setEmail(e.target.value)} required autoFocus data-testid="auth-email" />
             <input className="auth-input" type="password" placeholder="Password" value={password}
-              onChange={(e) => setPassword(e.target.value)} required minLength={6} />
-            {error && <p className="auth-error">{error}</p>}
-            <button className="concession-btn-confirm" type="submit" disabled={loading}>
+              onChange={(e) => setPassword(e.target.value)} required minLength={6} data-testid="auth-password" />
+            {error && <p className="auth-error" data-testid="auth-error">{error}</p>}
+            <button className="concession-btn-confirm" type="submit" disabled={loading} data-testid="auth-submit">
               {loading ? "..." : "Sign in"}
             </button>
-            <button type="button" className="auth-toggle-link"
+            <button type="button" className="auth-toggle-link" data-testid="auth-toggle-signup"
               onClick={() => { setMode("signup"); clearError(); }}>
               No account? Sign up
             </button>
-            <button type="button" className="auth-toggle-link"
+            <button type="button" className="auth-toggle-link" data-testid="auth-toggle-forgot"
               onClick={() => { setMode("forgot"); clearError(); }}>
               Forgot password?
             </button>
