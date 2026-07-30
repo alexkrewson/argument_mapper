@@ -25,7 +25,10 @@
     "pretest:apk:all": "node -e \"require('fs').mkdirSync('test-results/apk',{recursive:true})\"",
     "test:apk:all": "node --test --test-concurrency=1 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/apk/support/json-reporter.mjs --test-reporter-destination=test-results/apk/results.json tests/apk/apk-static.test.mjs tests/apk/apk-device.test.mjs tests/apk/apk-flows.test.mjs tests/apk/apk-turns.test.mjs tests/apk/apk-settings.test.mjs",
     "test:apk:report": "node tests/apk/support/report.mjs",
-    "validate:apk": "npm run build:apk && npm run test:apk:all && npm run test:apk:report"
+    "validate:apk": "npm run build:apk && npm run test:apk:all && npm run test:apk:report",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name=idisagree --branch=master",
+    "deploy:verify": "node scripts/verify-deploy.mjs",
+    "ship": "npm run deploy && npm run deploy:verify && npm run build:apk"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
