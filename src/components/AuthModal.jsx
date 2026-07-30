@@ -2,7 +2,8 @@ import { useState } from "react";
 import { supabase } from "../utils/supabase";
 
 export default function AuthModal({ onClose, initialMode = "signin" }) {
-  const [mode, setMode] = useState(initialMode); // "signin" | "signup" | "forgot" | "otp_verify" | "reset_password"
+  // "signin" | "signup" | "forgot" | "otp_verify" | "reset_password" | "change_password"
+  const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
@@ -10,6 +11,7 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [signupDone, setSignupDone] = useState(false);
+  const [changeDone, setChangeDone] = useState(false);
 
   const clearError = () => setError(null);
 
@@ -91,6 +93,32 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
     }
   };
 
+  // Signed-in change. Re-authenticates first so someone who walks up to an
+  // unlocked session can't silently take the account over.
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+    clearError();
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error("You're not signed in.");
+
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password,
+      });
+      if (reauthError) throw new Error("Current password is incorrect.");
+
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setChangeDone(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const goToSignIn = () => { setMode("signin"); setOtp(""); setNewPassword(""); clearError(); };
 
   const title = {
@@ -99,6 +127,7 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
     forgot: "Reset password",
     otp_verify: "Enter code",
     reset_password: "Set new password",
+    change_password: "Change password",
   }[mode];
 
   return (
@@ -113,6 +142,33 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
               Go to sign in
             </button>
           </div>
+
+        ) : changeDone ? (
+          <div className="auth-signup-done">
+            <p data-testid="auth-change-done">Password updated.</p>
+            <button className="concession-btn-confirm" onClick={onClose} data-testid="auth-change-close">
+              Done
+            </button>
+          </div>
+
+        ) : mode === "change_password" ? (
+          <form className="auth-form" onSubmit={handleChangePassword}>
+            <p className="auth-hint">Confirm your current password, then choose a new one.</p>
+            <input className="auth-input" type="password" placeholder="Current password" value={password}
+              onChange={(e) => setPassword(e.target.value)} required autoFocus
+              data-testid="auth-current-password" />
+            <input className="auth-input" type="password" placeholder="New password" value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)} required minLength={6}
+              data-testid="auth-new-password" />
+            {error && <p className="auth-error" data-testid="auth-error">{error}</p>}
+            <button className="concession-btn-confirm" type="submit"
+              disabled={loading || newPassword.length < 6} data-testid="auth-change-submit">
+              {loading ? "..." : "Update password"}
+            </button>
+            <button type="button" className="auth-toggle-link" onClick={onClose}>
+              Cancel
+            </button>
+          </form>
 
         ) : mode === "signin" ? (
           <form className="auth-form" onSubmit={handleSignIn}>
