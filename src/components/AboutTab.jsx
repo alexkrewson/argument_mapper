@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const NAV = [
   { id: "about",               label: "About" },
-  { id: "debate-flow",         label: "Debate Flow" },
+  { id: "debate-flow",         label: "Disagreement Flow" },
   { id: "combined-mode",       label: "Combined Mode" },
   { id: "tabs",                label: "Tabs" },
   { id: "node-types",          label: "Node Types" },
@@ -76,6 +76,9 @@ export default function AboutTab({ isActive }) {
   // Auto-expand nav parent when a sub-item becomes active
   useEffect(() => {
     const parent = NAV.find(s => s.sub?.some(ss => ss.id === activeId));
+    // `expanded` is also user-toggleable, so it can't simply be derived during
+    // render. The updater is idempotent, so the extra render settles at once.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (parent) setExpanded(prev => ({ ...prev, [parent.id]: true }));
   }, [activeId]);
 
@@ -152,13 +155,13 @@ export default function AboutTab({ isActive }) {
       <div className="about-content">
         <h2 id="about">iDisagree</h2>
         <p className="about-lead">
-          A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude)
-          analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics,
+          A browser-based tool for productive disagreement between two people. You take turns submitting arguments, and an AI (Claude)
+          analyzes each statement, builds a live visual map of the disagreement, detects rhetorical tactics,
           moderates the exchange, tracks concessions, and — if you enable Game Mode — scores both
           participants in real time.
         </p>
 
-        <h3 id="debate-flow">The Debate Flow</h3>
+        <h3 id="debate-flow">The Disagreement Flow</h3>
         <p>The app alternates turns between two speakers — each shown in their own color.</p>
         <ol>
           <li>Before your first submission, <strong>edit your name</strong> in the input bar or hit the shuffle icon for a random one. The name locks in after you submit.</li>
@@ -181,7 +184,7 @@ export default function AboutTab({ isActive }) {
         <p>
           Behind the scenes: Claude Haiku first parses the raw text (or extracts text from a screenshot image) into an ordered list of attributed turns,
           stripping speaker labels and metadata. Then Claude Sonnet runs the full argument map analysis for
-          each turn sequentially, building the graph progressively just as if the debate had happened live.
+          each turn sequentially, building the graph progressively just as if the disagreement had happened live.
         </p>
         <p>
           The first distinct speaker maps to the current player, the second to their opponent.
@@ -191,9 +194,9 @@ export default function AboutTab({ isActive }) {
         <h3 id="tabs">Tabs</h3>
         <dl>
           <dt>Map</dt>
-          <dd>Live visual graph of the debate. Click any node to see its details. Click the background to hide/show the header and footer for a cleaner view.</dd>
+          <dd>Live visual graph of the disagreement. Click any node to see its details. Click the background to hide/show the header and footer for a cleaner view.</dd>
           <dt>Moderator</dt>
-          <dd>Side-by-side speaker breakdowns — scores (Game Mode), style analysis, and event log — plus an AI chat where you can ask Claude anything about the debate.</dd>
+          <dd>Side-by-side speaker breakdowns — scores (Game Mode), style analysis, and event log — plus an AI chat where you can ask Claude anything about the disagreement.</dd>
           <dt>History</dt>
           <dd>Your saved arguments (requires sign-in). Start a fresh argument with <strong>New Argument</strong>, load a previous one, or delete from here.</dd>
         </dl>
@@ -260,7 +263,7 @@ export default function AboutTab({ isActive }) {
           <li><strong>⤳ Goalpost Moving:</strong> A speaker quietly shifts the scope of their own earlier claim to dodge a challenge. Both affected nodes get an orange border.</li>
           <li><strong>⚡ Non-sequitur:</strong> A statement with no logical connection to any existing node. It appears <em>beside</em> the tree with a bright red border instead of connecting to it.</li>
         </ul>
-        <p>These flags only apply within a single speaker's own nodes — they can never occur across speakers, since arguing against the other person is just normal debate.</p>
+        <p>These flags only apply within a single speaker's own nodes — they can never occur across speakers, since arguing against the other person is just normal disagreement.</p>
 
         <h3 id="game-mode">Game Mode</h3>
         <p>
@@ -329,14 +332,14 @@ export default function AboutTab({ isActive }) {
         </p>
         <p>
           Below the breakdowns is an <strong>AI chat</strong> where you can ask Claude anything about the
-          debate — explain the map, identify weak points, steelman a position, summarize. Claude can update
+          disagreement — explain the map, identify weak points, steelman a position, summarize. Claude can update
           the argument map from the chat; a "Map updated" label appears on those replies.
         </p>
 
         <h3 id="accounts">Accounts &amp; Auto-Save</h3>
         <ul>
           <li>Sign in or sign up via the <strong>⚙ settings</strong> menu (top right).</li>
-          <li>When signed in, debates <strong>auto-save</strong> to the cloud a moment after any change.</li>
+          <li>When signed in, productive disagreements <strong>auto-save</strong> to the cloud a moment after any change.</li>
           <li>Load, delete, or start a new argument from the <strong>History</strong> tab. Use <strong>New Argument</strong> to clear the current map and start fresh.</li>
           <li>If you're not signed in, a nudge appears after a few nodes. Closing the tab will warn you about unsaved work.</li>
         </ul>
@@ -406,7 +409,7 @@ export default function AboutTab({ isActive }) {
           <li><strong>Be specific</strong> — vague statements produce vague nodes. Claude works best with clear, focused claims.</li>
           <li><strong>Concede freely</strong> — fading settled nodes keeps the map focused on what's still genuinely contested. In Game Mode, conceding also earns the most points.</li>
           <li><strong>Use Combined mode</strong> to import a conversation that already happened — paste a chat export and get the full map built instantly.</li>
-          <li><strong>Use the Moderator tab mid-debate</strong> for a neutral read on who's winning or where an argument is weak.</li>
+          <li><strong>Use the Moderator tab mid-disagreement</strong> for a neutral read on who's winning or where an argument is weak.</li>
           <li><strong>Click nodes in the graph</strong> — the popup shows the original wording vs. the AI's interpretation, useful if you want to dispute or edit a summary.</li>
           <li><strong>Undo aggressively</strong> — if Claude misreads a statement and creates a bad node, undo and rephrase rather than working around it.</li>
         </ul>
@@ -424,7 +427,7 @@ export default function AboutTab({ isActive }) {
           <tbody>
             <tr><td><strong>React 19</strong></td><td>UI framework, built with Vite. Vanilla CSS — no component library.</td></tr>
             <tr><td><strong>Cytoscape.js</strong></td><td>Graph rendering engine. Uses the <code>dagre</code> layout plugin for tree arrangement and <code>cytoscape-node-html-label</code> for rich badge overlays on nodes.</td></tr>
-            <tr><td><strong>Supabase</strong></td><td>PostgreSQL database for debate storage, Supabase Auth for user accounts, and Supabase Edge Functions (Deno runtime) as the AI proxy.</td></tr>
+            <tr><td><strong>Supabase</strong></td><td>PostgreSQL database for storage, Supabase Auth for user accounts, and Supabase Edge Functions (Deno runtime) as the AI proxy.</td></tr>
             <tr><td><strong>Claude (Anthropic)</strong></td><td>Claude Sonnet for full argument map analysis each turn; Claude Haiku for fast conversation parsing in Combined mode.</td></tr>
             <tr><td><strong>Web Audio API</strong></td><td>Synthesizes Game Mode sounds entirely in the browser — no audio files. Happy arpeggios, sad descending chords, and a fanfare for big wins.</td></tr>
             <tr><td><strong>Cloudflare Pages</strong></td><td>Hosts the static build. Deployed automatically from the <code>master</code> branch on every push.</td></tr>
@@ -462,10 +465,10 @@ export default function AboutTab({ isActive }) {
 
         <h4 id="tech-data">Data &amp; Persistence</h4>
         <p>
-          Each debate is stored as a single JSON blob in a Supabase <code>debates</code> table, alongside
-          the debate title, theme key, and speaker names. Auto-save fires 1.5 seconds after any map change
-          when the user is signed in — it upserts to the same row until a new debate is started.
-          Row-level security ensures users can only read and write their own debates.
+          Each productive disagreement is stored as a single JSON blob in a Supabase <code>debates</code> table, alongside
+          the title, theme key, and speaker names. Auto-save fires 1.5 seconds after any map change
+          when the user is signed in — it upserts to the same row until a new one is started.
+          Row-level security ensures users can only read and write their own rows.
         </p>
         <p>
           Locally, the app maintains an in-memory undo/redo stack (a plain array of map snapshots).
@@ -488,7 +491,7 @@ export default function AboutTab({ isActive }) {
 
         <h4 id="phil-problem">The Problem</h4>
         <p>
-          In person and text-based conversations are linear; Arguments are not. When two people debate in a chat thread,
+          In person and text-based conversations are linear; Arguments are not. When two people disagree in a chat thread,
           the conversation sprawls. Earlier points get buried, rebuttals get detached from what they're
           rebutting, and rhetorical sleight-of-hand is hard to call out in the moment. People talk past
           each other because the format makes it nearly impossible to track
@@ -501,7 +504,7 @@ export default function AboutTab({ isActive }) {
         <h4 id="phil-approach">The Approach</h4>
         <p>
           iDisagree imposes structure. Every statement becomes a node. Every node has a type, a
-          parent, and a speaker. The graph makes the logical shape of the debate visible and persistent:
+          parent, and a speaker. The graph makes the logical shape of the disagreement visible and persistent:
           you can see at a glance what supports what, what challenges what, and where the conversation
           has genuinely moved.
         </p>
@@ -520,7 +523,7 @@ export default function AboutTab({ isActive }) {
           Claude is not a participant. It doesn't take sides, doesn't try to win, and doesn't generate
           arguments. Its job is to be a neutral structural layer — converting raw statements into clean,
           objectively worded claims; detecting patterns the participants might not notice in the heat of
-          debate; and acting as a moderator who can explain the state of the argument without an agenda.
+          disagreement; and acting as a moderator who can explain the state of the argument without an agenda.
         </p>
         <p>
           This distinction matters. The goal is to give both participants a shared, trustworthy

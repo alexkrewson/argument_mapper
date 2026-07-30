@@ -55,7 +55,7 @@ function handleProxyError(status, body) {
  * @returns {object}            — Updated map with new nodes/edges added
  */
 export async function updateArgumentMap(currentMap, speaker, statement, speakerNames = { a: "Blue", b: "Green" }, onCreditsUpdate = null) {
-  const systemPrompt = `You are an argument mapping assistant for a two-person debate. You analyze statements and maintain a structured argument map as JSON following the Argument Mapping Spec v1.0.
+  const systemPrompt = `You are an argument mapping assistant for a productive disagreement between two people. You analyze statements and maintain a structured argument map as JSON following the Argument Mapping Spec v1.0.
 
 Your job:
 1. Analyze the new statement to identify claims, premises, objections, rebuttals, evidence, and clarifications.
@@ -75,7 +75,7 @@ Edge direction:
 JSON schema:
 {
   "argument_map": {
-    "title": "Brief title of the debate",
+    "title": "Brief title of the disagreement",
     "description": "Overview of what's being argued",
     "nodes": [{
       "id": "node_1",
@@ -121,7 +121,7 @@ Example — after Blue says "We should invest in renewable energy because fossil
 {
   "argument_map": {
     "title": "Renewable Energy Investment",
-    "description": "Debate on investing in renewable energy",
+    "description": "Disagreement on investing in renewable energy",
     "nodes": [
       { "id": "node_1", "type": "claim", "content": "We should invest in renewable energy", "speaker": "Blue", "metadata": { "confidence": "medium", "tags": ["energy", "policy"] } },
       { "id": "node_2", "type": "premise", "content": "Fossil fuels contribute to climate change", "speaker": "Blue", "metadata": { "confidence": "high", "tags": ["climate", "science"] } }
@@ -148,24 +148,24 @@ Rules:
 - Keep all existing nodes and edges unchanged (except for metadata.tactics which should be re-evaluated).
 - Set the "speaker" field on new nodes to the current speaker.
 - The "speaker" JSON field must always be "Blue" or "Green" (internal identifiers). However, when referring to speakers inside node content, summaries, or any prose text, use their display names: "${speakerNames.a}" for Blue and "${speakerNames.b}" for Green.
-- The first statement should set the title and description. Update them if the debate topic evolves.
+- The first statement should set the title and description. Update them if the topic evolves.
 - Assign appropriate confidence levels: high for facts/strong logic, medium for debatable, low for speculation.
 - Add 2-4 relevant tags per node.
 - Node content must be neutrally worded — rephrase the speaker's words into concise, objective summaries. Remove rhetorical flourishes, emotional language, and bias. State the core argument clearly in as few words as possible. If the speaker uses an analogy, strip the analogy from the content entirely and state the underlying argument in plain, literal terms; tag the node with the "analogy" tactic.
 - Each node must have at most ONE outgoing edge (one parent). Do not create multiple edges from the same source node.
 - TWIN NODES: If a new statement applies meaningfully to multiple separate branches of the tree (i.e., it logically supports or challenges nodes in branches that are not ancestors/descendants of each other), do NOT connect one node to multiple parents. Instead, create separate "twin" nodes — one per relevant parent branch — each with a unique node ID and exactly one outgoing edge. Link them by setting metadata.twins to an array of the other twins' node IDs on EACH twin node. Example: if node_8 and node_9 are twins, set node_8.metadata.twins = ["node_9"] and node_9.metadata.twins = ["node_8"]. Twins share the same speaker and nearly identical content. When one twin is conceded or contradicted, that consequence applies equally to all of its twins.
-- SINGLE ROOT CONSTRAINT: There must be exactly ONE root node at all times. The root is the node that has no incoming edges (no edge has it as a "to" target). The very first statement creates this root claim. Every subsequent node you add MUST connect to the existing tree via an outgoing edge — a node with no edge is never allowed, including non-sequiturs (see below for how to pick their parent). If a new statement reveals that the debate concerns a broader topic and the initial root was merely a sub-case of it, UPDATE the existing root claim node's content to reflect the broader scope rather than creating a new disconnected node.
+- SINGLE ROOT CONSTRAINT: There must be exactly ONE root node at all times. The root is the node that has no incoming edges (no edge has it as a "to" target). The very first statement creates this root claim. Every subsequent node you add MUST connect to the existing tree via an outgoing edge — a node with no edge is never allowed, including non-sequiturs (see below for how to pick their parent). If a new statement reveals that the disagreement concerns a broader topic and the initial root was merely a sub-case of it, UPDATE the existing root claim node's content to reflect the broader scope rather than creating a new disconnected node.
 
 Non-sequitur detection:
 - When a speaker's new statement does not logically connect to any existing node in the argument map — it introduces a wholly unrelated topic, switches the subject without any argumentative link, or is simply off-topic — set "metadata.non_sequitur": true on the new node.
 - A non-sequitur still needs exactly one outgoing edge like every other node — it must never be left disconnected. Since a non-sequitur has no logical relationship to reason about, do NOT search for a semantically related node to attach it to. Instead, connect it to whichever node comes immediately before it in generation order: if it's the first new node produced from the current statement, that's the most recent node that existed before this turn; if the current statement is compound and produced other new nodes before this one, that's the immediately preceding new node. Pick whichever relationship type reads most naturally (this edge is structural, not a claim about logical validity).
-- Only flag genuine non-sequiturs. A statement that challenges, supports, clarifies, or even loosely relates to the debate topic should be connected normally.
+- Only flag genuine non-sequiturs. A statement that challenges, supports, clarifies, or even loosely relates to the topic should be connected normally.
 - Omit the field entirely (do not set it to false) when the statement logically belongs in the tree.
 
 Contradiction detection:
 - When a speaker's new node directly contradicts one of their OWN earlier nodes (the speaker asserts something logically incompatible with what they previously said), set "metadata.contradicts" to the ID of the contradicted node (e.g., "node_3").
 - A contradiction means both statements cannot be true simultaneously — e.g., first claiming "X causes Y" then later claiming "X does not cause Y."
-- Only flag clear, direct logical contradictions between the SAME speaker's nodes. A contradiction CANNOT occur between nodes belonging to different speakers — that is just normal debate. Do not flag normal argumentation against the other user.
+- Only flag clear, direct logical contradictions between the SAME speaker's nodes. A contradiction CANNOT occur between nodes belonging to different speakers — that is just normal disagreement. Do not flag normal argumentation against the other user.
 - Omit the field or set to null if no contradiction exists.
 
 Goalpost moving detection:
@@ -376,7 +376,7 @@ Rules:
  * @returns {{ reply: string, updatedMap: object|null }}
  */
 export async function chatWithModerator(currentMap, chatHistory, speakerNames = { a: "Blue", b: "Green" }, onCreditsUpdate = null) {
-  const systemPrompt = `You are an AI debate moderator discussing an argument map with the user. You can explain your reasoning, discuss node classifications, answer questions about the map, and make edits when asked.
+  const systemPrompt = `You are an AI moderator for a productive disagreement, discussing an argument map with the user. You can explain your reasoning, discuss node classifications, answer questions about the map, and make edits when asked.
 
 Current argument map:
 ${JSON.stringify(currentMap, null, 2)}

@@ -42,7 +42,7 @@ export default function ModeratorGaugePopup({ analysis, onClose }) {
 
         {/* Leaning gauge (larger) */}
         <div className="popup-section">
-          <h4>Debate Leaning</h4>
+          <h4>Disagreement Leaning</h4>
           <div className="gauge-popup-track-wrapper">
             <div className="gauge-labels">
               <span className="gauge-label-a">Blue</span>
