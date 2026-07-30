@@ -72,22 +72,34 @@ try {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
 
-// Auto-upload the built APK to Google Drive via rclone (see ../upload-apk.sh).
-// No-ops quietly if rclone or the "gdrive" remote isn't set up yet.
-afterEvaluate {
-    ['assembleDebug', 'assembleRelease'].each { taskName ->
-        def t = tasks.findByName(taskName)
-        if (t != null) {
-            t.doLast {
-                t.outputs.files.each { f ->
-                    if (f.name.endsWith('.apk')) {
-                        exec {
-                            commandLine 'bash', "${rootProject.projectDir}/upload-apk.sh", f.absolutePath
-                            ignoreExitValue = true
-                        }
-                    }
-                }
-            }
+// Auto-upload built artifacts to Google Drive via rclone (see
+// ../../scripts/upload-apk.mjs). No-ops quietly if rclone or the "gdrive"
+// remote isn't set up.
+//
+// Do NOT go back to iterating t.outputs.files: assemble* are aggregation tasks
+// that declare no outputs ("Task has not declared any outputs despite executing
+// actions"), so the loop body never ran and the upload silently never happened.
+// Scan the real output directory instead.
+def uploadArtifacts = { String subdir, String ext ->
+    def dir = new File("${buildDir}/outputs/${subdir}")
+    if (!dir.isDirectory()) {
+        logger.lifecycle("upload-apk: ${dir} does not exist, nothing to upload")
+        return
+    }
+    def found = dir.listFiles()?.findAll { it.isFile() && it.name.endsWith(ext) } ?: []
+    if (found.isEmpty()) logger.lifecycle("upload-apk: no ${ext} found in ${dir}")
+    found.each { f ->
+        exec {
+            // node, not bash — bash is absent on Windows, and node is already
+            // required to build the web assets.
+            commandLine 'node', "${rootProject.projectDir}/../scripts/upload-apk.mjs", f.absolutePath
+            ignoreExitValue = true
         }
     }
+}
+
+afterEvaluate {
+    tasks.findByName('assembleDebug')?.doLast { uploadArtifacts('apk/debug', '.apk') }
+    tasks.findByName('assembleRelease')?.doLast { uploadArtifacts('apk/release', '.apk') }
+    tasks.findByName('bundleRelease')?.doLast { uploadArtifacts('bundle/release', '.aab') }
 }
