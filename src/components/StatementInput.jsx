@@ -107,7 +107,7 @@ function CtrlBtn({ icon, label, onClick, dormant, tooltipKey, testId }) {
 }
 
 export default function StatementInput({
-  currentSpeaker, speakerSummary, onSubmit, onChatMessage,
+  currentSpeaker, onSubmit, onChatMessage,
   loading, loadingSpeaker, directMode, onSkipTurn,
   onUndo, onRedo, canUndo, canRedo,
   onAddNode, onReviewChanges, changeLogCount,

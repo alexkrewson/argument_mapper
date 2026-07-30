@@ -12,6 +12,7 @@ import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeDetailPopup from "./components/NodeDetailPopup";
 import SettingsPanel from "./components/SettingsPanel";
+import { copyText } from "./utils/clipboard";
 import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
 import AIChangeLogModal from "./components/AIChangeLogModal";
 import AuthModal from "./components/AuthModal";
@@ -23,7 +24,7 @@ import { estimateNextTurnCents, formatCostCents } from "./utils/costEstimate";
 import { TACTICS } from "./utils/tactics.js";
 import { computeScores, computeScoreDelta, POINTS } from "./utils/scoring.js";
 import { playHappy, playSad, playBigWin } from "./utils/sounds.js";
-import { speakerName, speakerBorder } from "./utils/speakers.js";
+import { speakerBorder } from "./utils/speakers.js";
 import { fmtNodeId } from "./utils/format.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
 import { randomName } from "./utils/names.js";
@@ -219,6 +220,10 @@ export default function App() {
     localStorage.setItem("theme", key);
     setPreviewThemeKey(null);
   }, []);
+
+  // Stable identity so SettingsPanel's outside-click effect can depend on it
+  // without re-subscribing its listeners on every render.
+  const handleThemePreviewEnd = useCallback(() => setPreviewThemeKey(null), []);
   useEffect(() => {
     document.documentElement.setAttribute("data-dark",  theme.dark  ? "true" : "false");
     document.documentElement.setAttribute("data-lcars", theme.lcars ? "true" : "false");
@@ -271,7 +276,7 @@ export default function App() {
     } else if (params.get("payment") === "cancelled") {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const refreshBalance = useCallback(async () => {
     if (!user) return;
@@ -319,7 +324,7 @@ export default function App() {
     const entry = histEntries[histIndex];
     const autoTitle = inner.title ||
       inner.nodes.find((n) => n.type === "claim")?.content?.slice(0, 60) ||
-      `Debate — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+      `Productive Disagreement — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
     const timer = setTimeout(async () => {
       setSaveStatus("saving");
       try {
@@ -1101,7 +1106,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} onThemePreviewStart={setPreviewThemeKey} onThemePreviewEnd={() => setPreviewThemeKey(null)} user={user} onOpenAuth={() => setShowAuthModal(true)} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => navigator.clipboard.writeText(JSON.stringify(argumentMap, null, 2))} />
+          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} onThemePreviewStart={setPreviewThemeKey} onThemePreviewEnd={handleThemePreviewEnd} user={user} onOpenAuth={(mode = "signin") => { setAuthInitialMode(mode); setShowAuthModal(true); }} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => copyText(JSON.stringify(argumentMap, null, 2))} />
         </header>
         <nav className="tab-bar">
         <button

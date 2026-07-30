@@ -14,6 +14,9 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
 
   useEffect(() => {
     if (!user) return;
+    // Standard fetch-with-loading-flag. Only re-fires when `user` changes, so
+    // the cascading render the rule guards against doesn't apply.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     supabase
       .from("debates")
@@ -37,7 +40,7 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
   );
 
   if (loading) {
-    return <div className="history-loading">{newArgBtn}Loading debates...</div>;
+    return <div className="history-loading">{newArgBtn}Loading…</div>;
   }
 
   if (error) {
@@ -48,8 +51,8 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
     return (
       <div className="history-empty">
         {newArgBtn}
-        <p>No saved debates yet.</p>
-        <p>Sign in and start debating — your arguments will be saved automatically.</p>
+        <p>No saved productive disagreements yet.</p>
+        <p>Start one and it'll be saved here automatically.</p>
       </div>
     );
   }
@@ -60,8 +63,8 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
       {confirmLoad && (
         <div className="concession-overlay">
           <div className="concession-modal">
-            <div className="concession-modal-header">Load debate?</div>
-            <p className="concession-modal-body">This will replace your current debate. Any unsaved progress will be lost.</p>
+            <div className="concession-modal-header">Load this productive disagreement?</div>
+            <p className="concession-modal-body">This will replace your current one. Any unsaved progress will be lost.</p>
             <div className="concession-modal-actions">
               <button className="concession-btn-confirm" data-testid="history-confirm-load" onClick={() => { onLoadDebate(confirmLoad); setConfirmLoad(null); }}>
                 Load anyway

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { THEMES } from "../utils/themes.js";
 import { supabase } from "../utils/supabase";
+import { copyText } from "../utils/clipboard";
 
 function formatCredits(cents) {
   if (cents == null) return null;
@@ -76,7 +77,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("touchstart", handler);
     };
-  }, [open]);
+  }, [open, onThemePreviewEnd]);
 
   return (
     <div className="settings-wrap" ref={ref}>
@@ -115,6 +116,9 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                     </div>
                   )}
                   <div className="settings-user-email" data-testid="settings-user-email">{user.email}</div>
+                  <button className="theme-option" data-testid="settings-change-password" onClick={() => { onOpenAuth("change_password"); setOpen(false); }}>
+                    Change password
+                  </button>
                   <button className="theme-option" data-testid="settings-signout" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
                     Sign out
                   </button>
@@ -125,7 +129,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                   ) : (
                     <div className="settings-delete-confirm" data-testid="settings-delete-confirm">
                       <p>
-                        Permanently deletes all your saved debates and credit balance.
+                        Permanently deletes all your saved productive disagreements and credit balance.
                         Your sign-in itself isn't affected. This can't be undone.
                       </p>
                       {deleteError && <p className="settings-delete-error">{deleteError}</p>}
@@ -159,8 +163,10 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
               <button
                 className="theme-option"
                 data-testid="settings-contact-dev"
-                onClick={() => {
-                  navigator.clipboard.writeText(SUPPORT_EMAIL);
+                onClick={async () => {
+                  // Only confirm on success — this used to claim "copied" even
+                  // when the Android WebView had rejected the write.
+                  if (!(await copyText(SUPPORT_EMAIL))) return;
                   setEmailCopied(true);
                   setTimeout(() => setEmailCopied(false), 2500);
                 }}
