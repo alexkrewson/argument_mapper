@@ -58,6 +58,14 @@
   padding: 0.5rem;
   z-index: 70;
   width: 215px;
+  /* With every section expanded (ACCOUNT + HELP + ADVANCED + 8 themes) the
+     panel is taller than the viewport. Without these it simply overflows off
+     the bottom of the screen with no way to reach the lower entries.
+     dvh so the mobile address bar doesn't eat the bottom; vh as fallback. */
+  max-height: calc(100vh - 5rem);
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .settings-section-label {
