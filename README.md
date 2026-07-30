@@ -1,6 +1,6 @@
 # iDisagree
 
-A browser-based debate tool for two participants. Statements are analyzed by Claude (Anthropic), structured into a live argument graph, and tracked for rhetorical tactics, concessions, contradictions, and logical consistency. An optional Game Mode scores both participants in real time.
+A browser-based tool for productive disagreement between two participants. Statements are analyzed by Claude (Anthropic), structured into a live argument graph, and tracked for rhetorical tactics, concessions, contradictions, and logical consistency. An optional Game Mode scores both participants in real time.
 
 **[Live app →](https://idisagree.trolleysolution.com/)**  
 **[Full feature guide →](QUICKSTART.md)**
@@ -18,7 +18,7 @@ A browser-based debate tool for two participants. Statements are analyzed by Cla
 - **Game Mode** — points for concessions, good techniques, and penalties for fallacies; animated score toasts, sounds, and a live leaderboard in the Moderator tab
 - **AI Moderator** — per-speaker style analysis, event log, and a chat interface that can read and edit the map
 - **Undo/redo** — full history stack for every change
-- **Accounts & auto-save** — Supabase auth + auto-save to cloud; load or delete past debates from the Arguments tab
+- **Accounts & auto-save** — Supabase auth + auto-save to cloud; load or delete past productive disagreements from the History tab
 
 ---
 
@@ -51,7 +51,7 @@ src/
     MapTreeView.jsx         List-tab tree view
     NodeList.jsx            Node list item
     SettingsPanel.jsx       Settings dropdown (theme, game mode, auth)
-    DebateHistory.jsx       Arguments tab — saved debate list
+    DebateHistory.jsx       History tab — saved disagreement list
     AboutTab.jsx            About tab — feature guide with scrollable nav
     ConcessionConfirmModal.jsx  Concession confirmation dialog
     AIChangeLogModal.jsx    Change log modal

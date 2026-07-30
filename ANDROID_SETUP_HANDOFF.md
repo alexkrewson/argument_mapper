@@ -1,7 +1,22 @@
-# Android / Capacitor Setup Handoff
+# Android / Capacitor Setup Handoff — Linux
 
-**Last updated: 2026-06-04**
-**Goal: Run the Argument Mapper app on an Android emulator via Android Studio**
+**Machine-specific: the Ubuntu box (`CF-53-2`).** For Windows see
+`ANDROID_SETUP_WINDOWS.md`; nothing below about paths, KVM or `.bashrc` applies
+there.
+
+**Originally written 2026-06-04; corrected 2026-07-30** — see the auth and
+blank-screen sections, both of which said things that are no longer true.
+
+**Goal: Run the app on an Android emulator via Android Studio**
+
+> **Action required on this machine.** `android/gradle.properties` used to pin
+> `org.gradle.java.home=/home/alex/.local/jdk21`. That line was committed, so it
+> broke every other machine and has been removed. Gradle now resolves the JDK
+> from `JAVA_HOME`, so add this to `.bashrc` before the next Android build:
+>
+> ```bash
+> export JAVA_HOME="$HOME/.local/jdk21"
+> ```
 
 ---
 
@@ -116,7 +131,20 @@ Notes:
 
 ## App Auth Behavior
 
-Sign-in is **optional** — users can use the app as guests immediately. Sign-in is only nudged when a user has unsaved nodes ("Sign in to keep it"). There is no hard gate requiring auth before use.
+> Updated 2026-07-30 — guest mode was deprecated. The previous text here said
+> sign-in was optional with no hard gate; that is no longer true.
+
+Sign-in is **required** before any AI analysis. Credits are metered per account,
+so a turn cannot be attributed without one. Verified on the debug APK:
+
+- Submitting a statement while signed out opens the sign-in modal and **discards
+  the statement**. No AI call is made and nothing is charged.
+- The **History** tab is hidden entirely when signed out.
+- **Add Node** (`ctrl-add-node`) is still reachable signed out — it places a node
+  directly with no AI call, so it isn't gated.
+
+New accounts get a starter allowance of free credits; the running balance shows
+under ⚙ → ACCOUNT (`settings-credits-amount`).
 
 ---
 
@@ -124,10 +152,18 @@ Sign-in is **optional** — users can use the app as guests immediately. Sign-in
 
 The Argument Mapper is a Vite/React app with a Capacitor Android project scaffolded at `android/`. Relevant files:
 
-- `package.json` — has `@capacitor/android`, `@capacitor/core`, `@capacitor/cli`
-- `vite.config.js` — build output goes to `dist/`
+- `package.json` — `@capacitor/android`, `@capacitor/core`, `@capacitor/cli`,
+  `@capacitor/device`, `@capacitor/clipboard`
+- `vite.config.js` — build output goes to `dist/`; also splits vendor chunks
 - `android/` — the Capacitor Android project opened in Android Studio
-- `QUICKSTART.md` — project-level quickstart notes
+- `scripts/gradlew.mjs` — picks `gradlew` or `gradlew.bat` per platform
+- `scripts/upload-apk.mjs` — uploads finished artifacts to Google Drive via rclone
+- `QUICKSTART.md` — app feature guide
+- `tests/apk/` — APK validation suites (`npm run validate:apk`)
+
+Adding a Capacitor plugin requires `npx cap sync android` and a rebuild, and
+commits changes to `android/capacitor.settings.gradle` and
+`android/app/capacitor.build.gradle`.
 
 To rebuild web assets and sync to Android before running:
 ```bash
@@ -136,11 +172,20 @@ npx cap sync android
 ```
 Then run from Android Studio.
 
-> **⚠️ BLANK SCREEN BUG**: Always use `npm run build:mobile` (sets `BUILD_TARGET=mobile`),
-> never plain `npm run build`, when building for Android. The difference is the Vite `base`
-> path: web builds use `/argument_mapper/` (GitHub Pages path) while mobile builds use `./`
-> (relative, required for APK local file loading). Using the web build produces an APK that
-> opens to a blank white screen because assets can't be found at `/argument_mapper/`.
+> **Use `npm run build:mobile`, not plain `npm run build`.** It sets
+> `BUILD_TARGET=mobile`, which makes the Vite `base` relative (`./`) instead of
+> root-absolute (`/`).
+>
+> **The old "blank screen" warning here was out of date on two counts.** It
+> claimed web builds use `/argument_mapper/` — `vite.config.js` actually uses
+> `/`. And it claimed the wrong base produces a blank APK: tested 2026-07-30 by
+> deliberately shipping a web-base build to the emulator, and it rendered
+> correctly. Capacitor 8 serves the WebView from `https://localhost/`, not
+> `file://`, so root-absolute asset paths still resolve.
+>
+> `build:mobile` remains correct and `npm run test:apk` still fails the build on
+> absolute paths — but treat that as a convention check, not a live-bug guard.
+> If `server.androidScheme` is ever set to `file`, the original failure returns.
 >
 > To build the full APK in one command: `npm run build:apk`
 
@@ -150,3 +195,18 @@ Then run from Android Studio.
 
 - [ ] Set up signed release APK / keystore for Play Store distribution
 - [ ] Confirm desktop launcher (`android-studio.desktop`) PATH inheritance (currently unreliable — use terminal launch)
+- [ ] Export `JAVA_HOME` in `.bashrc` on this machine (see the note at the top)
+- [ ] Create an own-brand rclone `client_id` — the shared one rclone uses by
+      default is being retired during 2026 and will stop working
+- [ ] Versioned filenames for uploaded APKs; every build currently overwrites
+      the same `app-debug.apk`, so there's no build history to match a tester's
+      report against
+
+## Done since the original handoff (2026-07-30)
+
+- Google Drive auto-upload now actually fires. It never worked: the hook
+  iterated `assembleDebug.outputs.files`, and `assemble*` are aggregation tasks
+  that declare no outputs, so the loop body never ran.
+- `npm run validate:apk` builds and validates the APK — 54 checks, static plus
+  on-device, with an HTML screenshot report.
+- Guest mode deprecated; see the auth section above.

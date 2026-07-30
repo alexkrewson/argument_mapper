@@ -1,17 +1,20 @@
 # iDisagree — Feature Guide
 
-# Running Anroid Studio
-~/android-studio/bin/studio.sh.
+> Building or running the Android app? See `ANDROID_SETUP_HANDOFF.md` (Linux)
+> or `ANDROID_SETUP_WINDOWS.md` (Windows). This file covers app features only.
 
 ## What is it?
 
-A browser-based debate tool for two users. You take turns submitting arguments, and an AI (Claude) analyzes each statement, builds a live visual map of the debate, detects rhetorical tactics, moderates the exchange, tracks concessions, and — if you enable Game Mode — scores both participants in real time.
+A browser-based tool for productive disagreement between two people. You take turns submitting arguments, and an AI (Claude) analyzes each statement, builds a live visual map of the disagreement, detects rhetorical tactics, moderates the exchange, tracks concessions, and — if you enable Game Mode — scores both participants in real time.
 
-Debates are saved automatically when you're signed in — sign in via the ⚙ settings menu.
+**You need an account.** Sign in via the ⚙ settings menu before submitting —
+statements are analyzed by Claude and credits are metered per account, so a
+signed-out submission is rejected and the statement is discarded. New accounts
+start with a free credit allowance. Productive disagreements then save automatically.
 
 ---
 
-## The Debate Flow
+## The Disagreement Flow
 
 The app alternates turns between two speakers — each shown in their own color.
 
@@ -40,7 +43,7 @@ Switch back to **Turns** mode at any time to resume one-at-a-time submissions.
 ## Tabs
 
 ### Map
-The main area shows a live visual graph of the debate. Each node is a statement; edges show how arguments relate. Click any node to open its detail popup. Click the graph background to hide/show the header and footer for a cleaner view.
+The main area shows a live visual graph of the disagreement. Each node is a statement; edges show how arguments relate. Click any node to open its detail popup. Click the graph background to hide/show the header and footer for a cleaner view.
 
 **Node colors** match the speaker who made the argument.
 
@@ -48,11 +51,8 @@ The main area shows a live visual graph of the debate. Each node is a statement;
 - **Faded (opacity-reduced):** Agreed-upon or retracted — settled, move on.
 - **Red background + border:** Involved in a self-contradiction.
 - **Orange background + border:** Involved in goalpost-moving.
-- **Bright red border, no tree connection:** Non-sequitur — a statement with no logical link to the debate.
+- **Bright red border, no tree connection:** Non-sequitur — a statement with no logical link to the disagreement.
 - **Pulsing glow (briefly):** Newly added this turn.
-
-### List
-A tree view of all nodes, indented by parent-child relationship. Includes tactic badges, fading, and concede buttons. Good for mobile or dense debates.
 
 ### Moderator
 Two panels — one per speaker — showing:
@@ -60,10 +60,10 @@ Two panels — one per speaker — showing:
 - **Style analysis:** Claude's assessment of each speaker's rhetorical style.
 - **Events list:** A running record of notable moves — tactics used, concessions made, contradictions, retractions, points the opponent agreed with. In Game Mode, each event shows its point value.
 
-Below the panels is an **AI chat** where you can ask Claude anything about the debate (see [AI Moderator Chat](#ai-moderator-chat)).
+Below the panels is an **AI chat** where you can ask Claude anything about the disagreement (see [AI Moderator Chat](#ai-moderator-chat)).
 
-### Arguments *(signed-in users only)*
-A list of all your saved debates, sorted by last modified. Click a title to load it. Delete with ✕. Use the **New Argument** button to clear the map and start fresh.
+### History *(signed-in users only)*
+A list of all your saved productive disagreements, sorted by last modified. Click a title to load it. Delete with ✕. Use the **New Argument** button to clear the map and start fresh.
 
 ---
 
@@ -225,7 +225,7 @@ Scores are **cumulative** — every node on the map contributes to the running t
 
 Switch to the **Moderator** tab and use the chat at the bottom to talk to Claude directly.
 
-- Ask Claude to explain the map, identify weak points, steelman a position, summarize the debate, or anything else.
+- Ask Claude to explain the map, identify weak points, steelman a position, summarize the disagreement, or anything else.
 - Claude can **update the argument map** directly from the chat — a "Map updated" indicator appears on the reply when it does.
 
 ---
@@ -244,10 +244,16 @@ The **Review Changes** button (input bar, shows a count badge) opens a modal lis
 
 ## Accounts & Auto-Save
 
-- Sign in or sign up via the **⚙ settings** menu (top right).
-- When signed in, debates **auto-save** 1.5 seconds after any change. A "Saving…" / "Saved ✓" indicator appears in the header.
-- Load, delete, or start a new argument from the **Arguments** tab.
-- If you're not signed in and have started a debate, a nudge appears after a few nodes. Closing the tab triggers a browser warning about unsaved work.
+- Sign in or sign up via the **⚙ settings** menu (top right). This is required —
+  submitting while signed out opens the sign-in modal and discards the statement.
+- Credits are metered per account. New accounts start with a free allowance;
+  the balance is under ⚙ → ACCOUNT, and **Buy Credits** tops it up.
+- Productive disagreements **auto-save** 1.5 seconds after any change. A "Saving…" / "Saved ✓"
+  indicator appears in the header.
+- Load, delete, or start a new argument from the **History** tab, which is
+  hidden while signed out.
+- **Add Node** is the exception: it places a node directly with no AI call, so
+  it works without credits.
 
 ---
 
@@ -269,6 +275,8 @@ Open the **⚙ settings** menu (top right) to:
 | `Shift+Enter` | New line in the text box |
 | `Escape` | Close any open popup |
 
+*(The List tab was removed; `src/components/MapTreeView.jsx` is now unreferenced.)*
+
 ---
 
 ## Tips
@@ -276,6 +284,6 @@ Open the **⚙ settings** menu (top right) to:
 - **Be specific** — vague statements produce vague nodes. Claude works best with clear, focused claims.
 - **Concede freely** — fading settled nodes keeps the map focused on what's still genuinely contested. In Game Mode, conceding also earns the most points.
 - **Use Combined mode** to import a conversation that already happened — paste a chat export and get the full map instantly.
-- **Use the Moderator tab mid-debate** for a neutral read on who's winning or where an argument is weak.
+- **Use the Moderator tab mid-disagreement** for a neutral read on who's winning or where an argument is weak.
 - **Click nodes in the graph** — the popup shows the original wording vs. the AI's interpretation, useful if you want to dispute a summary or edit it.
 - **Undo aggressively** — if Claude misreads a statement and creates a bad node, undo and rephrase rather than trying to work around it.
