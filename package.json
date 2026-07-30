@@ -6,20 +6,31 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:mobile": "BUILD_TARGET=mobile vite build",
+    "build:mobile": "cross-env BUILD_TARGET=mobile vite build",
     "sync:android": "npm run build:mobile && npx cap sync android",
-    "build:apk": "npm run sync:android && cd android && ./gradlew assembleDebug",
-    "build:apk:release": "npm run sync:android && cd android && ./gradlew assembleRelease",
-    "build:aab:release": "npm run sync:android && cd android && ./gradlew bundleRelease",
+    "build:apk": "npm run sync:android && node scripts/gradlew.mjs assembleDebug",
+    "build:apk:release": "npm run sync:android && node scripts/gradlew.mjs assembleRelease",
+    "build:aab:release": "npm run sync:android && node scripts/gradlew.mjs bundleRelease",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:e2e": "playwright test --grep-invert @costly",
     "test:e2e:full": "playwright test",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "test:apk": "node --test tests/apk/apk-static.test.mjs",
+    "test:apk:device": "node --test tests/apk/apk-device.test.mjs",
+    "test:apk:flows": "node --test tests/apk/apk-flows.test.mjs",
+    "test:apk:turns": "node --test tests/apk/apk-turns.test.mjs",
+    "test:apk:settings": "node --test tests/apk/apk-settings.test.mjs",
+    "test:apk:costly": "cross-env RUN_COSTLY=1 node --test tests/apk/apk-costly.test.mjs",
+    "pretest:apk:all": "node -e \"require('fs').mkdirSync('test-results/apk',{recursive:true})\"",
+    "test:apk:all": "node --test --test-concurrency=1 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/apk/support/json-reporter.mjs --test-reporter-destination=test-results/apk/results.json tests/apk/apk-static.test.mjs tests/apk/apk-device.test.mjs tests/apk/apk-flows.test.mjs tests/apk/apk-turns.test.mjs tests/apk/apk-settings.test.mjs",
+    "test:apk:report": "node tests/apk/support/report.mjs",
+    "validate:apk": "npm run build:apk && npm run test:apk:all && npm run test:apk:report"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
     "@capacitor/cli": "^8.3.1",
+    "@capacitor/clipboard": "^8.0.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/device": "^8.0.2",
     "@supabase/supabase-js": "^2.99.1",
@@ -36,10 +47,12 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.7.0",
-    "eslint": "^9.39.1",
+    "adm-zip": "^0.6.0",
+    "cross-env": "^10.1.0",
+    "eslint": "^10.8.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "vite": "^5.4.21"
+    "vite": "^8.2.0"
   }
 }
