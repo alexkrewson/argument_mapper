@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { reportShot } from "./support/reportShot.js";
 
 /**
  * Exploratory @costly tests — not strict correctness checks. These submit
@@ -10,12 +11,14 @@ import { test, expect } from "@playwright/test";
  *
  * Each test spends real AI credits and deliberately leaves its debate in
  * History (not cleaned up) so it can be opened and inspected manually — the
- * point is to look at the result, not just assert on it. Full-page
- * screenshots of the final map are attached to the HTML report
- * (npm run test:e2e:report) for every run, pass or fail.
+ * point is to look at the result, not just assert on it. Every meaningful
+ * step (each node landing, the final map, the Moderator tab with Etiquette
+ * points on) is captured via reportShot() and compiled into one scrollable
+ * HTML doc by tests/support/screenshot-report-reporter.mjs — see
+ * playwright-report/screenshot-report.html after any run.
  */
 
-async function submitCombined(page, conversation) {
+async function submitCombinedWithStepShots(page, testInfo, conversation) {
   await page.goto("/");
   await page.getByTestId("tab-history").click();
   await page.getByTestId("history-new-argument").click();
@@ -33,14 +36,30 @@ async function submitCombined(page, conversation) {
   // still running, and since Playwright tears the page down at the end of
   // the test, that would silently truncate the AI's in-flight work and save
   // a half-processed debate to the real account.)
-  await expect(page.getByTestId("statement-textarea")).toBeVisible({ timeout: 220_000 });
-
+  //
+  // Poll node count while waiting so intermediate stages of the build-up get
+  // captured too, not just the finished tree.
   const nodeBadges = page.locator(".type-badge");
+  const statementTextarea = page.getByTestId("statement-textarea");
+  const deadline = Date.now() + 220_000;
+  let lastCount = 0;
+  while (Date.now() < deadline) {
+    const count = await nodeBadges.count();
+    if (count > lastCount) {
+      await page.waitForTimeout(300); // let the new node's layout/fit animation settle
+      await reportShot(page, testInfo, `after node ${count}`);
+      lastCount = count;
+    }
+    if (count > 0 && (await statementTextarea.isVisible().catch(() => false))) break;
+    await page.waitForTimeout(1000);
+  }
+  await expect(statementTextarea).toBeVisible();
   await expect(nodeBadges.first()).toBeVisible();
 
   // Give the map a moment to finish its auto-fit layout animation before
-  // screenshotting.
+  // the final screenshot.
   await page.waitForTimeout(1500);
+  await reportShot(page, testInfo, "final map");
 }
 
 async function attachMapReport(page, testInfo, conversation) {
@@ -58,12 +77,27 @@ async function attachMapReport(page, testInfo, conversation) {
     body: summary.join("\n") || "(no nodes)",
     contentType: "text/plain",
   });
+}
 
-  const screenshot = await page.screenshot({ fullPage: true });
-  await testInfo.attach("final-map.png", { body: screenshot, contentType: "image/png" });
+async function shotModeratorWithEtiquette(page, testInfo) {
+  await page.getByTestId("settings-btn").click();
+  await page.getByTestId("settings-advanced-toggle").click();
+  const etiquetteToggle = page.getByTestId("settings-game-mode-toggle");
+  if ((await etiquetteToggle.getAttribute("aria-checked")) !== "true") {
+    await etiquetteToggle.click();
+  }
+  await page.keyboard.press("Escape"); // close the settings dropdown
+  await page.getByTestId("tab-moderator").click();
+  await page.waitForTimeout(500); // let the moderator panel's own render/animation settle
+  await reportShot(page, testInfo, "moderator tab — etiquette points on");
 }
 
 test.describe("Messy arguments — AI mapping of hostile/low-substance debates", () => {
+  // Large, high-DPI viewport so every screenshot has room to fit the whole
+  // tree (fitToSafeZone re-fits to whatever viewport is present at launch)
+  // and renders at retina sharpness instead of the default 1280x720 @1x.
+  test.use({ viewport: { width: 1920, height: 1600 }, deviceScaleFactor: 2 });
+
   test("personal-attacks-over-chores @costly", async ({ page }, testInfo) => {
     test.setTimeout(240_000);
     const conversation = [
@@ -75,8 +109,9 @@ test.describe("Messy arguments — AI mapping of hostile/low-substance debates",
       "User B: You're so dramatic, it's literally one plate.",
     ].join("\n");
 
-    await submitCombined(page, conversation);
+    await submitCombinedWithStepShots(page, testInfo, conversation);
     await attachMapReport(page, testInfo, conversation);
+    await shotModeratorWithEtiquette(page, testInfo);
   });
 
   test("sarcastic-non-sequitur-pizza-fight @costly", async ({ page }, testInfo) => {
@@ -90,7 +125,8 @@ test.describe("Messy arguments — AI mapping of hostile/low-substance debates",
       "User B: \"Objectively.\" Sure. Whatever helps you sleep at night.",
     ].join("\n");
 
-    await submitCombined(page, conversation);
+    await submitCombinedWithStepShots(page, testInfo, conversation);
     await attachMapReport(page, testInfo, conversation);
+    await shotModeratorWithEtiquette(page, testInfo);
   });
 });

@@ -20,7 +20,11 @@ export default defineConfig({
               // Robustness over speed here, per project preference.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: [
+    ["list"],
+    ["html", { open: "never" }],
+    ["./tests/support/screenshot-report-reporter.mjs"],
+  ],
 
   use: {
     baseURL: process.env.TEST_BASE_URL || "https://idisagree.trolleysolution.com",
