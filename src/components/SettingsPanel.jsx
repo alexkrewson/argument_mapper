@@ -33,9 +33,36 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
   const [showThemes, setShowThemes] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmAccount, setConfirmAccount] = useState(false);
+  // null = not checked yet, [] = login is used nowhere else, [...] = names.
+  const [sharedApps, setSharedApps] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const ref = useRef(null);
+
+  // Ask the server whether this login is actually carrying data in the other
+  // apps sharing the project, so the confirmation warns about a real loss
+  // rather than a hypothetical one. Failure falls back to the broad warning.
+  const probeSharedApps = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+      // GET, never POST. An older deployment of this function deletes on any
+      // POST, so a POST probe would destroy data against it. GET 405s there,
+      // and we fall back to the broad warning.
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: "GET",
+          headers: { "Authorization": `Bearer ${session.access_token}` },
+        }
+      );
+      if (!resp.ok) return null;
+      const { sharedApps: apps } = await resp.json();
+      return Array.isArray(apps) ? apps : null;
+    } catch {
+      return null;
+    }
+  };
 
   // deleteAccount=false wipes this app's data and leaves the login intact.
   // deleteAccount=true also removes the login, which Google Play requires an
@@ -138,7 +165,11 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                     Sign out
                   </button>
                   {!confirmDelete ? (
-                    <button className="theme-option" data-testid="settings-delete-data-btn" onClick={() => setConfirmDelete(true)}>
+                    <button
+                      className="theme-option"
+                      data-testid="settings-delete-data-btn"
+                      onClick={async () => { setConfirmDelete(true); setSharedApps(await probeSharedApps()); }}
+                    >
                       Delete my data
                     </button>
                   ) : (
@@ -153,15 +184,24 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                       <button className="theme-option" data-testid="settings-delete-confirm-yes" onClick={() => handleDeleteData(false)} disabled={deleting}>
                         {deleting ? "Deleting…" : "Yes, delete my data"}
                       </button>
-                      {!confirmAccount ? (
-                        <button className="theme-option" data-testid="settings-delete-account-btn" onClick={() => setConfirmAccount(true)} disabled={deleting}>
+                      {/* Only offered once the probe succeeds. A null result means
+                          the backend predates account deletion, and offering it
+                          then would promise something the server won't do. */}
+                      {sharedApps === null ? null : !confirmAccount ? (
+                        <button
+                          className="theme-option"
+                          data-testid="settings-delete-account-btn"
+                          onClick={() => setConfirmAccount(true)}
+                          disabled={deleting}
+                        >
                           Delete my account too
                         </button>
                       ) : (
                         <div data-testid="settings-delete-account-confirm">
                           <p>
-                            This also removes your sign-in. The same login is used
-                            across our other apps, so you'll lose access to those too.
+                            {sharedApps.length > 0
+                              ? "This also removes your sign-in, which you're using for our other apps — you'll lose access to those and their data too."
+                              : "This also removes your sign-in. You aren't using it for any of our other apps, so nothing else is affected."}
                           </p>
                           <button className="theme-option" data-testid="settings-delete-account-yes" onClick={() => handleDeleteData(true)} disabled={deleting}>
                             {deleting ? "Deleting…" : "Delete data and account"}
