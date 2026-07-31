@@ -31,7 +31,29 @@ export function loadTestEnv() {
   );
 }
 
-export async function connect({ relaunch = false } = {}) {
+const APK_PATH = path.join(
+  repoRoot, "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk",
+);
+
+/**
+ * Push the freshly built APK before relaunching.
+ *
+ * `build:apk` builds but does not install, and only apk-device installs as part
+ * of its own setup. Without this, running a suite on its own silently tests
+ * whatever build happens to be on the device — which looks like a failing
+ * assertion about missing UI rather than a stale install.
+ */
+function installCurrentApk() {
+  if (!fs.existsSync(APK_PATH)) return "no-apk";
+  const res = adb(["install", "-r", "-d", APK_PATH], { timeout: 300_000 });
+  return res.status === 0 ? "installed" : `install-failed: ${res.stderr || res.stdout}`;
+}
+
+export async function connect({ relaunch = false, install = relaunch } = {}) {
+  if (install) {
+    const result = installCurrentApk();
+    if (result.startsWith("install-failed")) throw new Error(result);
+  }
   if (relaunch) {
     adb(["shell", "am", "force-stop", PKG]);
     await sleep(1200);

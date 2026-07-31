@@ -139,6 +139,36 @@ describe("APK settings menu (free)", { skip }, () => {
     assert.ok(await app.exists("settings-user-email"), "still signed in after cancel");
   });
 
+  // Account deletion is behind a second confirmation because it removes the
+  // shared login, not just this app's data. Never clicks the final confirm --
+  // that would delete the account .env.test depends on.
+  test("account deletion needs a second, separate confirmation", async () => {
+    await app.ensureSection("settings-account-toggle", "settings-delete-data-btn");
+    await app.click("settings-delete-data-btn");
+    await sleep(1200);
+
+    assert.ok(await app.exists("settings-delete-account-btn"), "no account-delete option");
+    assert.equal(
+      await app.exists("settings-delete-account-yes"),
+      false,
+      "final account-delete confirm is reachable in one click",
+    );
+
+    await app.click("settings-delete-account-btn");
+    await sleep(1200);
+    shot("delete-account-confirm");
+    assert.ok(await app.exists("settings-delete-account-confirm"), "no second confirmation");
+    assert.ok(await app.exists("settings-delete-account-yes"), "no final confirm button");
+
+    const warning = await app.bodyText();
+    assert.match(warning, /other apps/i, "warning doesn't mention the shared login");
+
+    await app.click("settings-delete-confirm-cancel");
+    await sleep(1200);
+    assert.equal(await app.exists("settings-delete-confirm"), false, "cancel left the dialog open");
+    assert.ok(await app.isSignedIn(), "still signed in after cancelling");
+  });
+
   test("HELP section reveals Contact Developer and copies the address", async () => {
     await app.ensureSection("settings-help-toggle", "settings-contact-dev");
     shot("help-section");

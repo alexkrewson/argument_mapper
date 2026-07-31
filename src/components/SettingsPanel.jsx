@@ -32,11 +32,16 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmAccount, setConfirmAccount] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
   const ref = useRef(null);
 
-  const handleDeleteData = async () => {
+  // deleteAccount=false wipes this app's data and leaves the login intact.
+  // deleteAccount=true also removes the login, which Google Play requires an
+  // app with account creation to offer — but the login is shared with the other
+  // apps in this Supabase project, so it's confirmed separately.
+  const handleDeleteData = async (deleteAccount = false) => {
     setDeleting(true);
     setDeleteError(null);
     try {
@@ -46,10 +51,20 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
         {
           method: "POST",
-          headers: { "Authorization": `Bearer ${session.access_token}` },
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ deleteAccount }),
         }
       );
-      if (!resp.ok) throw new Error("Couldn't delete your data. Try again.");
+      if (!resp.ok) {
+        throw new Error(
+          deleteAccount
+            ? "Couldn't delete your account. Try again."
+            : "Couldn't delete your data. Try again."
+        );
+      }
       await supabase.auth.signOut();
       setConfirmDelete(false);
       setOpen(false);
@@ -130,13 +145,30 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                     <div className="settings-delete-confirm" data-testid="settings-delete-confirm">
                       <p>
                         Permanently deletes all your saved productive disagreements and credit balance.
-                        Your sign-in itself isn't affected. This can't be undone.
+                        Your sign-in stays, so you can start fresh. This can't be undone.
                       </p>
                       {deleteError && <p className="settings-delete-error">{deleteError}</p>}
-                      <button className="theme-option" data-testid="settings-delete-confirm-yes" onClick={handleDeleteData} disabled={deleting}>
-                        {deleting ? "Deleting…" : "Yes, delete everything"}
+                      {/* Explicit arrow: passing the handler directly would hand
+                          React's click event in as deleteAccount, which is truthy. */}
+                      <button className="theme-option" data-testid="settings-delete-confirm-yes" onClick={() => handleDeleteData(false)} disabled={deleting}>
+                        {deleting ? "Deleting…" : "Yes, delete my data"}
                       </button>
-                      <button className="theme-option" data-testid="settings-delete-confirm-cancel" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                      {!confirmAccount ? (
+                        <button className="theme-option" data-testid="settings-delete-account-btn" onClick={() => setConfirmAccount(true)} disabled={deleting}>
+                          Delete my account too
+                        </button>
+                      ) : (
+                        <div data-testid="settings-delete-account-confirm">
+                          <p>
+                            This also removes your sign-in. The same login is used
+                            across our other apps, so you'll lose access to those too.
+                          </p>
+                          <button className="theme-option" data-testid="settings-delete-account-yes" onClick={() => handleDeleteData(true)} disabled={deleting}>
+                            {deleting ? "Deleting…" : "Delete data and account"}
+                          </button>
+                        </div>
+                      )}
+                      <button className="theme-option" data-testid="settings-delete-confirm-cancel" onClick={() => { setConfirmDelete(false); setConfirmAccount(false); }} disabled={deleting}>
                         Cancel
                       </button>
                     </div>

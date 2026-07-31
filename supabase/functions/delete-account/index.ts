@@ -30,9 +30,25 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Scoped to this app's data only. auth.users is a pool shared across
-  // multiple apps in this Supabase project, so we deliberately don't delete
-  // the login itself here — only iDisagree's debates and credit balance.
+  // Two modes.
+  //
+  // Default (no body, or { deleteAccount: false }) removes only this app's
+  // data. auth.users is a pool shared across every app in this Supabase
+  // project, so wiping iDisagree's rows must not touch the login.
+  //
+  // { deleteAccount: true } additionally deletes the auth user, which Google
+  // Play requires an app offering account creation to provide. That WILL sign
+  // the person out of the other apps sharing this project, which is why it's
+  // opt-in and separately confirmed in the UI rather than folded into the
+  // data-only path.
+  let deleteAccount = false;
+  try {
+    const body = await req.json();
+    deleteAccount = body?.deleteAccount === true;
+  } catch {
+    // No body — data-only, the original behaviour.
+  }
+
   const { error: debatesError } = await supabaseAdmin
     .from("debates")
     .delete()
@@ -55,7 +71,19 @@ Deno.serve(async (req) => {
     });
   }
 
-  return new Response(JSON.stringify({ deleted: true }), {
+  if (deleteAccount) {
+    // Last, so a failure here still leaves the data deleted rather than
+    // orphaning rows behind a login that no longer exists.
+    const { error: userError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+    if (userError) {
+      return new Response(
+        JSON.stringify({ error: "account_delete_failed", detail: userError.message, dataDeleted: true }),
+        { status: 500, headers: { "Content-Type": "application/json", ...CORS } },
+      );
+    }
+  }
+
+  return new Response(JSON.stringify({ deleted: true, accountDeleted: deleteAccount }), {
     status: 200, headers: { "Content-Type": "application/json", ...CORS },
   });
 });
