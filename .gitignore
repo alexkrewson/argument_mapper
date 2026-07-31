@@ -27,6 +27,13 @@ android/app/build
 android/build
 android/local.properties
 
+# Android signing — never commit. keystore.properties holds the passwords in
+# plaintext, and the .jks is the upload key itself. Back both up somewhere
+# outside the repo: without them you can't publish an update under this key.
+android/keystore.properties
+*.jks
+*.keystore
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
