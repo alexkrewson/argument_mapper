@@ -50,8 +50,105 @@ supply compliant testers. Steps needed before submitting:
         whenever he is.
   [ ] Recruit 12 testers and run for 14 days
   [ ] Add privacy policy URL + fill out Data Safety form in Play Console
-        (public/privacy.html added 2026-07-24, needs to be live at
-        idisagree.trolleysolution.com/privacy.html before submitting)
+        USE https://idisagree.trolleysolution.com/privacy  (no .html — that
+        form 308-redirects; browsers follow it but don't hand a redirect to a
+        review process). Confirmed live 2026-07-30, HTTP 200.
+
+
+--- Session log: 2026-07-30 (Windows machine set up, first dev box besides
+--- the Ubuntu one). Everything below was verified on-device, not assumed.
+
+  DONE — build/release
+  [x] Windows dev environment: git, gh, Node 22, JDK 21, Android Studio
+        2026.1.2, SDK API 36, AVD "idisagree_api36". See ANDROID_SETUP_WINDOWS.md.
+  [x] Three hardcoded-to-Linux breakages fixed: bash-only BUILD_TARGET syntax,
+        ./gradlew under cmd, and a committed org.gradle.java.home pointing at
+        /home/alex/.local/jdk21 which failed the build outright anywhere else.
+        THE UBUNTU BOX NOW NEEDS `export JAVA_HOME="$HOME/.local/jdk21"` in
+        .bashrc — it no longer gets that path from the repo.
+  [x] Google Drive APK upload now actually runs. It never had: the hook looped
+        over assembleDebug.outputs.files, and assemble* declare no outputs, so
+        the loop body never executed. Silent. Verified an APK reaching
+        gdrive:AndroidBuilds/argument_mapper/.
+  [x] Vite 5 -> 8, ESLint 10, 0 npm vulnerabilities. App chunk 1078 kB -> 167 kB.
+  [x] Cloudflare Pages deploys again. `npm audit fix --force` had left
+        @vitejs/plugin-react and eslint-plugin-react-hooks on peer ranges that
+        excluded the new majors, so `npm ci` failed on a clean checkout — which
+        is what Cloudflare runs. A failed Git-triggered build is invisible from
+        outside; the site just kept serving the old bundle for ~40 minutes.
+        `npm run deploy:verify` now checks the live entry-bundle hash, because
+        "deploy succeeded" and "users see the new code" are different claims.
+
+  DONE — app fixes
+  [x] Clipboard was dead in the APK. Both Copy map JSON and Contact Developer
+        used navigator.clipboard, which the Android WebView refuses; the
+        execCommand fallback fails there too. Now @capacitor/clipboard on
+        native. SettingsPanel also claimed "copied" after a failed copy.
+  [x] Settings panel overflowed short viewports — no max-height, overflow
+        visible. At a 600px viewport 59px was unreachable; at 500px, 159px.
+  [x] History tab told signed-in users to "sign in and start debating". That
+        string was in the empty-list branch, and the tab only renders when
+        signed in, so it was wrong 100% of the time.
+  [x] Terminology: user-facing "debate" -> "productive disagreement". The
+        `debates` table, the debate-flow anchor and identifiers are unchanged.
+  [x] Change-password added (settings > ACCOUNT), re-authenticating first.
+  [x] APK test suite: 55 checks, static + on-device over CDP, plus 5 @costly.
+        `npm run validate:apk`. HTML screenshot report.
+
+  BLOCKING — Play submission
+  [!] TWO RELEASE KEYSTORES NOW EXIST. Decide before the first upload; after
+        it, the choice is locked to whatever signed that build.
+          - Ubuntu:  idisagree-release.jks, alias "idisagree"  (pre-existing)
+          - Windows: android/upload-keystore.jks, alias "upload" (made
+            2026-07-30, 4096-bit, because release builds here were UNSIGNED —
+            build.gradle skips signing when keystore.properties is absent and
+            still reports BUILD SUCCESSFUL, producing a bundle Play rejects)
+        Pick one, copy it to both machines, delete the other. Back it up
+        somewhere off-machine: losing it means no more updates under that key.
+  [!] Play Billing vs Stripe. BuyCreditsModal opens Stripe checkout from inside
+        the app for credits consumed in-app. Play's Payments policy wants Play
+        Billing for that. This is the only item that can't be fixed after
+        launch without disrupting paying users. Post-Epic rules on linking out
+        may have changed — check the current policy before building anything.
+  [!] Account deletion: Play requires it for apps with account creation. Code
+        is written and committed but NOT deployed —
+        `supabase functions deploy delete-account` is still needed. The client
+        hides the option until the function answers a GET probe, so shipping in
+        either order is safe.
+
+  NEXT — my machine, needs your hands
+  [ ] Restore the test account's profiles row (I deleted it, see incident
+        below): insert into argument_mapper.profiles (id)
+        values ('b8d3c162-27dc-42f0-8fe1-f1cc709d6d06');
+  [ ] Deploy the delete-account function, then rerun `npm run test:apk:settings`
+        — 3 settings tests currently fail only because that profiles row is gone.
+  [ ] Decide: keep one consolidated Supabase project or split per-app. Splitting
+        is cheapest NOW; migrating auth.users between projects gets harder with
+        every user, and closed testers are about to arrive.
+
+  INCIDENT 2026-07-30 — probe deleted test-account data
+  A capability probe was written as POST. The deployed delete-account function
+  treats every POST as a delete, so the probe deleted the test account's rows
+  and profile. Contained (test account), but had that client shipped ahead of
+  the function, merely opening the confirmation dialog would have deleted a
+  real user's data with no confirmation. Probe is now GET, which the old
+  deployment 405s.
+  It did surface a genuine bug: data-only delete removed the profiles row, and
+  handle_new_user() only fires on insert into auth.users while the app only
+  ever selects. No path back — the credits card renders on a non-null balance,
+  so Buy Credits vanished permanently and that account could never purchase
+  again. Data-only now zeroes credits_cents and keeps the row.
+
+  SMALLER, NOT DONE
+  [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
+        closed-test bug reports are "it crashed" with nothing behind them.
+  [ ] minifyEnabled false: release ships unminified and unobfuscated.
+  [ ] Drive uploads overwrite one app-debug.apk — no build history to match a
+        tester's report against. One line in scripts/upload-apk.mjs.
+  [ ] rclone's shared client_id is being retired during 2026 (Alex: overlook
+        for now). Own client_id also removes the "unverified app" warning.
+  [ ] testing-guidelines.md is referenced by tests/README.md but exists only on
+        the Ubuntu box — not in apps-shared. One disk failure from gone.
 
 
 ================================================================================

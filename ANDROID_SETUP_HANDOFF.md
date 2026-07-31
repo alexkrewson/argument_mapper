@@ -193,9 +193,22 @@ Then run from Android Studio.
 
 ## Open Items
 
-- [ ] Set up signed release APK / keystore for Play Store distribution
+> The full pre-launch checklist, the 2026-07-30 session log and the open
+> Play-submission blockers live in `maintenance_todo.txt`. Only Android/Linux
+> machine specifics are repeated here.
+
+- [ ] **Two release keystores now exist — pick one before the first Play upload.**
+      This machine has `idisagree-release.jks` (alias `idisagree`); the Windows
+      machine generated `android/upload-keystore.jks` (alias `upload`) on
+      2026-07-30 because release builds there were unsigned. After the first
+      upload, Play locks to whichever key signed it, so builds from the other
+      machine will be rejected. Copy the survivor to both machines and back it
+      up off-machine.
+- [ ] Export `JAVA_HOME` in `.bashrc` on this machine (see the note at the top) —
+      required now that the committed `org.gradle.java.home` pin is gone.
 - [ ] Confirm desktop launcher (`android-studio.desktop`) PATH inheritance (currently unreliable — use terminal launch)
-- [ ] Export `JAVA_HOME` in `.bashrc` on this machine (see the note at the top)
+- [ ] Deploy the `delete-account` edge function — account deletion is written and
+      committed but not live.
 - [ ] Create an own-brand rclone `client_id` — the shared one rclone uses by
       default is being retired during 2026 and will stop working
 - [ ] Versioned filenames for uploaded APKs; every build currently overwrites
@@ -207,6 +220,12 @@ Then run from Android Studio.
 - Google Drive auto-upload now actually fires. It never worked: the hook
   iterated `assembleDebug.outputs.files`, and `assemble*` are aggregation tasks
   that declare no outputs, so the loop body never ran.
-- `npm run validate:apk` builds and validates the APK — 54 checks, static plus
-  on-device, with an HTML screenshot report.
+- `npm run validate:apk` builds and validates the APK — 55 checks, static plus
+  on-device over CDP, with an HTML screenshot report. `npm run test:apk:costly`
+  covers the AI path separately.
+- `npm run version:bump` / `npm run release:aab` — Play rejects any upload whose
+  `versionCode` doesn't increase, and that only surfaces at upload time.
+- Release signing wired via `android/keystore.properties` (gitignored). Note
+  `build.gradle` silently skips signing when that file is absent and still
+  reports BUILD SUCCESSFUL, which is how unsigned bundles got produced.
 - Guest mode deprecated; see the auth section above.
