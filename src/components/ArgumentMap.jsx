@@ -279,6 +279,9 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     const fmtId = fmtNodeId;
     const cs = (color) => `background:${color};color:#fff;border-radius:3px;padding:0 5px;font-size:9px;font-weight:800;letter-spacing:0.05em;white-space:nowrap;border:1.5px solid rgba(0,0,0,0.4);display:inline-flex;align-items:center;height:16px;box-sizing:border-box;`;
     const rowStyle = `display:flex;gap:3px;align-items:center;flex-wrap:wrap;`;
+    // Reassigned during render on purpose -- see the note above: it's what makes
+    // HMR-patched template code take effect without remounting the graph.
+    // eslint-disable-next-line react-hooks/refs
     tplRef.current = (data) => {
       const theme = themeRef.current;
       // Plugin: translate(0%,-100%) translate(node.left, node.top)

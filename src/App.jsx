@@ -260,6 +260,8 @@ export default function App() {
 
   // Fetch credit balance when user signs in/out, and handle ?payment=success redirect
   useEffect(() => {
+    // Clearing derived state on sign-out; only runs when `user` changes.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!user) { setCreditBalance(null); return; }
     supabase.from("profiles").select("credits_cents").eq("id", user.id).single()
       .then(({ data }) => { if (data) setCreditBalance(data.credits_cents); });
@@ -304,6 +306,9 @@ export default function App() {
   useEffect(() => {
     if (authEvent === "PASSWORD_RECOVERY") {
       window.history.replaceState({}, document.title, window.location.pathname);
+      // Reacting to an external Supabase auth event, which is exactly what an
+      // effect is for -- there's no render-time value to derive this from.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAuthInitialMode("reset_password");
       setShowAuthModal(true);
     }
