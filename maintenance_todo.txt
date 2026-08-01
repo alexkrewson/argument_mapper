@@ -116,14 +116,72 @@ supply compliant testers. Steps needed before submitting:
         hides the option until the function answers a GET probe, so shipping in
         either order is safe.
 
-  NEXT — my machine, needs your hands
-  [ ] Restore the test account's profiles row (I deleted it, see incident
-        below): insert into argument_mapper.profiles (id)
+  ============================================================================
+  START HERE NEXT SESSION (as of 2026-07-31, Windows machine)
+  ============================================================================
+
+  TWO COMMITS ARE UNPUSHED. Deliberately held back, not forgotten:
+        67b4d87  fix(account): warn only when the shared login is really at stake
+        24c1336  docs: record the 2026-07-30 session and what's blocking submission
+  They're held because 3 of 15 settings tests are red, and both failures trace
+  to a deleted profiles row rather than to the code. Don't push on the
+  assumption they're environmental — clear step 1, rerun, then push on green.
+
+  Step 1 — restore the test account's profiles row (deleted by the probe
+  incident described below). RLS blocks the anon key; this needs the SQL editor:
+        insert into argument_mapper.profiles (id)
         values ('b8d3c162-27dc-42f0-8fe1-f1cc709d6d06');
-  [ ] Deploy the delete-account function, then rerun `npm run test:apk:settings`
-        — 3 settings tests currently fail only because that profiles row is gone.
-  [ ] Decide: keep one consolidated Supabase project or split per-app. Splitting
-        is cheapest NOW; migrating auth.users between projects gets harder with
+
+  Step 2 — `npm run test:apk:settings`. Expect 15/15. The 3 reds are tests 2, 3
+  and 5, all of which need the credits card, which needs that row.
+
+  Step 3 — `supabase functions deploy delete-account`. Until it lands, the
+  client hides account deletion (it gates on a GET probe the old deployment
+  405s), so shipping in either order is safe.
+
+  Step 4 — push.
+
+  Running the device suites needs an emulator; launch it DETACHED or it dies
+  with the shell:
+        Start-Process "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" `
+          -ArgumentList "-avd","idisagree_api36","-no-window","-no-audio",`
+          "-no-boot-anim","-gpu","swiftshader_indirect" -WindowStyle Hidden
+
+  ----------------------------------------------------------------------------
+  Google Play Billing — research done 2026-07-31, no code written
+  ----------------------------------------------------------------------------
+  Asked for, then paused before implementation. Findings worth keeping:
+
+  Plugin options:
+    - @capacitor-community/in-app-purchases  no version resolves; looks dead
+    - @revenuecat/purchases-capacitor 13.3.0 published 2026-07-31, maintained.
+        Handles receipt validation server-side; free under $2.5k/mo revenue
+    - cordova-plugin-purchase 13.18.0        current, works under Capacitor
+    - @squareetlabs/capacitor-subscriptions  last publish 2025-11, subs-focused
+
+  THE VERIFICATION PROBLEM, decide before spending effort: Play Billing cannot
+  be exercised on this setup at all. The AVD is google_apis, not
+  google_apis_playstore, so com.android.vending isn't present. Even after
+  swapping to a Play-enabled image (~1.5 GB), billing requires the app
+  installed FROM a Play track by a licensed tester account. So the integration
+  can be written here but not tested here — it only becomes testable once
+  something is uploaded to internal testing, which is gated on the keystore
+  decision above.
+
+  Also unresolved and worth settling first: whether Play's post-Epic rules now
+  permit linking out to Stripe. If they do, the cheapest compliant answer may
+  be no in-app purchase at all rather than a full Billing integration. That
+  question decides whether any of this work is necessary.
+
+  If it does go ahead: credits would need to be purchasable both ways (Play on
+  Android, Stripe on web), so the ledger and the credit-granting path have to
+  accept two sources. The existing stripe-webhook is the model.
+
+  ----------------------------------------------------------------------------
+
+  NEXT — decisions, not code
+  [ ] Keep one consolidated Supabase project or split per-app. Splitting is
+        cheapest NOW; migrating auth.users between projects gets harder with
         every user, and closed testers are about to arrive.
 
   INCIDENT 2026-07-30 — probe deleted test-account data
