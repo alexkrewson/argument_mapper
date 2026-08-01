@@ -1,0 +1,35 @@
+{
+  "project": "argument_mapper (iDisagree)",
+  "checks": [
+    {"type": "command", "name": "node", "min_version": "22",
+     "fix": "winget install OpenJS.NodeJS.22 — .nvmrc pins 22"},
+    {"type": "command", "name": "npm",
+     "fix": "ships with Node"},
+    {"type": "command", "name": "git",
+     "fix": "winget install Git.Git"},
+
+    {"type": "file", "path": ".env", "required": true,
+     "label": ".env",
+     "fix": "VITE_SUPABASE_URL + VITE_SUPABASE_ANON_KEY. Without it the app BUILDS FINE and dies at runtime — createClient() gets undefined"},
+    {"type": "file", "path": ".env.test", "required": false,
+     "label": ".env.test",
+     "fix": "copy .env.test.example — only needed for the Playwright and device suites"},
+
+    {"type": "clean_install", "required": true, "label": "npm ci",
+     "fix": "peer conflicts make npm ci fail on a clean checkout. Local builds still pass, so this only shows up as a silently stale deploy"},
+
+    {"type": "env", "name": "JAVA_HOME", "required": false,
+     "fix": "needed for Android builds. gradle.properties no longer pins a JDK path, deliberately — it broke every machine but one"},
+    {"type": "env", "name": "ANDROID_HOME", "required": false,
+     "fix": "needed for Android builds — see ANDROID_SETUP_WINDOWS.md or ANDROID_SETUP_HANDOFF.md"},
+    {"type": "command", "name": "adb", "required": false,
+     "fix": "Android SDK platform-tools; add to PATH"},
+    {"type": "adb_device", "required": false, "label": "emulator",
+     "fix": "launch DETACHED or it dies with the shell: Start-Process $env:LOCALAPPDATA\\Android\\Sdk\\emulator\\emulator.exe -ArgumentList '-avd','idisagree_api36','-no-window','-no-audio','-no-boot-anim','-gpu','swiftshader_indirect' -WindowStyle Hidden"},
+
+    {"type": "command", "name": "rclone", "required": false,
+     "fix": "only for the Google Drive APK upload; builds no-op cleanly without it"},
+    {"type": "command", "name": "supabase", "required": false,
+     "fix": "only needed to deploy edge functions"}
+  ]
+}
