@@ -151,7 +151,43 @@ supply compliant testers. Steps needed before submitting:
   See "TRIGGER DRIFT" below — it would silently break comment_cluster signups.
 
   ---------------------------------------------------------------------------
-  PHASE 0 — capture reality first (read-only, ~20 min, START HERE)
+  PHASE 0 — DONE 2026-08-01. Nothing was hidden.
+  ---------------------------------------------------------------------------
+  Dumped the live function, trigger, grants and policies from the keeper. ALL
+  FOUR match 20260724151739_consolidate_to_argument_mapper_schema.sql exactly.
+  The migration is a faithful description of production and can be trusted to
+  rebuild the schema. The only thing Phase 0 overturned was the drift warning
+  written the night before — see TRIGGER DRIFT below.
+
+  What the counts said:
+        auth.users                6
+        argument_mapper.profiles  5   <- one short: the test account's row,
+                                         still missing from the probe incident
+        argument_mapper.debates  28
+        comment_cluster.profiles  4   <- lazily created, exactly as expected
+        comment_cluster.analyses 53
+        public.master_items     297
+
+  SIX accounts, not four. But only TWO need migrating:
+        1b74bbb3-9855-45d1-b4c4-8d96e36ac427  alex.krewson@gmail.com   27 debates
+        b8d3c162-27dc-42f0-8fe1-f1cc709d6d06  ...+idisagree-test@      0, is .env.test
+  Optional third: 2e64b950 (me1@mailinator.com) has 1 throwaway debate.
+  DO NOT migrate hugheschad@comcast.net or nick.krewson@isakenaz.com. Both have
+  zero debates and an argument_mapper.profiles row only because the trigger made
+  one for every signup regardless of app. They are Analyzer users who have never
+  opened iDisagree; copying their credentials into a project they never signed
+  up for isn't ours to do. If either visits later they simply sign up.
+
+  Also learned: profiles has SELECT and UPDATE policies but NO INSERT policy.
+  That is exactly why a deleted profiles row cannot heal itself and needs the
+  SQL editor — the app cannot create one under RLS. Carries to the new project.
+
+  And: the test account holds 99 public.master_items. A full account-delete on
+  it would cascade into packing-list data. Nothing does that today —
+  apk-settings.test.mjs:143 deliberately never clicks the final confirm — but
+  it does mean the probe's warning for that account will be the true one.
+
+  (original Phase 0 instructions kept below for reference)
   ---------------------------------------------------------------------------
   The live public.handle_new_user() in the keeper does NOT match any file in
   any repo. argument_mapper's 20260724151739 migration defines it as inserting
@@ -172,22 +208,51 @@ supply compliant testers. Steps needed before submitting:
   ---------------------------------------------------------------------------
   PHASE 1 — stand up the new project (Alex's hands: dashboard)
   ---------------------------------------------------------------------------
-  Create the project, then apply the schema.
+  Create the project, then run supabase/bootstrap-new-project.sql in ITS SQL
+  editor. One paste, runs once. Written 2026-08-01, committed to this repo
+  precisely so it isn't a scratch file that evaporates.
+
   KEEP THE SCHEMA NAMED `argument_mapper`, do not move to `public`. The client
   already sets db: { schema: "argument_mapper" }, so keeping the name means
   zero client-code churn and a much smaller diff to get wrong.
 
+  WHY A COMBINED SCRIPT RATHER THAN `supabase db push`:
+    - credits_cents is created at 50.0 by 20260724151739 and only raised to
+      200.0 by 20260724160038. Run the first alone against a fresh project and
+      every new signup silently gets $0.50 — undoing the fix that resolved
+      "do the testers have to pay?". The bootstrap sets 200.0 at create time
+      AND re-asserts it afterwards.
+    - 20260605000000_credits.sql must NOT run at all. It builds public.*
+      objects for the retired project. `db push` would run it.
+
+  AFTERWARDS, BY HAND — no SQL equivalent, nothing works without it:
+        Dashboard > Settings > Data API > Exposed schemas -> add argument_mapper
+  Every request 403s with "permission denied for schema" until this is done.
+  This is the step the 2026-07-24 consolidation had to fix after the fact.
+
+  Reusing an old project was considered and rejected 2026-08-01: the retired
+  rctaosokjpwdkuewmvyc holds a pre-consolidation snapshot, so it means merging
+  two divergent states, and on Pro a restored project costs the same ~$10/mo as
+  a fresh one. Legacy cruft at full price.
+
   ---------------------------------------------------------------------------
-  PHASE 2 — move the 4 accounts, PRESERVING UUIDs
+  PHASE 2 — move TWO accounts and 28 debates, PRESERVING UUIDs
   ---------------------------------------------------------------------------
+  Which two, and why only two, is settled in the Phase 0 block above.
   debates.user_id and profiles.id are FKs to auth.users. If the UUIDs change,
   every row is orphaned. Copy auth.users rows directly, password hashes
   included — nobody re-registers and nobody notices. Password resets are the
   fallback, not the plan.
-  While here: the test account's profiles row (b8d3c162-27dc-42f0-8fe1-
-  f1cc709d6d06) is still missing from the probe incident. Restore it as part
-  of the migration rather than separately, so what lands in the new project is
-  a complete account. That row is what makes settings tests 2, 3 and 5 pass.
+  The test account's profiles row (b8d3c162) is still missing from the probe
+  incident — CONFIRMED by the Phase 0 counts, not assumed. Create it in the new
+  project as part of this rather than as a separate errand, so what lands there
+  is a complete account. That row is what makes settings tests 2, 3 and 5 pass.
+
+  EXPECT ALEX TO HAVE TWO IDENTITIES AFTER THIS, and say so out loud when it
+  happens: alex.krewson@gmail.com will exist in the keeper (for packing lists
+  and Analyzer) and in the new project (for iDisagree), independently. Changing
+  the password in one will not change it in the other. That is the isolation
+  working, but it will feel like a bug the first time.
 
   ---------------------------------------------------------------------------
   PHASE 3 — functions, secrets, auth config (the fiddly one)
@@ -213,13 +278,32 @@ supply compliant testers. Steps needed before submitting:
   build, not after.
 
   ---------------------------------------------------------------------------
-  PHASE 5 — clean up the keeper
+  PHASE 5 — clean up the keeper.  ORDER MATTERS. TRIGGER FIRST, SCHEMA SECOND.
   ---------------------------------------------------------------------------
-  Rewrite public.handle_new_user() to drop the argument_mapper insert and keep
-  comment_cluster's, using the body captured in Phase 0. Commit the true
-  version somewhere authoritative — its absence from source control is what
-  made this risky. Then drop schema argument_mapper from the keeper once the
-  new project is confirmed good. Don't rush the drop; it costs nothing to wait.
+  Verified 2026-08-01 (Phase 0): public.handle_new_user() exists in the keeper
+  SOLELY for iDisagree — the app that's leaving. It inserts into
+  argument_mapper.profiles and nothing else, and it is the ONLY trigger on
+  auth.users. Neither remaining app needs it:
+    - comment_cluster self-heals. reddit-proxy-worker.js getOrCreateProfile()
+      selects, and inserts {id} if absent, picking up the column default.
+    - packing_lists has no profiles table and no credits at all. Zero hits for
+      either in trips-app.html.
+
+  So the cleanup is a DROP, not a rewrite:
+        drop trigger if exists on_auth_user_created on auth.users;
+        drop function if exists public.handle_new_user();
+        -- only then:
+        drop schema argument_mapper cascade;
+
+  DO NOT DROP THE SCHEMA FIRST. The trigger is AFTER INSERT on auth.users. With
+  the schema gone and the trigger still present, every new signup in the keeper
+  raises on a missing schema — which breaks signup for Analyzer AND packing
+  lists, neither of which has anything to do with this migration. Dropping the
+  trigger first is harmless; the reverse is an outage in two apps.
+
+  Take the schema drop slowly regardless — it costs nothing to leave the schema
+  sitting there for a week once the trigger is gone and the new project is
+  confirmed good.
 
   ---------------------------------------------------------------------------
   SEPARATE, SMALL, AND IT UNBLOCKS SUBMISSION — Buy Credits off on Android
@@ -239,27 +323,31 @@ supply compliant testers. Steps needed before submitting:
   ---------------------------------------------------------------------------
   PUSH / DEPLOY ORDERING — this bit is easy to get wrong
   ---------------------------------------------------------------------------
-  UNPUSHED, oldest first. Check with `git log origin/master..HEAD --oneline`
-  rather than trusting this list — it has been wrong twice already:
-        67b4d87  fix(account): warn only when the shared login is at stake
-        24c1336  docs: record the 2026-07-30 session
-        3981379  docs: resume point and Play Billing findings
-        731fc34  fix(account): correct the probe, never reassure on failure
-        5f891a6  Add CLAUDE.md pointing at the shared guidelines
-        790789d  docs: plan the Supabase split  (this plan)
-        <tip>    docs(privacy): deletion as it actually works
+  ONE COMMIT IS UNSAFE TO PUSH. Everything else can go whenever.
 
-  EVERYTHING EXCEPT THE TIP IS SAFE TO PUSH. 67b4d87 + 731fc34 hide account
-  deletion until the probe answers, so the client degrades cleanly against any
-  backend, deployed or not.
+        UNSAFE:  2fbe34c  docs(privacy): deletion as it actually works
 
-  THE TIP COMMIT IS NOT SAFE TO PUSH YET. public/privacy.html describes an
-  account-deletion option that does not exist until delete-account is deployed
-  (Phase 3), and a push builds Cloudflare Pages straight to production. It is
-  deliberately the newest commit so it can be excluded with one command:
-        git push origin HEAD~1:master
-  Correct order: deploy the function -> push the tip -> npm run deploy:verify.
-  If more commits land on top, push by SHA instead: git push origin 790789d:master
+  Find the current boundary with `git log origin/master..HEAD --oneline` — do
+  not trust a written list here, this one has been stale three times in two
+  days as commits landed from other sessions.
+
+  WHY 2fbe34c IS HELD: public/privacy.html describes an account-deletion option
+  that does not exist until delete-account is deployed (Phase 3), and a push
+  builds Cloudflare Pages straight to production. It would put a policy page
+  live promising a button nobody can find.
+
+  TO PUSH EVERYTHING BEFORE IT — push the SHA of the commit just underneath it,
+  not a relative ref. As of 2026-08-01 that is:
+        git push origin fe84530:master
+  Relative refs (HEAD~1) were the original plan and are now WRONG: commits have
+  since landed on top, so 2fbe34c is no longer the tip and HEAD~1 would push it.
+  Re-read the log and pick the SHA below it each time.
+
+  Correct order: deploy the function -> push 2fbe34c -> npm run deploy:verify.
+
+  Everything below the boundary is safe: 67b4d87 + 731fc34 hide account deletion
+  until the probe answers, so the client degrades cleanly against any backend,
+  deployed or not.
 
   CLAUDE.md SAYS SOMETHING THE SPLIT WILL FALSIFY. Its non-negotiables include
   "Auth is shared across every app in this Supabase project... Deleting
@@ -317,21 +405,29 @@ supply compliant testers. Steps needed before submitting:
         DECIDED 2026-07-31: split iDisagree out, leave the other two together.
         Plan is PHASE 0-5 above. Alex starts 2026-08-01.
 
-  TRIGGER DRIFT — the live database disagrees with every repo
-  Found 2026-07-31 while planning the split. public.handle_new_user() in the
-  keeper project inserts into BOTH argument_mapper.profiles and
-  comment_cluster.profiles. No file anywhere defines that merged version:
-    - argument_mapper/supabase/migrations/20260724151739_*.sql defines it with
-      ONLY the argument_mapper insert, and its own comment says the cross-app
-      grant "is defined in comment_cluster_claude's own migrations, not here"
-    - reddit-comment-cluster/supabase-credits-migration.sql is marked
-      "STALE — DO NOT RUN" and targets the retired project
-  So `create or replace function public.handle_new_user()` from the
-  argument_mapper migration would OVERWRITE the live merged version and
-  silently stop creating comment_cluster.profiles rows for new signups. No
-  error. It would surface later as an Analyzer user with no credits.
-  Capture the live body (Phase 0) before running anything, and commit the
-  post-split version somewhere authoritative (Phase 5).
+  TRIGGER DRIFT — CHECKED 2026-08-01, AND IT WASN'T DRIFT
+  The 2026-07-31 version of this entry warned that the live
+  public.handle_new_user() inserted into BOTH argument_mapper.profiles and
+  comment_cluster.profiles, that no file defined that merged version, and that
+  running the consolidation migration would silently break Analyzer signups.
+  THAT WAS WRONG. Phase 0 dumped the live definition and it is byte-identical
+  to 20260724151739_*.sql: one insert, into argument_mapper.profiles. There is
+  exactly one trigger on auth.users.
+
+  The claim came from a comment in
+  reddit-comment-cluster/supabase-credits-migration.sql — a file marked
+  "STALE — DO NOT RUN" — asserting the deployed version granted into both. It
+  never did. A comment in a stale file was taken as a description of
+  production; the database was the only thing that could settle it, and it did
+  so in one query.
+
+  Two things worth keeping from the false alarm:
+    - The real risk runs the OTHER WAY, and it's live. See PHASE 5: that
+      trigger exists only for the departing app, and dropping the schema before
+      the trigger breaks signups for the two apps that stay.
+    - Analyzer never depended on the trigger anyway. getOrCreateProfile() in
+      reddit-proxy-worker.js creates the row on first use. The stale file's
+      "cross-app grant" describes something that was planned, not shipped.
 
   DELETE-ACCOUNT DESIGN — settled, don't redesign it
   A spec was floated 2026-07-31 (from another Claude conversation, written
