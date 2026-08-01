@@ -7,23 +7,38 @@ const CORS = {
 };
 
 // Other apps sharing this project's auth.users, as "schema.table:user_column".
-// Deleting the login signs the person out of these too, so we check whether
-// they actually have anything in them before showing a warning that says so.
+// Supabase Auth is one pool per project, not per schema, so deleting the login
+// signs the person out of every app here — we check whether they'd actually
+// lose anything before saying so.
 //
-// Override with the OTHER_APP_TABLES env var (same format, comma separated) —
-// the defaults are a guess and a wrong entry is treated as "no data", never as
-// a reason to block the delete.
+// Content tables only. The shared signup trigger writes a profiles row into
+// every app's schema for every new user, so profiles proves nothing about
+// whether an app was ever used.
+//
+// packing_lists still lives in public.* — renaming its tables to packing_lists.*
+// is an open item in apps-shared/todo.md. Update this when that lands.
+//
+// Override with the OTHER_APP_TABLES env var (same format, comma separated).
 const OTHER_APP_TABLES = (Deno.env.get("OTHER_APP_TABLES") ??
-  "packing_list.lists:user_id,comment_cluster.analyses:user_id")
+  "public.master_items:user_id,comment_cluster.analyses:user_id")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
-/** Which other apps hold rows for this user. Never throws. */
+/**
+ * Which other apps hold rows for this user.
+ *
+ * `uncertain` is the important part: if a probe fails we do NOT get to tell
+ * someone "nothing else is affected", because we don't know that. A misspelled
+ * table or an unreachable schema has to surface as the broad warning — being
+ * wrong in the reassuring direction could cost them another app's data.
+ */
 async function otherAppsWithData(url: string, serviceKey: string, userId: string) {
   const found: string[] = [];
+  let uncertain = false;
+
   for (const entry of OTHER_APP_TABLES) {
     const [location, column = "user_id"] = entry.split(":");
     const [schema, table] = location.split(".");
-    if (!schema || !table) continue;
+    if (!schema || !table) { uncertain = true; continue; }
     try {
       const res = await fetch(
         `${url}/rest/v1/${table}?${column}=eq.${userId}&limit=1&select=${column}`,
@@ -35,14 +50,14 @@ async function otherAppsWithData(url: string, serviceKey: string, userId: string
           },
         },
       );
-      if (!res.ok) continue; // schema/table doesn't exist here — nothing to warn about
+      if (!res.ok) { uncertain = true; continue; }
       const rows = await res.json();
       if (Array.isArray(rows) && rows.length > 0) found.push(schema);
     } catch {
-      // Unreachable table is not a reason to warn.
+      uncertain = true;
     }
   }
-  return found;
+  return { found, uncertain };
 }
 
 Deno.serve(async (req) => {
@@ -91,12 +106,12 @@ Deno.serve(async (req) => {
   // Answers "would deleting the login cost this person anything elsewhere?"
   // so the UI warns only when it's actually true. Deletes nothing.
   if (isProbe) {
-    const sharedApps = await otherAppsWithData(
+    const { found, uncertain } = await otherAppsWithData(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
       user.id,
     );
-    return new Response(JSON.stringify({ sharedApps }), {
+    return new Response(JSON.stringify({ sharedApps: found, uncertain }), {
       status: 200, headers: { "Content-Type": "application/json", ...CORS },
     });
   }

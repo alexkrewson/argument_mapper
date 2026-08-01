@@ -33,7 +33,9 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
   const [showThemes, setShowThemes] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmAccount, setConfirmAccount] = useState(false);
-  // null = not checked yet, [] = login is used nowhere else, [...] = names.
+  // null = backend can't answer (older deployment) — account deletion stays
+  // hidden. Otherwise { apps, certain }: `certain` false means some probe
+  // failed, so we must not claim nothing else is affected.
   const [sharedApps, setSharedApps] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
@@ -57,8 +59,11 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
         }
       );
       if (!resp.ok) return null;
-      const { sharedApps: apps } = await resp.json();
-      return Array.isArray(apps) ? apps : null;
+      const { sharedApps: apps, uncertain } = await resp.json();
+      if (!Array.isArray(apps)) return null;
+      // A probe that couldn't check everything must not produce the reassuring
+      // wording — treat it as "capability present, answer unknown".
+      return uncertain ? { apps, certain: false } : { apps, certain: true };
     } catch {
       return null;
     }
@@ -199,9 +204,13 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                       ) : (
                         <div data-testid="settings-delete-account-confirm">
                           <p>
-                            {sharedApps.length > 0
-                              ? "This also removes your sign-in, which you're using for our other apps — you'll lose access to those and their data too."
-                              : "This also removes your sign-in. You aren't using it for any of our other apps, so nothing else is affected."}
+                            {/* Only claim "nothing else is affected" when the
+                                probe actually checked everything. */}
+                            {!sharedApps.certain
+                              ? "This also removes your sign-in. If you use that login for any of our other apps, you'll lose access to those too."
+                              : sharedApps.apps.length > 0
+                                ? "This also removes your sign-in, which you're using for our other apps — you'll lose access to those and their data too."
+                                : "This also removes your sign-in. You aren't using it for any of our other apps, so nothing else is affected."}
                           </p>
                           <button className="theme-option" data-testid="settings-delete-account-yes" onClick={() => handleDeleteData(true)} disabled={deleting}>
                             {deleting ? "Deleting…" : "Delete data and account"}
