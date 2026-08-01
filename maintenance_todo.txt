@@ -53,6 +53,15 @@ supply compliant testers. Steps needed before submitting:
         USE https://idisagree.trolleysolution.com/privacy  (no .html — that
         form 308-redirects; browsers follow it but don't hand a redirect to a
         review process). Confirmed live 2026-07-30, HTTP 200.
+        DATA DELETION URL (separate Play Console field, App content > Data
+        deletion): https://idisagree.trolleysolution.com/privacy#delete
+        That anchor was added 2026-07-31 and is written for the person who
+        already uninstalled — uninstalling deletes nothing server-side, so the
+        in-app button is unreachable to them. It states both options and gives
+        the email route with a 30-day commitment.
+        VERIFY BEFORE SUBMITTING whether Play accepts an email-based request
+        route or insists on a self-serve web form. Not confirmed — don't
+        assume the anchor satisfies the field.
 
 
 --- Session log: 2026-07-30 (Windows machine set up, first dev box besides
@@ -107,9 +116,12 @@ supply compliant testers. Steps needed before submitting:
         somewhere off-machine: losing it means no more updates under that key.
   [!] Play Billing vs Stripe. BuyCreditsModal opens Stripe checkout from inside
         the app for credits consumed in-app. Play's Payments policy wants Play
-        Billing for that. This is the only item that can't be fixed after
-        launch without disrupting paying users. Post-Epic rules on linking out
-        may have changed — check the current policy before building anything.
+        Billing for that. RESOLVED 2026-07-31 — see "Buy Credits off on
+        Android" in the plan below. Hiding the button on native means no
+        Android user can ever purchase via Stripe, so there are no Android
+        payers to disrupt later. That converts this from the one item that
+        couldn't be fixed after launch into a reversible decision. Post-Epic
+        rules on linking out still unchecked, but no longer block submission.
   [!] Account deletion: Play requires it for apps with account creation. Code
         is written and committed but NOT deployed —
         `supabase functions deploy delete-account` is still needed. The client
@@ -117,35 +129,156 @@ supply compliant testers. Steps needed before submitting:
         either order is safe.
 
   ============================================================================
-  START HERE NEXT SESSION (as of 2026-07-31, Windows machine)
+  START HERE NEXT SESSION — written 2026-07-31 evening, for 2026-08-01
   ============================================================================
+  Supersedes the older step list (restore profiles row -> test -> deploy ->
+  push). That plan assumed iDisagree stays in the shared project. It doesn't.
+  See DECISIONS below before doing anything from an older section.
 
-  TWO COMMITS ARE UNPUSHED. Deliberately held back, not forgotten:
-        67b4d87  fix(account): warn only when the shared login is really at stake
-        24c1336  docs: record the 2026-07-30 session and what's blocking submission
-  They're held because 3 of 15 settings tests are red, and both failures trace
-  to a deleted profiles row rather than to the code. Don't push on the
-  assumption they're environmental — clear step 1, rerun, then push on green.
+  THE DECISION THAT REORDERS EVERYTHING
+  iDisagree gets its OWN Supabase project. packing_lists and comment_cluster
+  stay together in the keeper (ycuuxnscbxiibsnefgef). Cost ~+$10/mo, not +$20.
+  Reasoning: iDisagree is the only one of the three with money, strangers and
+  legal obligations attached. Isolating it means a hobby-app bug can't reach a
+  paying user, restores stop being all-or-nothing (PITR is per PROJECT, not per
+  schema), account deletion becomes trivially correct, and the OAuth
+  identity-linking question collapses. Four accounts exist today (Alex, the test
+  account, two friends) so the migration is nearly free. After 12 testers sign
+  up it is not — auth.users migration is the part that gets worse with every
+  user. This is a one-way door and it is currently standing open.
 
-  Step 1 — restore the test account's profiles row (deleted by the probe
-  incident described below). RLS blocks the anon key; this needs the SQL editor:
-        insert into argument_mapper.profiles (id)
-        values ('b8d3c162-27dc-42f0-8fe1-f1cc709d6d06');
+  DO NOT run argument_mapper's consolidation migration against the keeper.
+  See "TRIGGER DRIFT" below — it would silently break comment_cluster signups.
 
-  Step 2 — `npm run test:apk:settings`. Expect 15/15. The 3 reds are tests 2, 3
-  and 5, all of which need the credits card, which needs that row.
+  ---------------------------------------------------------------------------
+  PHASE 0 — capture reality first (read-only, ~20 min, START HERE)
+  ---------------------------------------------------------------------------
+  The live public.handle_new_user() in the keeper does NOT match any file in
+  any repo. argument_mapper's 20260724151739 migration defines it as inserting
+  only into argument_mapper.profiles and says so in its own comment;
+  reddit-comment-cluster/supabase-credits-migration.sql says the deployed
+  version grants into BOTH argument_mapper.profiles and
+  comment_cluster.profiles. The merged version exists only in the database.
+  Nothing can reproduce it from source. Capture it before touching anything:
 
-  Step 3 — `supabase functions deploy delete-account`. Until it lands, the
-  client hides account deletion (it gates on a GET probe the old deployment
-  405s), so shipping in either order is safe.
+        select prosrc from pg_proc
+        where proname = 'handle_new_user'
+          and pronamespace = 'public'::regnamespace;
 
-  Step 4 — push.
+  Also worth dumping in the same sitting: the on_auth_user_created trigger
+  definition, and the grants on schema argument_mapper (the consolidation
+  needed a hand-applied grants fix that isn't obvious from the migration).
+
+  ---------------------------------------------------------------------------
+  PHASE 1 — stand up the new project (Alex's hands: dashboard)
+  ---------------------------------------------------------------------------
+  Create the project, then apply the schema.
+  KEEP THE SCHEMA NAMED `argument_mapper`, do not move to `public`. The client
+  already sets db: { schema: "argument_mapper" }, so keeping the name means
+  zero client-code churn and a much smaller diff to get wrong.
+
+  ---------------------------------------------------------------------------
+  PHASE 2 — move the 4 accounts, PRESERVING UUIDs
+  ---------------------------------------------------------------------------
+  debates.user_id and profiles.id are FKs to auth.users. If the UUIDs change,
+  every row is orphaned. Copy auth.users rows directly, password hashes
+  included — nobody re-registers and nobody notices. Password resets are the
+  fallback, not the plan.
+  While here: the test account's profiles row (b8d3c162-27dc-42f0-8fe1-
+  f1cc709d6d06) is still missing from the probe incident. Restore it as part
+  of the migration rather than separately, so what lands in the new project is
+  a complete account. That row is what makes settings tests 2, 3 and 5 pass.
+
+  ---------------------------------------------------------------------------
+  PHASE 3 — functions, secrets, auth config (the fiddly one)
+  ---------------------------------------------------------------------------
+  Deploy all four Edge Functions to the NEW project and set their secrets:
+  claude-proxy, create-checkout-session, stripe-webhook, delete-account.
+    - delete-account gets deployed ONCE, here. Do not deploy it to the keeper
+      first; the keeper is about to stop serving this app.
+    - OTHER_APP_TABLES should become EMPTY in the new project. There are no
+      other apps in it, so the probe correctly reports "nothing else affected".
+    - Re-point the STRIPE WEBHOOK to the new project. Pick a moment with no
+      payment in flight — trivial with 4 users, not trivial later.
+    - Redo Auth redirect URLs (https://idisagree.trolleysolution.com/**).
+    - Re-point Resend SMTP. It is per-project and does NOT come along.
+
+  ---------------------------------------------------------------------------
+  PHASE 4 — cut over and verify
+  ---------------------------------------------------------------------------
+  New .env and .env.test, rebuild, then run the Playwright suite and the 55
+  APK checks. This is what that suite is for. NOTE: the anon key is INLINED in
+  the APK (apk-static asserts it), so a new project means a new build — which
+  is why the keystore decision comes forward. Pick the keystore before this
+  build, not after.
+
+  ---------------------------------------------------------------------------
+  PHASE 5 — clean up the keeper
+  ---------------------------------------------------------------------------
+  Rewrite public.handle_new_user() to drop the argument_mapper insert and keep
+  comment_cluster's, using the body captured in Phase 0. Commit the true
+  version somewhere authoritative — its absence from source control is what
+  made this risky. Then drop schema argument_mapper from the keeper once the
+  new project is confirmed good. Don't rush the drop; it costs nothing to wait.
+
+  ---------------------------------------------------------------------------
+  SEPARATE, SMALL, AND IT UNBLOCKS SUBMISSION — Buy Credits off on Android
+  ---------------------------------------------------------------------------
+  Hide Buy Credits when Capacitor.isNativePlatform(). Two sites:
+    - SettingsPanel.jsx:160  the settings-buy-credits button
+    - App.jsx:299            the out_of_credits path auto-opens the modal;
+                             on native show a message instead
+  Three APK settings tests assert settings-buy-credits exists and click it —
+  they need to expect it ABSENT on native. Two of those are among the 3 reds.
+  Testers are unaffected: starter credits are $2.00 and test purchases would
+  have been free anyway under Play's license-tester scheme.
+  WRITE THE MESSAGE CAREFULLY: no "buy more on our website". Steering to an
+  external purchase is exactly what Play's payments policy scrutinises. A
+  plain "You're out of AI credits" carries no policy risk.
+
+  ---------------------------------------------------------------------------
+  PUSH / DEPLOY ORDERING — this bit is easy to get wrong
+  ---------------------------------------------------------------------------
+  UNPUSHED, oldest first. Check with `git log origin/master..HEAD --oneline`
+  rather than trusting this list — it has been wrong twice already:
+        67b4d87  fix(account): warn only when the shared login is at stake
+        24c1336  docs: record the 2026-07-30 session
+        3981379  docs: resume point and Play Billing findings
+        731fc34  fix(account): correct the probe, never reassure on failure
+        5f891a6  Add CLAUDE.md pointing at the shared guidelines
+        790789d  docs: plan the Supabase split  (this plan)
+        <tip>    docs(privacy): deletion as it actually works
+
+  EVERYTHING EXCEPT THE TIP IS SAFE TO PUSH. 67b4d87 + 731fc34 hide account
+  deletion until the probe answers, so the client degrades cleanly against any
+  backend, deployed or not.
+
+  THE TIP COMMIT IS NOT SAFE TO PUSH YET. public/privacy.html describes an
+  account-deletion option that does not exist until delete-account is deployed
+  (Phase 3), and a push builds Cloudflare Pages straight to production. It is
+  deliberately the newest commit so it can be excluded with one command:
+        git push origin HEAD~1:master
+  Correct order: deploy the function -> push the tip -> npm run deploy:verify.
+  If more commits land on top, push by SHA instead: git push origin 790789d:master
+
+  CLAUDE.md SAYS SOMETHING THE SPLIT WILL FALSIFY. Its non-negotiables include
+  "Auth is shared across every app in this Supabase project... Deleting
+  auth.users costs that person their Analyzer and packing-list access too."
+  True today, false the moment Phase 4 lands. Update it in Phase 5 alongside
+  the keeper cleanup — a stale non-negotiable is worse than no note at all.
 
   Running the device suites needs an emulator; launch it DETACHED or it dies
   with the shell:
         Start-Process "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" `
           -ArgumentList "-avd","idisagree_api36","-no-window","-no-audio",`
           "-no-boot-anim","-gpu","swiftshader_indirect" -WindowStyle Hidden
+
+  Reminder for whoever runs this: `python` on this box resolves to the
+  Microsoft Store stub. Real interpreter is
+  C:\Users\Alex\AppData\Local\Programs\Python\Python313\python.exe. A session
+  can also inherit a stale PATH missing adb/emulator/rclone/npm-globals
+  entirely — check $env:PATH against HKCU:\Environment before concluding a
+  tool is missing. Relaunching the terminal fixes it.
 
   ----------------------------------------------------------------------------
   Google Play Billing — research done 2026-07-31, no code written
@@ -180,9 +313,54 @@ supply compliant testers. Steps needed before submitting:
   ----------------------------------------------------------------------------
 
   NEXT — decisions, not code
-  [ ] Keep one consolidated Supabase project or split per-app. Splitting is
-        cheapest NOW; migrating auth.users between projects gets harder with
-        every user, and closed testers are about to arrive.
+  [x] Keep one consolidated Supabase project or split per-app.
+        DECIDED 2026-07-31: split iDisagree out, leave the other two together.
+        Plan is PHASE 0-5 above. Alex starts 2026-08-01.
+
+  TRIGGER DRIFT — the live database disagrees with every repo
+  Found 2026-07-31 while planning the split. public.handle_new_user() in the
+  keeper project inserts into BOTH argument_mapper.profiles and
+  comment_cluster.profiles. No file anywhere defines that merged version:
+    - argument_mapper/supabase/migrations/20260724151739_*.sql defines it with
+      ONLY the argument_mapper insert, and its own comment says the cross-app
+      grant "is defined in comment_cluster_claude's own migrations, not here"
+    - reddit-comment-cluster/supabase-credits-migration.sql is marked
+      "STALE — DO NOT RUN" and targets the retired project
+  So `create or replace function public.handle_new_user()` from the
+  argument_mapper migration would OVERWRITE the live merged version and
+  silently stop creating comment_cluster.profiles rows for new signups. No
+  error. It would surface later as an Analyzer user with no credits.
+  Capture the live body (Phase 0) before running anything, and commit the
+  post-split version somewhere authoritative (Phase 5).
+
+  DELETE-ACCOUNT DESIGN — settled, don't redesign it
+  A spec was floated 2026-07-31 (from another Claude conversation, written
+  without the repo in front of it) proposing app_id columns on every table,
+  an app_memberships table, and RLS scoped on user_id + app_id. REJECTED for
+  this project, because:
+    - Apps here are separated by Postgres SCHEMA, not by an app_id column.
+      The spec would rebuild existing isolation across three live apps and
+      leave two overlapping mechanisms in place.
+    - Its RLS uses current_setting('request.app_id'), which PostgREST does not
+      expose (it has request.headers / request.jwt.claims / request.method /
+      request.path). As written the policy evaluates to NULL and denies
+      everything.
+    - app_id chosen by the client is not a security boundary in any case,
+      header or where-clause. Its own fallback admits this.
+    - Its steps 4-5 (service-role function, per-app delete, identity cleanup)
+      are already implemented in 67b4d87.
+  The one good idea in it is app_memberships replacing the hand-maintained
+  OTHER_APP_TABLES probe list. Not needed after the split (no other apps in
+  the project). Revisit only if a fourth app ever shares a project — and if so,
+  write membership rows on FIRST USE, not signup: the shared signup trigger
+  already writes a profiles row into every schema for every user, which is
+  exactly why profiles is excluded from the probe. Membership-at-signup would
+  reproduce that bug precisely and the identity would never be deletable.
+
+  Also settled: when someone picks full account deletion AND has data in other
+  apps, we WARN and let them proceed. We do not silently downgrade to
+  data-only. Someone who clicks through two confirmations and a warning naming
+  the other apps has asked for what they get.
 
   INCIDENT 2026-07-30 — probe deleted test-account data
   A capability probe was written as POST. The deployed delete-account function
@@ -197,6 +375,70 @@ supply compliant testers. Steps needed before submitting:
   so Buy Credits vanished permanently and that account could never purchase
   again. Data-only now zeroes credits_cents and keeps the row.
 
+  COUPLED — privacy.html and the delete-account deploy ship together
+  [!] public/privacy.html was rewritten 2026-07-31 to describe in-app account
+        deletion (the two-option table, the shared-sign-in warning, the
+        uninstalled-user route at #delete). That page now describes behaviour
+        that DOES NOT EXIST IN PRODUCTION until
+        `supabase functions deploy delete-account` runs — the client hides the
+        account-delete option until the GET probe answers, so publishing the
+        page first means the policy promises an option nobody can see.
+        Deploy the function, then deploy the site. Not the other way round.
+
+  AFTER CLOSED TESTING — OAuth sign-in (Google / Facebook / Apple)
+  [ ] Asked about 2026-07-31. Doable, free, built into Supabase Auth, but not
+        before testers land — it's a new auth surface and email/password works.
+        Three things to settle first:
+        - Google refuses OAuth inside embedded WebViews (disallowed_useragent),
+          and the APK IS a WebView. Works in the browser, fails in the app —
+          same shape as the clipboard and Stripe-redirect bugs. Needs a system
+          browser / Custom Tab round trip via deep link, or native sign-in.
+        - Reopens the shared-identity question. One row per email is a hard
+          rule in Supabase Auth, so signing up in another app with a password
+          and then using "Sign in with Google" on the same address either links
+          to the existing identity or errors, depending on a Supabase
+          identity-linking setting. CHECK THE CURRENT DEFAULT before building.
+        - Facebook needs business verification and app review. Google alone is
+          the 90% answer. Apple requires Sign in with Apple if iOS ever ships
+          with any third-party login.
+
+        WEB IS EASY, and worth saying plainly because it sounded harder than it
+        is: one call, supabase.auth.signInWithOAuth({ provider: 'google' }).
+        Full-page redirect to Google's own screen, back to the app, supabase-js
+        picks the session out of the URL. NO custom page to build; a
+        /auth/callback route is optional tidiness. The work is configuration —
+        Google Cloud OAuth client, paste ID/secret into Supabase, add
+        Supabase's callback URL to Google's authorized redirect list. Also move
+        the consent screen out of "Testing" (small user cap) before testers.
+
+        ANDROID, two options:
+          1. Browser round-trip — Custom Tab (a real browser, so Google
+             accepts it) plus a deep link home, via custom scheme
+             (idisagree://auth) or App Links verified against
+             idisagree.trolleysolution.com. Cloudflare Pages can host the
+             assetlinks file.
+          2. Native account picker (Credential Manager) — bottom sheet, no
+             browser, better UX.
+        DO 1 FIRST. Option 2's catch: the native client binds to the app's
+        SIGNING CERTIFICATE. Debug and release differ so both need
+        registering, and with Play App Signing the fingerprint that matters in
+        production is GOOGLE's, which you cannot know until after the first
+        upload. So the native picker can't be fully verified until the app is
+        on a Play track — the same wall as Play Billing, and likely the same
+        emulator problem (a real Google account generally wants a Play-Store
+        image; the AVD is google_apis). The browser round-trip has none of
+        those dependencies and shares one code path with web.
+
+        SET UP AFTER THE SUPABASE SPLIT, NOT BEFORE. The OAuth client is bound
+        to a project — the callback URL contains the project ref — so doing it
+        on the keeper means doing it twice.
+
+        THE PATTERN WORTH NOTICING: Play Billing and the native account picker
+        are both untestable until something is uploaded. If either is wanted,
+        the move is to get a build onto INTERNAL testing early — that track
+        needs neither the 12 testers nor the 14 days, which are closed-track
+        requirements.
+
   SMALLER, NOT DONE
   [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
         closed-test bug reports are "it crashed" with nothing behind them.
@@ -205,8 +447,20 @@ supply compliant testers. Steps needed before submitting:
         tester's report against. One line in scripts/upload-apk.mjs.
   [ ] rclone's shared client_id is being retired during 2026 (Alex: overlook
         for now). Own client_id also removes the "unverified app" warning.
-  [ ] testing-guidelines.md is referenced by tests/README.md but exists only on
-        the Ubuntu box — not in apps-shared. One disk failure from gone.
+  [x] testing-guidelines.md — RESOLVED 2026-07-31, same evening it was raised.
+        It is now committed and pushed: apps-shared 4ba1d88 "Add shared
+        testing-guidelines.md; log Supabase consolidation as done". The repo
+        tracks five files now, and the Windows checkout at ../apps-shared/ can
+        read it.
+        Recorded because the earlier note here was alarming and is now wrong:
+        for a few hours the file was genuinely outside version control — no
+        copy in git, none on GitHub, one disk. It was cited by three files in
+        this repo (tests/README.md:6,
+        tests/support/screenshot-report-reporter.mjs:6, and the mocking plan
+        below, which is a gap analysis against it) while existing only on the
+        Ubuntu box. Worth remembering next time a doc is referenced by path
+        rather than committed — the citation looked exactly as authoritative
+        either way.
 
 
 ================================================================================
