@@ -255,7 +255,52 @@ supply compliant testers. Steps needed before submitting:
   working, but it will feel like a bug the first time.
 
   ---------------------------------------------------------------------------
-  PHASE 3 — functions, secrets, auth config (the fiddly one)
+  PHASE 3 — IN PROGRESS 2026-08-01. New project ref: hdhqpeevtofevymayvie
+  ---------------------------------------------------------------------------
+  DONE and verified by live request, not assumption:
+    [x] All four Edge Functions deployed (npx supabase functions deploy, no
+        args, deploys all of them). CLI needed `npx.cmd` — PowerShell's
+        execution policy blocks npx.ps1 — and a window YOU open, since one
+        spawned from a Claude panel inherits CLAUDECODE=1 and the Supabase CLI
+        switches to non-interactive JSON mode and refuses to prompt.
+    [x] Schema exposed + grants working: /rest/v1/debates returns 200 [] with
+        the publishable key.
+    [x] SIGN-IN WORKS FOR THE MIGRATED ACCOUNT. The .env.test account signs in
+        against the new project with its original password — the auth.users
+        password hash survived the migration. No resets needed for anyone.
+    [x] ANTHROPIC_API_KEY set; claude-proxy returned 200 and a real model
+        reply (14 in / 4 out tokens, ~0.02 cents). That single call proves
+        auth -> JWT verify -> service_role -> profiles -> credit check ->
+        Anthropic -> deduction.
+    [x] STRIPE_WEBHOOK_SECRET set (new Stripe destination, not the keeper's).
+    [x] OTHER_APP_TABLES set to "," — the probe now returns
+        {sharedApps: [], uncertain: false}, so the delete-account dialog says
+        "nothing else is affected" and that is finally TRUE rather than a
+        careful hedge. A blank value is rejected by the form; "," splits and
+        filters to an empty list, same as blank. Do NOT put a word like "none"
+        there — it survives the filter, fails to split into schema.table, and
+        silently sets uncertain=true again.
+
+  SECRET NAMES ARE LOOKUP KEYS, NOT LABELS. Cost 20 minutes on 2026-08-01:
+  secrets were first created named "iDisagree — Anthropic API key (new
+  project)". Deno.env.get("ANTHROPIC_API_KEY") matches that literal string and
+  nothing else, so the function saw no key at all. Supabase wants
+  ANTHROPIC_API_KEY; the Worker wants CLAUDE_API_KEY; Bitwarden gets the
+  descriptive name. Three names, same key material, each right in its place.
+  Also: do NOT add SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY by hand — they're
+  in Default secrets already and a manual one shadows the real thing.
+
+  STILL TO DO in Phase 3:
+    [ ] STRIPE_SECRET_KEY — needed by create-checkout-session and
+        stripe-webhook. Same value as the keeper uses; reveal, don't roll.
+    [ ] Auth redirect URLs: add https://idisagree.trolleysolution.com/** and
+        set Site URL to https://idisagree.trolleysolution.com. Unlike the
+        keeper, this project serves one app, so Site URL can finally be right.
+    [ ] Resend SMTP. Per-project; does not come along. Until it's set, auth
+        email uses Supabase's built-in sender, which is rate-limited and not
+        meant for production.
+
+  (original Phase 3 notes below)
   ---------------------------------------------------------------------------
   Deploy all four Edge Functions to the NEW project and set their secrets:
   claude-proxy, create-checkout-session, stripe-webhook, delete-account.
