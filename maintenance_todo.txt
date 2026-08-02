@@ -435,7 +435,56 @@ supply compliant testers. Steps needed before submitting:
     - Re-point Resend SMTP. It is per-project and does NOT come along.
 
   ---------------------------------------------------------------------------
-  PHASE 4 — cut over and verify
+  PHASE 4 — DONE 2026-08-02. PRODUCTION IS NOW ON hdhqpeevtofevymayvie.
+  ---------------------------------------------------------------------------
+  Verified by reading the deployed bundle, not by trusting a green build:
+        /assets/index-CRtkjmvs.js
+        hdhqpeevtofevymayvie : 1 occurrence
+        ycuuxnscbxiibsnefgef : 0 occurrences
+  Then the full Playwright suite against the LIVE site: 19 passed, 1 failed —
+  identical to the local run, and better than the keeper managed before the
+  move (17 passed, 3 failed).
+
+  THE STEP THAT WAS MISSING FROM THE ORIGINAL PLAN: .env is gitignored, so the
+  Cloudflare Pages build never reads it. VITE_SUPABASE_URL and
+  VITE_SUPABASE_ANON_KEY live as encrypted Secrets in
+  Cloudflare > Pages > idisagree > Settings > Variables and secrets, and
+  changing THOSE is what moves production. Pushing code alone would have
+  produced a successful build still pointed at the keeper — indistinguishable
+  from success unless you read the bundle.
+  Cloudflare shows secrets as write-only, so note old values BEFORE editing.
+  Rollback = put both back to the keeper's values and redeploy; the keeper is
+  untouched and still holds everything.
+        old URL : https://ycuuxnscbxiibsnefgef.supabase.co
+        old key : sb_publishable_oVIOiEk...  (Bitwarden entry 11)
+
+  ALSO FOUND DURING PHASE 4 — STRIPE_SECRET_KEY had never been added to the new
+  project. An earlier note in this file claimed it was set; that was inferred
+  from create-checkout-session returning "Minimum purchase is 50 cents", which
+  is validation at line 33 and returns BEFORE line 39 constructs the Stripe
+  client. With a valid amount the function threw, and an unhandled throw
+  returns Deno's default error response with NO CORS headers — which the
+  browser surfaces as "Failed to fetch", pointing at CORS rather than at a
+  missing key. A/B against the keeper is what settled it: same request, 200
+  with a cs_live_ URL there, 500 here. Now set; both projects mint cs_live_.
+
+  STILL ON THE KEEPER, ON PURPOSE:
+    [ ] The OLD Stripe webhook destination is still active. Both destinations
+        now receive checkout.session.completed — the new project credits
+        correctly, the keeper tries to credit a user who no longer transacts
+        there and fails harmlessly. Disable the old destination once a real
+        payment has been seen to work end to end.
+    [ ] All the original data. Nothing was deleted from the keeper; it is the
+        rollback. Phase 5 cleanup is a separate, later decision.
+
+  KNOWN TEST FAILURE, NOT A REGRESSION:
+    history.spec.js expects the .env.test account to own at least one debate.
+    That account has zero — its rows were deleted by the July probe incident —
+    so the test fails against the keeper and the new project alike. Fix by
+    having the test create a debate first, the way node-lifecycle.spec.js does,
+    rather than assuming pre-existing data.
+
+  (original Phase 4 notes below)
   ---------------------------------------------------------------------------
   New .env and .env.test, rebuild, then run the Playwright suite and the 55
   APK checks. This is what that suite is for. NOTE: the anon key is INLINED in
