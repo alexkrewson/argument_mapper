@@ -643,23 +643,33 @@ supply compliant testers. Steps needed before submitting:
         requirements.
 
   SMALLER, NOT DONE
-  [ ] SINGLE-NODE MAPS RENDER AT MAX ZOOM ON NARROW VIEWPORTS. Found
-        2026-08-02 from mobile web screenshots. ArgumentMap.jsx fitToSafeZone()
-        computes zoom as
-              Math.min(safeW/(bb.w+60), safeH/(bb.h+60), 2)
-        With one node the bounding box is tiny, both ratios are huge, and the
-        hard cap of 2 wins — so every one-node map draws at 2x. On a phone a
-        long label then overflows the viewport and the html-label badges stop
-        lining up with the node. Multi-node maps are fine because the bbox is
-        big enough that a ratio wins instead.
-        Likely fix: include labels in the bounding box
-        (cy.elements().boundingBox({ includeLabels: true })) so a wide label
-        is actually accounted for, and/or drop the cap when nodes.length === 1.
-        Reproduce on desktop by narrowing the window with a single-node map —
-        no device needed. Unrelated to the Supabase split; this is old layout
-        code.
-        While in there, check the node label's contrast: on the dark theme the
-        text looked near-black against the dark background in those shots.
+  [!] NODES SOMETIMES RENDER AS STOCK CYTOSCAPE DEFAULTS — grey ellipses with
+        the label floating outside, instead of themed roundrectangles with the
+        text inside. Seen 2026-08-02 on mobile web AND on the laptop.
+        THE DECISIVE EVIDENCE: the SAME debate on the SAME machine rendered
+        correctly in one screenshot and as grey ovals in another. So it is not
+        the data, and not the map contents.
+        Grey ellipse + label above the node + bigger font is precisely
+        Cytoscape's built-in default styling (shape: ellipse,
+        background-color #666, text-valign top). buildStylesheet()
+        (ArgumentMap.jsx:46) sets roundrectangle, theme colours and
+        text-valign: center — so when this happens the ENTIRE base node rule
+        is not in effect, not just one property.
+        Being transient points at a race between applying the stylesheet and
+        adding elements, most likely on debates loaded from History rather
+        than built up live — both sightings were History-loaded.
+        NEXT DIAGNOSTIC, 5 seconds: when the ovals appear, REFRESH THE PAGE.
+          - back to normal  -> load-order race, fix the ordering
+          - still ovals     -> something per-debate; look at that row's
+                               map_data and check the browser console for a
+                               cytoscape style warning
+        AN EARLIER NOTE HERE BLAMED fitToSafeZone()'s zoom cap of 2. That was
+        WRONG and has been removed — a zoom cap cannot make the same debate
+        render two different ways on one machine. Left recorded so the wrong
+        theory isn't re-derived.
+        Worth checking while in there: on the dark theme the default label
+        colour reads near-black against the dark background, which is what
+        makes the broken state look especially bad.
   [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
         closed-test bug reports are "it crashed" with nothing behind them.
   [ ] minifyEnabled false: release ships unminified and unobfuscated.
