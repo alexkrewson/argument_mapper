@@ -355,9 +355,36 @@ supply compliant testers. Steps needed before submitting:
   STILL TO DO in Phase 3:
     [ ] STRIPE_SECRET_KEY — needed by create-checkout-session and
         stripe-webhook. Same value as the keeper uses; reveal, don't roll.
-    [ ] Auth redirect URLs: add https://idisagree.trolleysolution.com/** and
-        set Site URL to https://idisagree.trolleysolution.com. Unlike the
-        keeper, this project serves one app, so Site URL can finally be right.
+    [x] Auth redirect URLs — DONE 2026-08-02. Site URL is now
+        https://idisagree.trolleysolution.com and the allow-list has
+        https://idisagree.trolleysolution.com/** alongside the bare domain.
+        IT WAS localhost:3000, i.e. Supabase's default — never set. Caught by
+        reading redirect_to= in an actual reset link rather than trusting the
+        page. Every auth email would have sent users to a dead local address.
+
+    THE APP NEVER PASSES redirectTo. Zero matches in src/ for redirectTo,
+    emailRedirectTo or resetPasswordForEmail options, so EVERY auth email
+    falls back to Site URL. That single fact invalidated two earlier
+    assumptions in this file, so keep it in mind before reasoning about the
+    allow-list: allow-listing only matters for URLs something actually
+    requests, and nothing here requests any.
+
+    CONFIRMATION EMAILS ARE REQUIRED on both projects — checked via
+    GET /auth/v1/settings, mailer_autoconfirm is false. So a tester cannot sign
+    in until they click a link, which is what makes Site URL load-bearing
+    rather than cosmetic.
+
+    KNOWN AND DELIBERATELY NOT FIXED — the keeper's Site URL is
+    https://alexkrewson.github.io/packing_list. On the LIVE app today a new
+    iDisagree signup gets a confirmation email, clicking it DOES confirm the
+    account, and then dumps them on the packing-list site with no sign anything
+    worked. Most people would assume it failed.
+    Not fixing it, because one Site URL cannot serve three apps — pointing it
+    at iDisagree just moves the same breakage onto packing_lists. THE CUTOVER
+    IS THE FIX: the new project serves one app and is already correct. This is
+    a small concrete example of what the split is for.
+    Until cutover, anyone who signs up on production should be told they are
+    confirmed and just need to return to idisagree.trolleysolution.com.
     [x] Resend SMTP — DONE 2026-08-02 on the new project, and it turned out
         RESEND HAD NEVER ACTUALLY BEEN CONNECTED ANYWHERE.
         The 2026-07-26 note in this file said SMTP was "pointed at Resend and
