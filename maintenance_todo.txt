@@ -358,9 +358,41 @@ supply compliant testers. Steps needed before submitting:
     [ ] Auth redirect URLs: add https://idisagree.trolleysolution.com/** and
         set Site URL to https://idisagree.trolleysolution.com. Unlike the
         keeper, this project serves one app, so Site URL can finally be right.
-    [ ] Resend SMTP. Per-project; does not come along. Until it's set, auth
-        email uses Supabase's built-in sender, which is rate-limited and not
-        meant for production.
+    [x] Resend SMTP — DONE 2026-08-02 on the new project, and it turned out
+        RESEND HAD NEVER ACTUALLY BEEN CONNECTED ANYWHERE.
+        The 2026-07-26 note in this file said SMTP was "pointed at Resend and
+        working". Half true: mail was sending, but from
+        noreply@mail.app.supabase.io — Supabase's built-in sender. On the
+        keeper, "Enable custom SMTP" is toggled ON while every field is blank,
+        so it silently falls back. The DNS verified on 2026-07-24 was correct
+        and simply unused. Proved by triggering a real password reset and
+        reading the From address; the toggle looks identical either way, which
+        is why it went unnoticed for a week.
+        New project now has: host smtp.resend.com, port 465, username the
+        literal word `resend`, password a fresh Resend API key (vaulted),
+        sender noreply@trolleysolution.com, sender name iDisagree. Verified
+        domain in Resend is trolleysolution.com (NOT send.*, which only holds
+        the return-path MX/SPF).
+    [x] DMARC record added 2026-08-02 — and it was the difference between spam
+        and inbox. The first Resend message went to Gmail spam; the domain had
+        SPF and DKIM but no DMARC, which Gmail has treated as a strong
+        negative signal since 2024. Published at Cloudflare:
+              _dmarc  TXT  v=DMARC1; p=none; rua=mailto:support@trolleysolution.com
+        Second identical message ten minutes later landed in the INBOX.
+        p=none is monitoring only — it cannot cause mail to be rejected, and
+        aggregate reports go to support@. Tighten to quarantine later once the
+        reports show only expected senders.
+        THIS WAS A LAUNCH BLOCKER NOBODY KNEW ABOUT: twelve recruited testers
+        whose confirmation emails land in spam is a failed test round, and they
+        would not think to look.
+    [ ] Consider warming the domain before testers arrive — send a handful of
+        real messages over a few days rather than having twelve first-ever
+        messages hit Gmail at once. Gmail weighs sending history as well as
+        authentication.
+    [ ] The keeper still has blank SMTP fields, so packing_lists and Analyzer
+        auth email is still on Supabase's built-in sender. Same values and the
+        same API key would fix it. Low priority — those apps get nothing like
+        a twelve-signup burst.
 
   (original Phase 3 notes below)
   ---------------------------------------------------------------------------
