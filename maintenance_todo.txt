@@ -643,6 +643,23 @@ supply compliant testers. Steps needed before submitting:
         requirements.
 
   SMALLER, NOT DONE
+  [ ] SINGLE-NODE MAPS RENDER AT MAX ZOOM ON NARROW VIEWPORTS. Found
+        2026-08-02 from mobile web screenshots. ArgumentMap.jsx fitToSafeZone()
+        computes zoom as
+              Math.min(safeW/(bb.w+60), safeH/(bb.h+60), 2)
+        With one node the bounding box is tiny, both ratios are huge, and the
+        hard cap of 2 wins — so every one-node map draws at 2x. On a phone a
+        long label then overflows the viewport and the html-label badges stop
+        lining up with the node. Multi-node maps are fine because the bbox is
+        big enough that a ratio wins instead.
+        Likely fix: include labels in the bounding box
+        (cy.elements().boundingBox({ includeLabels: true })) so a wide label
+        is actually accounted for, and/or drop the cap when nodes.length === 1.
+        Reproduce on desktop by narrowing the window with a single-node map —
+        no device needed. Unrelated to the Supabase split; this is old layout
+        code.
+        While in there, check the node label's contrast: on the dark theme the
+        text looked near-black against the dark background in those shots.
   [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
         closed-test bug reports are "it crashed" with nothing behind them.
   [ ] minifyEnabled false: release ships unminified and unobfuscated.
