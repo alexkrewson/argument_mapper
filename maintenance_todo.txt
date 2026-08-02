@@ -643,33 +643,56 @@ supply compliant testers. Steps needed before submitting:
         requirements.
 
   SMALLER, NOT DONE
-  [!] NODES SOMETIMES RENDER AS STOCK CYTOSCAPE DEFAULTS — grey ellipses with
-        the label floating outside, instead of themed roundrectangles with the
-        text inside. Seen 2026-08-02 on mobile web AND on the laptop.
-        THE DECISIVE EVIDENCE: the SAME debate on the SAME machine rendered
-        correctly in one screenshot and as grey ovals in another. So it is not
-        the data, and not the map contents.
-        Grey ellipse + label above the node + bigger font is precisely
-        Cytoscape's built-in default styling (shape: ellipse,
-        background-color #666, text-valign top). buildStylesheet()
-        (ArgumentMap.jsx:46) sets roundrectangle, theme colours and
-        text-valign: center — so when this happens the ENTIRE base node rule
-        is not in effect, not just one property.
-        Being transient points at a race between applying the stylesheet and
-        adding elements, most likely on debates loaded from History rather
-        than built up live — both sightings were History-loaded.
-        NEXT DIAGNOSTIC, 5 seconds: when the ovals appear, REFRESH THE PAGE.
-          - back to normal  -> load-order race, fix the ordering
-          - still ovals     -> something per-debate; look at that row's
-                               map_data and check the browser console for a
-                               cytoscape style warning
-        AN EARLIER NOTE HERE BLAMED fitToSafeZone()'s zoom cap of 2. That was
-        WRONG and has been removed — a zoom cap cannot make the same debate
-        render two different ways on one machine. Left recorded so the wrong
-        theory isn't re-derived.
-        Worth checking while in there: on the dark theme the default label
-        colour reads near-black against the dark background, which is what
-        makes the broken state look especially bad.
+  [!] NODES RENDER AS STOCK CYTOSCAPE DEFAULTS — grey ellipses, label floating
+        outside, instead of themed roundrectangles with the text inside.
+        Investigated 2026-08-02 to a strong lead but NOT fixed. Display only;
+        no data is lost.
+
+        REPRO (Alex's, and it is repeatable):
+          open an old test-suite debate -> add a node -> re-parent so they
+          connect -> leave and re-open the argument. Ovals.
+
+        WHAT THE PAGE ACTUALLY REPORTS (console probe against a broken map,
+        all three nodes identical in shape):
+              nodeHeight: 50     height:  "50px"   <- data() mapper APPLIED
+              width:  "30px"     <- static 260 NOT applied (cytoscape default)
+              shape:  "ellipse"  <- static roundrectangle NOT applied
+              bg:     #999       <- static theme colour NOT applied
+              dataKeys: badgeRows,faded,flagPairs,id,label,nodeHeight,
+                        non_sequitur,rating,speaker,tactics,textMarginY,type
+        So every node has complete data, and within ONE style block a data()
+        mapper resolves while its static siblings fall back to defaults.
+
+        LEAD — ArgumentMap.jsx:59-60, inside that same base node rule:
+              "font-family":   lcars ? "..." : undefined,
+              "text-transform": lcars ? "uppercase" : undefined,
+        Off the LCARS theme those are literally `undefined`. Cytoscape rejects
+        undefined property values, and how it recovers can take neighbouring
+        properties in the block with it. That is a defect either way — the fix
+        is to omit the keys rather than assign undefined (build the object
+        conditionally). DO THIS FIRST, then re-open a broken map.
+        CONFIRM IT CHEAPLY: browser console on a broken map will log something
+        like  The style property `font-family: undefined` is invalid.
+
+        STILL UNEXPLAINED, so don't declare victory early: in one map a newly
+        added node rendered CORRECTLY (orange roundrectangle) while nodes 1
+        and 2 beside it were ovals; in another map all three were broken. A
+        stylesheet-wide fault should hit every node equally, so something is
+        still per-element.
+
+        THEORIES ALREADY DISPROVEN — do not re-derive these from the
+        screenshots:
+          - fitToSafeZone()'s zoom cap of 2. A zoom cap cannot make the same
+            debate render two ways on one machine.
+          - "the stylesheet never loaded". Edges are styled (tree routing,
+            correct widths) while nodes are not, and one node rendered
+            correctly beside two broken ones.
+          - "old nodes are missing nodeHeight". They are not; the probe shows
+            it present AND applied on broken nodes.
+
+        Also worth fixing while in there: on the dark theme the default label
+        colour reads near-black on the dark background, which is what makes
+        the broken state look especially bad.
   [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
         closed-test bug reports are "it crashed" with nothing behind them.
   [ ] minifyEnabled false: release ships unminified and unobfuscated.
