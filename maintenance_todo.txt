@@ -235,11 +235,17 @@ supply compliant testers. Steps needed before submitting:
   $0.0327 — and the app still sitting in Combined mode, which is exactly what
   "not finished yet" looks like. The sibling @costly test passed at 2.2m,
   under the same deadline.
-  THE FIX, when someone wants to spend the credits: make the deadline scale
-  with the number of turns in the conversation rather than being a flat 220s.
-  Each turn is a full AI round trip, so a 6-turn conversation cannot be given
-  the same budget as a 3-turn one. Left undone deliberately — every
-  verification run costs real money.
+  FIXED 2026-08-03, but NOT YET VERIFIED AGAINST THE REAL PIPELINE — that
+  costs credits, so it wants one deliberate run. tests/support/waitForCombined.js
+  now waits on PROGRESS rather than a flat total: while new nodes keep landing
+  the run is healthy, and only a 90s stall counts as a failure. The scaling-by-
+  turn-count idea written here first turned out not to be the answer on its
+  own — both failing conversations had SIX turns, and a six-turn sibling
+  passed in 132s, so the variance is per-call AI latency, not conversation
+  size. Turn count now sets only the outer cap. Failures also say which case
+  they are ("stalled after 3 nodes" vs "still making progress at the cap"),
+  where the flat timeout reported both identically.
+        npm run test:web:costly     # ~$0.30, three tests
   ALSO: `npx playwright test` with no arguments RUNS THE @costly TIER. There is
   no grepInvert in playwright.config.js, so the "free" tier is only free if you
   ask for it by name. That is how today's run spent credits unintentionally
@@ -275,6 +281,16 @@ supply compliant testers. Steps needed before submitting:
   once. On a loaded emulator that failed in a before() hook and cancelled 37
   tests, reported as "sign-in did not complete" with no hint the cause was
   timing. It now polls for 25s and still fails fast on a real rejection.
+
+  A REPORT TRAP FIXED THE SAME DAY IT WAS BUILT, because it is the kind that
+  stays quiet: `playwright test --list` — which runs nothing — printed
+  "0 web tests" and OVERWROTE the manifest, deleting a completed run's
+  results. Any invocation that executed no tests did this (--list, a --grep
+  matching nothing, an abort before the first test), and the APK side had the
+  same shape via a stray `npm run test:apk:report` with no results.json.
+  Both halves now keep what's there unless something actually ran. Worth
+  remembering because the two suites run hours apart, so the natural way to
+  discover it would have been opening the report and finding half of it gone.
 
   EMULATOR HEALTH IS A REAL VARIABLE, worth knowing before diagnosing a red
   run. Three consecutive runs failed in apk-device with three DIFFERENT
@@ -979,8 +995,18 @@ supply compliant testers. Steps needed before submitting:
   [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
         closed-test bug reports are "it crashed" with nothing behind them.
   [ ] minifyEnabled false: release ships unminified and unobfuscated.
-  [ ] Drive uploads overwrite one app-debug.apk — no build history to match a
-        tester's report against. One line in scripts/upload-apk.mjs.
+  [x] Drive uploads overwrite one app-debug.apk — DONE 2026-08-03. Uploads are
+        now app-debug-v2-20260803-1209-d2b02fc.apk (versionCode, timestamp,
+        commit; "-dirty" when the tree wasn't clean). Sorting by name gives
+        chronological order. It was NOT the one-liner this entry predicted:
+        Gradle's exec runs from the Android project directory, so reading
+        build.gradle or calling git relative to cwd silently produces a name
+        with the versionCode missing. Everything is anchored on the script's
+        own path, and it was verified through a real `npm run build:apk`
+        rather than by running the script by hand — the hand-run is exactly
+        the path that would have hidden the bug.
+        The two pre-existing unversioned files (app-debug.apk, app-release.aab)
+        are still in Drive from the old scheme. Harmless; delete when tidying.
   [ ] rclone's shared client_id is being retired during 2026 (Alex: overlook
         for now). Own client_id also removes the "unverified app" warning.
   [x] testing-guidelines.md — RESOLVED 2026-07-31, same evening it was raised.
