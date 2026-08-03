@@ -12,7 +12,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { REPORT_DIR, resetShots, shotsDir, writeManifest } from "./report-manifest.mjs";
+import { REPORT_DIR, shotsDir, writeManifest } from "./report-manifest.mjs";
 import { buildCombinedReport } from "../../scripts/build-test-report.mjs";
 
 const SHOT_PREFIX = "report-shot:";
@@ -29,7 +29,14 @@ export default class StepReporter {
   }
 
   onBegin() {
-    this.dir = resetShots(SUITE_ID);
+    // Deliberately NOT resetShots() here. The reporter runs on every
+    // `playwright test` invocation including ones that execute nothing --
+    // `--list`, a --grep that matches no test, a run aborted before the first
+    // test. Wiping up front meant those silently destroyed the previous run's
+    // screenshots and manifest. Orphans are pruned in onEnd instead, and only
+    // when something actually ran.
+    this.dir = shotsDir(SUITE_ID);
+    fs.mkdirSync(this.dir, { recursive: true });
   }
 
   onTestEnd(test, result) {
@@ -85,6 +92,20 @@ export default class StepReporter {
   }
 
   onEnd() {
+    if (this.tests.length === 0) {
+      console.log("\nStep report: no tests ran — keeping the previous web results.");
+      return;
+    }
+
+    // Drop screenshots from earlier runs that this one didn't produce, so the
+    // shots directory can't grow without bound across runs.
+    const keep = new Set(
+      this.tests.flatMap((t) => t.steps.map((s) => path.basename(s.src))),
+    );
+    for (const name of fs.readdirSync(this.dir)) {
+      if (!keep.has(name)) fs.rmSync(path.join(this.dir, name), { force: true });
+    }
+
     const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
     writeManifest({
       id: SUITE_ID,

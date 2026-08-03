@@ -99,6 +99,13 @@ export function buildApkManifest() {
   const dev = deviceInfo();
   const tests = parseResults();
   const steps = parseSteps();
+
+  // Same trap as the web reporter: called with no results.json — a stray
+  // `npm run test:apk:report`, or a run that never reached the first test —
+  // this would otherwise overwrite the Android half of the report with an
+  // empty manifest and delete its screenshots.
+  if (tests.length === 0) return null;
+
   const shotsOut = resetShots(SUITE_ID);
 
   const used = new Set();
@@ -156,14 +163,15 @@ const invokedDirectly =
 
 if (invokedDirectly) {
   const entries = buildApkManifest();
-  const shots = entries.reduce((n, t) => n + t.steps.length, 0);
   const out = process.argv.includes("--inline")
     ? await buildStandaloneReport()
     : buildCombinedReport();
   console.log(`report: ${out}`);
-  console.log(`  ${entries.length} APK tests, ${shots} screenshots`);
-  if (entries.length === 0) {
-    console.log("  note: no results.json — run `npm run test:apk:all` first.");
+  if (entries) {
+    const shots = entries.reduce((n, t) => n + t.steps.length, 0);
+    console.log(`  ${entries.length} APK tests, ${shots} screenshots`);
+  } else {
+    console.log("  no APK results — kept the previous Android half. Run `npm run test:apk:all` first.");
   }
   console.log(`  manifests: ${REPORT_DIR}`);
 }
