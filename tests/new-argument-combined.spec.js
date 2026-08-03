@@ -1,4 +1,5 @@
 import { test, expect } from "./support/fixtures.js";
+import { combinedBudgetMs, waitForCombinedRun } from "./support/waitForCombined.js";
 
 // NOTE: this test submits real statements to the production AI pipeline and
 // spends real credit balance every run. It's tagged @costly and excluded from
@@ -6,7 +7,6 @@ import { test, expect } from "./support/fixtures.js";
 // `npm run test:e2e:full` (or `playwright test --grep @costly`).
 test.describe("New argument — combined input mode", () => {
   test("creates an argument from a 4-line A/B conversation @costly", async ({ page }, testInfo) => {
-    test.setTimeout(240_000); // 4 sequential AI turns can take well over a minute
     await page.goto("/");
     await page.getByTestId("tab-history").click();
     await page.getByTestId("history-new-argument").click();
@@ -20,19 +20,17 @@ test.describe("New argument — combined input mode", () => {
       "User A: Plenty of accepted sandwiches use hinged bread, like a submarine or a taco-style roll.",
       "User B: Cultural convention already treats hot dogs as their own food category, regardless of bread structure.",
     ].join("\n");
+    test.setTimeout(combinedBudgetMs(conversation) + 60_000);
 
     await page.getByTestId("combined-textarea").fill(conversation);
     await page.getByTestId("statement-submit").click();
 
-    // Combined mode processes every turn sequentially in one background loop,
-    // then App.jsx auto-switches inputMode back to "turns" when the whole
-    // thing finishes (src/App.jsx:934) — waiting for the plain statement
-    // textarea to reappear is the real completion signal. A node-count
-    // threshold is not enough: it can pass after turn 1 while turns 2-4 are
-    // still running, and since Playwright tears the page down at the end of
-    // the test, that would silently truncate the AI's in-flight work and
-    // save a half-processed debate to the account.
-    await expect(page.getByTestId("statement-textarea")).toBeVisible({ timeout: 220_000 });
+    // Completion semantics and the wait strategy live in the shared helper —
+    // it waits on progress rather than a flat total, so a slow run and a
+    // genuinely stalled one report differently instead of both surfacing as
+    // "element not visible after 220s".
+    await waitForCombinedRun(page, conversation);
+    await expect(page.getByTestId("statement-textarea")).toBeVisible();
 
     // The AI may decompose a single statement into more than one node (e.g. a
     // rebuttal split into premise + conclusion), so assert a floor, not an
