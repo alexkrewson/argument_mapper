@@ -56,15 +56,25 @@ function buildStylesheet(theme) {
         "text-wrap": "wrap",
         "text-max-width": "208px",
         "font-size": lcars ? "11px" : "12px",
-        "font-family": lcars ? "Antonio, Arial Narrow, sans-serif" : undefined,
-        "text-transform": lcars ? "uppercase" : undefined,
+        // Spread rather than assign undefined. Cytoscape rejects an undefined
+        // property value, and rejecting one can take neighbouring properties in
+        // the same block down with it -- which is how every non-LCARS theme
+        // ended up with stock grey ellipses: width, shape and background-color
+        // all silently fell back to defaults while data() mappers still applied.
+        ...(lcars && {
+          "font-family": "Antonio, Arial Narrow, sans-serif",
+          "text-transform": "uppercase",
+        }),
         "text-valign": "center",
         "text-halign": "center",
         "text-margin-y": "data(textMarginY)",
         width: 260,
         height: "data(nodeHeight)",
         shape: "roundrectangle",
-        color: lcars ? "#FF9900" : "#0f172a",
+        // Speaker rules below set colour and background together; this base
+        // colour is what Moderator and unmatched nodes get, so it has to work
+        // against the dark background rather than assume a light one.
+        color: lcars ? "#FF9900" : dark ? "#e2e8f0" : "#0f172a",
         "background-color": lcars ? "#0a0900" : dark ? "#1e293b" : "#f8fafc",
         "border-width": 0,
         "font-weight": "bold",
