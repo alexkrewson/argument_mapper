@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Capacitor } from "@capacitor/core";
 import { THEMES } from "../utils/themes.js";
 import { supabase } from "../utils/supabase";
 import { copyText } from "../utils/clipboard";
@@ -157,9 +158,16 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
                     <div className="settings-credits-card">
                       <span className="settings-credits-amount" data-testid="settings-credits-amount">{formatCredits(creditBalance)}</span>
                       <span className="settings-credits-unit">remaining</span>
-                      <button className="settings-credits-buy" data-testid="settings-buy-credits" onClick={() => { onBuyCredits(); setOpen(false); }}>
-                        Top up
-                      </button>
+                      {/* No in-app purchase on Android: Play's Payments policy
+                          wants Play Billing for credits consumed in the app, so
+                          the Stripe path is web-only. Deliberately no "buy on
+                          our website" hint -- steering to an external purchase
+                          is the part of that policy with teeth. */}
+                      {!Capacitor.isNativePlatform() && (
+                        <button className="settings-credits-buy" data-testid="settings-buy-credits" onClick={() => { onBuyCredits(); setOpen(false); }}>
+                          Top up
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="settings-user-email" data-testid="settings-user-email">{user.email}</div>

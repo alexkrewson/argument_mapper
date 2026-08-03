@@ -8,6 +8,7 @@
  */
 
 import { useState, useCallback, useMemo, useReducer, useRef, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeDetailPopup from "./components/NodeDetailPopup";
@@ -296,7 +297,15 @@ export default function App() {
       return true;
     }
     if (err.code === "out_of_credits") {
-      setShowBuyCredits(true);
+      // On Android the Buy Credits modal is unreachable by design (Play's
+      // Payments policy), so auto-opening it would show a dead end. Say what
+      // happened and stop there -- pointing at an external purchase is what
+      // the policy actually prohibits.
+      if (Capacitor.isNativePlatform()) {
+        setError("You're out of AI credits.");
+      } else {
+        setShowBuyCredits(true);
+      }
       return true;
     }
     return false;

@@ -56,13 +56,19 @@ describe("APK settings menu (free)", { skip }, () => {
     shot("account-section");
     for (const id of [
       "settings-credits-amount",
-      "settings-buy-credits",
       "settings-user-email",
       "settings-signout",
       "settings-delete-data-btn",
     ]) {
       assert.ok(await app.exists(id), `missing ${id}`);
     }
+    // The balance still shows; only the purchase path is gone. See the
+    // buy-credits test below for why this is asserted rather than dropped.
+    assert.equal(
+      await app.exists("settings-buy-credits"),
+      false,
+      "Top up button is present on Android — violates Play's Payments policy",
+    );
   });
 
   test("account shows the signed-in email and a credit balance", async () => {
@@ -104,22 +110,22 @@ describe("APK settings menu (free)", { skip }, () => {
     assert.ok(await app.isSignedIn(), "session lost after a rejected password change");
   });
 
-  test("Buy Credits opens a modal that closes cleanly", async () => {
-    await app.ensureSection("settings-account-toggle", "settings-buy-credits");
-    await app.click("settings-buy-credits");
-    await sleep(2500);
-    shot("buy-credits-modal");
+  // Inverted 2026-08-03. This used to open the Stripe modal; on Android that is
+  // now a policy violation rather than a feature. Play's Payments policy wants
+  // Play Billing for credits consumed in-app, so the whole purchase path is
+  // web-only. Asserting ABSENCE here is what keeps it that way -- if someone
+  // later removes the isNativePlatform() guard, this test is what notices.
+  // The web equivalent still runs: tests/buy-credits.spec.js.
+  test("Buy Credits is not reachable on Android", async () => {
+    await app.ensureSection("settings-account-toggle", "settings-credits-amount");
+    shot("no-buy-credits-on-native");
 
-    const opened = await app.exists("credits-modal-close");
-    if (!opened) {
-      // Native Stripe redirect path — record it rather than failing the suite.
-      const err = await app.eval(`document.querySelector('[data-testid="credits-modal-error"]')?.innerText ?? null`);
-      console.log(`  no in-app modal; error=${err ?? "none"} url=${await app.eval("location.href")}`);
-      return;
-    }
-    await app.click("credits-modal-close");
-    await sleep(1200);
-    assert.equal(await app.exists("credits-modal-close"), false, "modal did not close");
+    assert.equal(await app.exists("settings-buy-credits"), false, "Top up button is reachable");
+    assert.equal(await app.exists("credits-modal-close"), false, "credits modal rendered unprompted");
+
+    // The balance is still shown -- users should know where they stand even
+    // when they can't top up from here.
+    assert.ok(await app.exists("settings-credits-amount"), "credit balance is missing too");
   });
 
   test("delete-data asks for confirmation and cancel aborts", async () => {
