@@ -65,6 +65,19 @@ Start-Process "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" `
   "-no-boot-anim","-gpu","swiftshader_indirect" -WindowStyle Hidden
 ```
 
+## Crash reporting
+
+Sentry, wired in `src/utils/monitoring.js`. **No-ops without `VITE_SENTRY_DSN`**,
+so dev and the test suites never report. The DSN is a write-only ingest key and
+is meant to be public; web reads it from Cloudflare Pages variables, the APK
+bakes in whatever `.env` held at build time — so **changing it needs a rebuild**,
+same as the Supabase anon key.
+
+Breadcrumbs from `console`, `dom` and `ui.*` are dropped on purpose: people
+paste real arguments into this app, and those categories carry the user's own
+words. A stack trace is what fixes a crash. `public/privacy.html` documents
+exactly this, so keep the two in step.
+
 ## Deployment
 
 Cloudflare Pages, project `idisagree`, building from `master` — **not** GitHub

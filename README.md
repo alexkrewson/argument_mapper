@@ -126,6 +126,7 @@ Requires environment variables (`.env`):
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
+VITE_SENTRY_DSN=...        # optional — crash reporting is off without it
 ```
 
 `.env` is gitignored, so it only affects local builds. The deployed site reads

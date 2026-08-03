@@ -18,7 +18,12 @@ export default defineConfig([
     ],
     languageOptions: {
       ecmaVersion: 2020,
-      globals: globals.browser,
+      globals: {
+        ...globals.browser,
+        // Substituted at build time by vite.config.js's `define` — the commit
+        // the bundle was built from, used as the Sentry release.
+        __APP_RELEASE__: 'readonly',
+      },
       parserOptions: {
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },

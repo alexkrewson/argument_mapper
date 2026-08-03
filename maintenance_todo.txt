@@ -299,6 +299,18 @@ supply compliant testers. Steps needed before submitting:
   cold restart returned it to 55/55 with no code change. Restart before
   investigating that class of failure.
 
+  THE PRIVACY POLICY WAS SAYING SOMETHING FALSE, found while adding crash
+  reporting on 08-03. public/privacy.html still carried the pre-split warning:
+  "Some of our other apps share the same sign-in system, so if you use any of
+  them with this email address, removing the sign-in removes your access and
+  data there too." The split made that untrue — iDisagree has its own auth
+  pool, the probe returns sharedApps: [], and the in-app dialog already says
+  nothing else is affected. So the live policy overstated a risk on the exact
+  page a Play reviewer reads, and contradicted the app's own UI. Rewritten to
+  say deletion here affects only this app. Worth noting as a pattern: the
+  Supabase split falsified statements in three places (CLAUDE.md, README,
+  privacy.html) and each was found separately, days apart.
+
   PICK UP HERE — all three need Alex's hands, none needs mine:
     [ ] Disable the OLD Stripe webhook destination, once one real payment has
         been seen to work end to end on the new project. Both destinations are
@@ -992,8 +1004,35 @@ supply compliant testers. Steps needed before submitting:
         Also worth fixing while in there: on the dark theme the default label
         colour reads near-black on the dark background, which is what makes
         the broken state look especially bad.
-  [ ] Crash reporting (Sentry/Crashlytics) before testers land — otherwise
-        closed-test bug reports are "it crashed" with nothing behind them.
+  [~] Crash reporting — CODE DONE 2026-08-03, needs one thing from Alex.
+        Sentry, not Crashlytics: this is a Capacitor WebView app, so nearly
+        every failure is a JavaScript error — the thing Crashlytics is worst
+        at and Sentry is built for. @sentry/capacitor still catches genuine
+        native crashes on top.
+        WHAT ALEX HAS TO DO — the only blocker:
+          1. sentry.io > create project > platform "React". Free tier is 5k
+             errors/month, which is far more than a 12-tester round produces.
+          2. Paste the DSN into Cloudflare Pages > idisagree > Settings >
+             Variables (name: VITE_SENTRY_DSN) AND into local .env.
+          3. Tell me, and I'll rebuild the AAB — the DSN is inlined at build
+             time exactly like the Supabase anon key, so the current bundle
+             has crash reporting compiled OUT.
+        It NO-OPS WITHOUT A DSN by design, so this is already merged and
+        harmless: dev, CI and the 55 APK checks never report.
+        ALSO ADDED: a top-level error boundary. A render error used to leave a
+        white screen, which testers report as "it didn't load" — indisting-
+        uishable from a bad install or no network, and unactionable. Verified
+        by forcing a render error; the screen renders and both recovery
+        buttons are wired.
+        PRIVACY IS PART OF THIS, not an afterthought — public/privacy.html now
+        lists Sentry as a processor and describes what a report contains. The
+        `console`, `dom` and `ui.*` breadcrumb categories are DROPPED in
+        monitoring.js because they carry the user's own words: people paste
+        real arguments, with real names, into this app. If that scrubbing is
+        ever relaxed, the privacy page becomes false.
+        PLAY DATA SAFETY: adding this means the form must now declare crash
+        logs / diagnostics. Do not fill it in from memory before submitting.
+        Bundle cost: app chunk 170.6 -> 196.6 kB (gzip 49.5 -> 58.0).
   [ ] minifyEnabled false: release ships unminified and unobfuscated.
   [x] Drive uploads overwrite one app-debug.apk — DONE 2026-08-03. Uploads are
         now app-debug-v2-20260803-1209-d2b02fc.apk (versionCode, timestamp,
