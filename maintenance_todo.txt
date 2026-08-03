@@ -133,17 +133,52 @@ supply compliant testers. Steps needed before submitting:
         payers to disrupt later. That converts this from the one item that
         couldn't be fixed after launch into a reversible decision. Post-Epic
         rules on linking out still unchecked, but no longer block submission.
-  [!] Account deletion: Play requires it for apps with account creation. Code
-        is written and committed but NOT deployed —
-        `supabase functions deploy delete-account` is still needed. The client
-        hides the option until the function answers a GET probe, so shipping in
-        either order is safe.
+  [x] Account deletion — DONE. Deployed to the new project in Phase 3 with the
+        other three Edge Functions, and PROVEN by the probe answering
+        {sharedApps: [], uncertain: false} rather than by assuming the deploy
+        took. This entry sat marked BLOCKING for two days after it stopped
+        being true.
 
   ============================================================================
-  START HERE — 2026-08-03. READ THIS FIRST; the 08-01 block below is history.
+  START HERE — end of 2026-08-03. Everything below this block is history.
   ============================================================================
-  The Supabase split is DONE through Phase 4. Phase 5 (keeper cleanup) is
-  deliberately still waiting. What changed today:
+
+  STATE OF PLAY, in one paragraph. The Supabase split is done through Phase 4;
+  production runs on hdhqpeevtofevymayvie and the keeper is untouched as the
+  rollback. Phase 5 is deliberately waiting until ~08-09. NOTHING TECHNICAL
+  BLOCKS PLAY SUBMISSION any more: keystore chosen, Buy Credits compliant,
+  account deletion deployed and proven, artifacts rebuilt against the right
+  backend, release minified, crash reporting merged, 55/55 on device and
+  22/22 on web. What remains is Alex's hands and the 12-tester round.
+
+  EVERYTHING IS COMMITTED AND PUSHED as of this block, in both argument_mapper
+  and apps-shared. Production verified live by bundle hash, not assumed.
+
+  DO THESE FIRST — in this order, all of them Alex's:
+    1. SENTRY DSN. sentry.io > new project > React. Paste into Cloudflare
+       Pages > idisagree > Settings > Variables as VITE_SENTRY_DSN, and into
+       local .env. Then ASK FOR AN APK/AAB REBUILD — the DSN is inlined at
+       build time, so today's artifacts have crash reporting compiled OUT.
+       Until this is done, crash reporting is merged but inert.
+    2. Run one analysis in Analyzer, so its rotated key stops showing
+       "Last used: —" and the old key can finally be revoked.
+    3. Play Console, whenever submission resumes. Note the Data Safety form
+       now has to declare crash logs / diagnostics — that changed today.
+    4. Disable the OLD Stripe webhook destination, but only after one real
+       payment has been seen to work end to end on the new project.
+
+  SMALLER, ALSO ALEX'S: copy upload-keystore.jks to the Ubuntu box and retire
+  idisagree-release.jks there; re-mint the Cloudflare API token; get
+  Analyzer's Reddit client id/secret from reddit.com/prefs/apps directly;
+  warm the sending domain before twelve testers arrive at once.
+
+  TWO THINGS DELIBERATELY NOT STARTED, because they need decisions and not
+  guesses: mocking the Thorough test tier (Alex asked for it scoped before any
+  code, and its open questions are choices about fixtures), and the
+  coach/tutorial feature further down this file, which has no agreed shape.
+
+  ---------------------------------------------------------------------------
+  What changed on 2026-08-03, in detail:
 
   THE BUILD ARTIFACTS WERE STALE AND NOBODY HAD NOTICED.
   Phase 4 moved production to hdhqpeevtofevymayvie on 08-02, but that only
@@ -164,10 +199,12 @@ supply compliant testers. Steps needed before submitting:
   BOTH ARE NOW REBUILT AND VERIFIED, 2026-08-03:
         app-debug.apk    hdhqpeevtofevymayvie ×5, ycuuxnscbxiibsnefgef ×0
         app-release.aab  hdhqpeevtofevymayvie ×5, ycuuxnscbxiibsnefgef ×0
-  APK suite: 55/55 pass on the emulator. (A first run failed at sign-in with
-  "settings-btn not found" — the emulator had only just finished booting and
-  the install raced it. A clean re-run passed everything. If that shape of
-  failure appears again, re-run before investigating.)
+  APK suite: 55/55 pass on the emulator.
+  (An earlier version of this note blamed a "settings-btn not found" failure
+  on the emulator having just booted, and told you to re-run before
+  investigating. THAT WAS WRONG and the advice was bad — it was a flat
+  8-second sleep after launch in connect(). Fixed later the same day; see the
+  flakiness entry below. Re-running masked a real bug for most of a day.)
 
   KEYSTORE DECISION MADE — Alex, 2026-08-03. This item is CLOSED.
         android/upload-keystore.jks, alias `upload`, 4096-bit RSA,
@@ -235,8 +272,13 @@ supply compliant testers. Steps needed before submitting:
   $0.0327 — and the app still sitting in Combined mode, which is exactly what
   "not finished yet" looks like. The sibling @costly test passed at 2.2m,
   under the same deadline.
-  FIXED 2026-08-03, but NOT YET VERIFIED AGAINST THE REAL PIPELINE — that
-  costs credits, so it wants one deliberate run. tests/support/waitForCombined.js
+  FIXED AND VERIFIED 2026-08-03 — 23/23 against production, all three @costly
+  tests green, ~$0.30 spent deliberately. THE DECISIVE DETAIL: pizza-fight,
+  which failed at 4.0m in the morning, passed in 1.7m on the same six-turn
+  conversation. Same input, less than half the time — which is the proof that
+  no fixed budget could ever have been tuned correctly, and that waiting on
+  progress was the right shape of fix rather than a bigger number.
+  tests/support/waitForCombined.js
   now waits on PROGRESS rather than a flat total: while new nodes keep landing
   the run is healthy, and only a 90s stall counts as a failure. The scaling-by-
   turn-count idea written here first turned out not to be the answer on its
@@ -364,7 +406,8 @@ supply compliant testers. Steps needed before submitting:
   branches, which are unreachable today but are the right thing to say if the
   probe ever fails. Conditional caution is not a stale claim.
 
-  PICK UP HERE — all three need Alex's hands, none needs mine:
+  DETAIL FOR THE "DO THESE FIRST" LIST AT THE TOP OF THIS BLOCK. The Sentry
+  DSN is item 1 there and is not repeated here; these are the rest.
     [ ] Disable the OLD Stripe webhook destination, once one real payment has
         been seen to work end to end on the new project. Both destinations are
         live right now; the keeper's fails harmlessly.
@@ -376,11 +419,12 @@ supply compliant testers. Steps needed before submitting:
         …/privacy#delete. STILL UNVERIFIED whether Play accepts an
         email-based deletion route or insists on a self-serve web form.
 
-  AND THEN, still open and unchanged by today:
+  AND THEN, still open:
     - Phase 5, the keeper cleanup. TRIGGER FIRST, SCHEMA SECOND. Give it a
       week from the 08-02 cutover; there is no cost to letting it sit.
     - Domain warming before twelve testers arrive at once.
-    - Crash reporting before testers land.
+    - Crash reporting: CODE DONE, inert until the DSN exists. See item 1 of
+      "DO THESE FIRST" above, and the full entry further down this file.
     - Uploading anything at all is still ON HOLD per Alex 2026-07-26, pending
       automated Android testing. That is now in much better shape: 55/55.
 
