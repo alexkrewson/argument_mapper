@@ -430,9 +430,15 @@ supply compliant testers. Steps needed before submitting:
     [ ] Run one analysis in Analyzer. Its rotated key still shows
         "Last used: —" in the Anthropic console, so the rotation is deployed
         but unproven — and the old key can't be safely revoked until it is.
-    [ ] A FIFTH project exists that the inventory doesn't cover:
-        subreddit_health_tracker (DATABASE_URL, REDIS_URL, its own Anthropic
-        key). Enumerate when convenient.
+    [x] subreddit_health_tracker — NOT OURS TO TRACK. Alex confirmed 2026-08-03
+        that it is a different, unrelated app, not a fifth project of this
+        ecosystem. Dropped from the secrets inventory's scope; do not go
+        looking for its DATABASE_URL / REDIS_URL / Anthropic key.
+        THIS MAKES THE ENTRY BELOW MORE SUSPECT, not less: the Reddit
+        client id/secret that turned up in old/subreddit_health_tracker/.env
+        on the Ubuntu box belong to an unrelated app, so they are very
+        probably NOT Analyzer's pair at all. Treat them as someone else's
+        credentials and get Analyzer's from reddit.com/prefs/apps directly.
     [ ] Analyzer's Reddit client id/secret are still unresolved. The values
         found on the Ubuntu box came from old/subreddit_health_tracker/.env —
         a different app's copy — so they may not even be Analyzer's current
@@ -1117,8 +1123,27 @@ supply compliant testers. Steps needed before submitting:
         making them readable needs sourcemap upload. Both are the same
         errand (Sentry's Gradle/Vite plugins) and worth doing before the
         tester round if crash triage turns out to matter.
-        shrinkResources was deliberately NOT enabled in the same pass — one
-        variable at a time. It is the obvious next size win if wanted.
+        shrinkResources — MEASURED AND REJECTED 2026-08-03, not skipped.
+        Enabled it, built, ran all 55 checks against the shrunk release APK:
+        55/55, it works. The numbers are why it's off anyway:
+              all-ABI APK  4.56 -> 4.48 MB   (-80 kB)
+              AAB          3.47 -> 3.46 MB   (-10 kB)  <- what Play delivers
+        0.3% of the shipping artifact. Resource shrinking's failure mode is
+        stripping something reached reflectively or by name, which a test
+        suite can miss entirely, and that risk isn't worth 10 kB. Revisit only
+        if the app ever grows resources worth shrinking. Recorded with the
+        measurements so nobody has to redo the experiment to find out.
+
+        A FALSE ALARM WORTH KEEPING, because it nearly became a wrong verdict:
+        the first shrinkResources run failed the blank-screen detector with
+        rootChildren 0 and readyState 'interactive' — a textbook "shrinking
+        broke the app" signature. It wasn't. The screenshot the suite captures
+        BEFORE that assertion showed an Android "System UI isn't responding"
+        dialog: the emulator was wedged, not the app. A cold restart gave
+        55/55 with the identical APK. That capture-before-assert line was
+        added the same day for exactly this reason and paid for itself
+        immediately — without it the conclusion would have been "shrinking
+        breaks the app", recorded as fact and never re-tested.
   [x] Drive uploads overwrite one app-debug.apk — DONE 2026-08-03. Uploads are
         now app-debug-v2-20260803-1209-d2b02fc.apk (versionCode, timestamp,
         commit; "-dirty" when the tree wasn't clean). Sorting by name gives

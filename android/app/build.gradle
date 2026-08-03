@@ -35,6 +35,13 @@ android {
     buildTypes {
         release {
             minifyEnabled true
+            // shrinkResources was measured on 2026-08-03 and rejected: it
+            // passed all 55 checks, but saved 80 kB on the all-ABI APK and
+            // only ~10 kB on the AAB, which is what Play actually delivers.
+            // Resource shrinking's failure mode is stripping something reached
+            // reflectively or by name, which a test suite can miss, and 0.3%
+            // does not buy that risk. Revisit only if the app grows resources
+            // worth shrinking.
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (keystorePropertiesFile.exists()) {
                 signingConfig signingConfigs.release
