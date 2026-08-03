@@ -324,9 +324,21 @@ supply compliant testers. Steps needed before submitting:
   pool, the probe returns sharedApps: [], and the in-app dialog already says
   nothing else is affected. So the live policy overstated a risk on the exact
   page a Play reviewer reads, and contradicted the app's own UI. Rewritten to
-  say deletion here affects only this app. Worth noting as a pattern: the
-  Supabase split falsified statements in three places (CLAUDE.md, README,
-  privacy.html) and each was found separately, days apart.
+  say deletion here affects only this app.
+
+  THAT PATTERN IS NOW CLOSED OUT. The split falsified statements in four
+  places, each found separately over three days — CLAUDE.md, README's
+  Deployment section, privacy.html, and then README's tech-stack table, which
+  still said "Hosting | GitHub Pages" even after the Deployment section below
+  it had been corrected. Rather than wait for a fifth, 08-03 swept for the
+  whole class:
+        grep -rn ycuuxnscbxiibsnefgef              # only intentional hits left
+        grep -rniE "share (the )?same (sign|auth)" # nothing outside this file
+        grep -rniE "github\.io|github pages"       # nothing outside this file
+  The delete-account copy in SettingsPanel.jsx:218-221 DOES still mention
+  other apps, and that is correct — those are the probe's uncertain/non-empty
+  branches, which are unreachable today but are the right thing to say if the
+  probe ever fails. Conditional caution is not a stale claim.
 
   PICK UP HERE — all three need Alex's hands, none needs mine:
     [ ] Disable the OLD Stripe webhook destination, once one real payment has
@@ -1050,6 +1062,21 @@ supply compliant testers. Steps needed before submitting:
         PLAY DATA SAFETY: adding this means the form must now declare crash
         logs / diagnostics. Do not fill it in from memory before submitting.
         Bundle cost: app chunk 170.6 -> 196.6 kB (gzip 49.5 -> 58.0).
+        @sentry/capacitor SHIPS A NATIVE ANDROID PLUGIN — this is not a
+        web-only change. `cap sync` edits two TRACKED files
+        (android/app/capacitor.build.gradle, android/capacitor.settings.gradle)
+        and without them committed the Android build silently omits the
+        plugin, i.e. crash reporting would work on web and not on the APK,
+        which is the platform it matters most for. Both committed.
+        Re-verified after adding it: debug APK builds, 55/55 on device, AAB
+        builds and is signed with the upload key, still 5 hits for the new
+        Supabase project and 0 for the keeper.
+        SIZE, because the raw number looks alarming: the all-ABI debug APK
+        went 4.37 -> 8.39 MB, but 4 MB of that is one libsentry.so per ABI.
+        The AAB went 3.36 -> 4.81 MB and Play delivers per-ABI splits, so a
+        tester downloads roughly one ~0.75 MB library, not four.
+        THE APK/AAB ON DISK NOW INCLUDE SENTRY BUT NO DSN — they are current
+        with master, and will need ONE more rebuild once the DSN exists.
   [ ] minifyEnabled false: release ships unminified and unobfuscated.
   [x] Drive uploads overwrite one app-debug.apk — DONE 2026-08-03. Uploads are
         now app-debug-v2-20260803-1209-d2b02fc.apk (versionCode, timestamp,

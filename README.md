@@ -30,7 +30,9 @@ A browser-based tool for productive disagreement between two participants. State
 | Graph rendering | Cytoscape.js + cytoscape-dagre + cytoscape-node-html-label |
 | AI | Claude Sonnet (map analysis) + Claude Haiku (conversation parsing) |
 | Backend / Auth | Supabase (PostgreSQL, Auth, Edge Functions on Deno) |
-| Hosting | GitHub Pages, deployed via GitHub Actions |
+| Mobile | Capacitor (Android) |
+| Crash reporting | Sentry (off unless `VITE_SENTRY_DSN` is set) |
+| Hosting | Cloudflare Pages, built from `master` |
 
 The browser never calls the Anthropic API directly. All AI requests are proxied through a Supabase Edge Function (`claude-proxy`) that holds the API key server-side.
 
