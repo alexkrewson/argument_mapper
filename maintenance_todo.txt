@@ -299,6 +299,23 @@ supply compliant testers. Steps needed before submitting:
   cold restart returned it to 55/55 with no code change. Restart before
   investigating that class of failure.
 
+  THE CLOUDFLARE BUILD BROKE ON 08-03 AND deploy:verify IS THE ONLY REASON
+  ANYONE KNEW. Commit 260892d (crash reporting) failed to build; the site
+  simply kept serving the previous bundle, exactly the silent failure this
+  file has warned about twice. Cause: @sentry/capacitor runs a
+  check-siblings.js postinstall that requires @sentry/react pinned to EXACTLY
+  10.60.0. `npm install` wrote ^10.60.0, which resolves fine against an
+  already-populated node_modules and fails `npm ci` from a clean checkout —
+  so it passed locally and failed in the one environment that matters.
+  THE DIAGNOSTIC WORTH REUSING: don't read the dashboard, reproduce it.
+        git clone --depth 1 file:///<this repo> /tmp/x && cd /tmp/x
+        npm ci && npm run build
+  Same error in seconds, and it is exactly what Cloudflare runs. This is the
+  second time a dependency range that only breaks under `npm ci` has taken
+  the site down quietly (the first was the 07-30 peer-range incident, ~40
+  minutes of stale bundle). Any change to dependencies deserves that clean
+  clone before the push, not after.
+
   THE PRIVACY POLICY WAS SAYING SOMETHING FALSE, found while adding crash
   reporting on 08-03. public/privacy.html still carried the pre-split warning:
   "Some of our other apps share the same sign-in system, so if you use any of
