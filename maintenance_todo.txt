@@ -44,10 +44,17 @@ supply compliant testers. Steps needed before submitting:
         android/app/build/outputs/bundle/release/app-release.aab. Verified
         signed with the real release keystore (idisagree-release.jks, alias
         "idisagree"), not a debug key.
+        SUPERSEDED 2026-08-03: that 07-26 bundle pointed at the OLD Supabase
+        project and must not be uploaded. Rebuilt 08-03 against
+        hdhqpeevtofevymayvie, signed with upload-keystore.jks, 55/55 APK
+        checks green. See the 08-03 block at the top of this file.
   [ ] Upload the AAB to Google Play Console as a closed testing track — ON
         HOLD per Alex 2026-07-26: not submitting yet, wants automated Android
-        testing worked out on his machine first. The AAB above is ready to go
-        whenever he is.
+        testing worked out on his machine first. That was the stated blocker
+        and it is now in good shape (55/55), so this is worth revisiting.
+        versionCode is still 2 and nothing has been uploaded, so no bump is
+        needed for a first upload — but `npm run release:aab` (which bumps)
+        is the right command for every upload after that.
   [ ] Recruit 12 testers and run for 14 days
   [ ] Add privacy policy URL + fill out Data Safety form in Play Console
         USE https://idisagree.trolleysolution.com/privacy  (no .html — that
@@ -105,6 +112,10 @@ supply compliant testers. Steps needed before submitting:
         `npm run validate:apk`. HTML screenshot report.
 
   BLOCKING — Play submission
+  [x] RESOLVED 2026-08-03 — the Windows `android/upload-keystore.jks`, alias
+        `upload`, is the one. See the 08-03 block at the top for the reasoning
+        and for what's left (copy it to Ubuntu, retire the other there).
+        Original entry kept below for context.
   [!] TWO RELEASE KEYSTORES NOW EXIST. Decide before the first upload; after
         it, the choice is locked to whatever signed that build.
           - Ubuntu:  idisagree-release.jks, alias "idisagree"  (pre-existing)
@@ -129,7 +140,171 @@ supply compliant testers. Steps needed before submitting:
         either order is safe.
 
   ============================================================================
-  WHERE WE STOPPED — 2026-08-01, ~20:00. READ THIS FIRST.
+  START HERE — 2026-08-03. READ THIS FIRST; the 08-01 block below is history.
+  ============================================================================
+  The Supabase split is DONE through Phase 4. Phase 5 (keeper cleanup) is
+  deliberately still waiting. What changed today:
+
+  THE BUILD ARTIFACTS WERE STALE AND NOBODY HAD NOTICED.
+  Phase 4 moved production to hdhqpeevtofevymayvie on 08-02, but that only
+  touched the Cloudflare Pages secrets. The AAB this file called "ready to go
+  whenever he is" was built 07-30 and still had the KEEPER's URL and key
+  inlined — reading the bundle inside it showed ycuuxnscbxiibsnefgef ×4,
+  hdhqpeevtofevymayvie ×0. Uploading it would have put twelve testers on the
+  retired project: the one whose Site URL dumps confirmations on the
+  packing-list site and whose auth mail still goes out unauthenticated from
+  Supabase's built-in sender. Both launch blockers fixed over the weekend were
+  fixed ONLY on the new project.
+  THE GENERAL LESSON, worth more than the incident: the anon key is INLINED at
+  build time. Any change to which Supabase project the app talks to invalidates
+  every existing artifact — web bundle, APK and AAB independently. "Production
+  is migrated" and "the artifacts are migrated" are separate claims, and the
+  only way to settle the second is to read the bundle inside the file.
+
+  BOTH ARE NOW REBUILT AND VERIFIED, 2026-08-03:
+        app-debug.apk    hdhqpeevtofevymayvie ×5, ycuuxnscbxiibsnefgef ×0
+        app-release.aab  hdhqpeevtofevymayvie ×5, ycuuxnscbxiibsnefgef ×0
+  APK suite: 55/55 pass on the emulator. (A first run failed at sign-in with
+  "settings-btn not found" — the emulator had only just finished booting and
+  the install raced it. A clean re-run passed everything. If that shape of
+  failure appears again, re-run before investigating.)
+
+  KEYSTORE DECISION MADE — Alex, 2026-08-03. This item is CLOSED.
+        android/upload-keystore.jks, alias `upload`, 4096-bit RSA,
+        CN=Alex Krewson, OU=iDisagree, valid to 2053.
+  The AAB above is signed with it (META-INF/UPLOAD.RSA), and
+  android/keystore.properties on this box already pointed at it, so nothing
+  had to change. Chosen over the Ubuntu idisagree-release.jks because it is
+  stronger and lives on the machine builds happen on. STILL TO DO: copy the
+  .jks to the Ubuntu box, and retire idisagree-release.jks there so a future
+  session can't sign with the wrong one. Both are in Bitwarden regardless.
+  Worth recording because this file made the choice sound more fateful than it
+  is: with Play App Signing (the default for new apps) this is only the UPLOAD
+  key, and a lost upload key can be reset by Google. The unrecoverable scenario
+  is opting OUT of Play App Signing, which we are not doing.
+
+  BUY CREDITS IS NOW OFF ON ANDROID — the last code-level Play blocker.
+        SettingsPanel.jsx  the Top up button is behind !isNativePlatform().
+                           The BALANCE still shows; only the purchase path is
+                           gone. Someone should know where they stand.
+        App.jsx            the out_of_credits path no longer auto-opens the
+                           modal on native — that would have been a dead end.
+                           It sets the error bar to a plain "You're out of AI
+                           credits." and stops. NO "buy more on our website":
+                           steering to an external purchase is the part of
+                           Play's payments policy with teeth.
+  The two APK settings tests that asserted the button EXISTS now assert it is
+  ABSENT, which is what will notice if the guard is ever removed. The web
+  equivalent (tests/buy-credits.spec.js) is unchanged and still runs — the
+  Stripe path is web-only, not deleted.
+
+  OVAL NODES — FIXED AND CONFIRMED. The 08-02 lead was right.
+  ArgumentMap.jsx assigned literal `undefined` to font-family and
+  text-transform off the LCARS theme; cytoscape rejects an undefined value and
+  took the neighbouring static properties in the same block down with it. Now
+  built with a conditional spread instead of assigned undefined.
+  Probed on Alex's exact repro (build a map, re-parent, leave, re-open):
+        before   shape ellipse · width 30px · bg #999
+        after    shape roundrectangle · width 260px · bg the speaker colour
+  Both nodes correct, zero console warnings. The "one node rendered fine beside
+  two broken ones" observation from 08-02 was never explained and could not be
+  reproduced today — if ovals ever come back, that variance is the thread to
+  pull, not the undefined properties.
+  Fixed in the same pass: the base node colour was near-black on both themes,
+  which is what made Moderator nodes unreadable on dark (the speaker rules set
+  colour and background together, Moderator sets only background).
+
+  history.spec.js NOW PASSES. It assumed the .env.test account already owned a
+  debate; the July probe incident deleted them all, so it failed against the
+  keeper and the new project alike for reasons unrelated to History. It now
+  builds its own debate, clears the canvas, loads it back from the list, and
+  deletes it BY ID. Clearing first is load-bearing twice over: it proves the
+  map came from the server, and the title click only loads directly when the
+  canvas is empty (otherwise it raises a replace-confirmation instead).
+
+  WEB SUITE 2026-08-03, run locally against the dev server: 21 passed, 2
+  failed. history.spec.js is now green (it was the 1 red on 08-02). Both
+  failures are @costly, which the 08-02 run did not include — so this is new
+  information, not a regression:
+        messy-arguments  sarcastic-non-sequitur-pizza-fight   4.0m
+        new-argument-combined  4-line A/B conversation        3.7m
+  NEITHER IS A PRODUCT BUG. Both hit the 220-second deadline in
+  submitCombinedWithStepShots (messy-arguments.spec.js:44) while the combined
+  loop was still working. The failure snapshot shows the map half-built and
+  correct — 5 properly typed nodes with tactic badges, a logged AI turn at
+  $0.0327 — and the app still sitting in Combined mode, which is exactly what
+  "not finished yet" looks like. The sibling @costly test passed at 2.2m,
+  under the same deadline.
+  THE FIX, when someone wants to spend the credits: make the deadline scale
+  with the number of turns in the conversation rather than being a flat 220s.
+  Each turn is a full AI round trip, so a 6-turn conversation cannot be given
+  the same budget as a 3-turn one. Left undone deliberately — every
+  verification run costs real money.
+  ALSO: `npx playwright test` with no arguments RUNS THE @costly TIER. There is
+  no grepInvert in playwright.config.js, so the "free" tier is only free if you
+  ask for it by name. That is how today's run spent credits unintentionally
+  (~$0.30, three tests). Worth a `--grep-invert @costly` npm script.
+
+  TEST REPORTING REBUILT 2026-08-03 — every test now shows its steps.
+  Asked for: screenshots for all tests, in an HTML report describing what they
+  did, with a collapsible left navbar. Built, and the shared
+  testing-guidelines.md was raised to match (it previously asked only for
+  screenshot-on-failure plus extra shots on costly tests).
+        test-results/report/index.html    75 tests · 318 screenshots
+  WHAT THE OLD REGIME ACTUALLY COVERED: 1 of 13 web spec files called
+  reportShot(). The report looked healthy and described 8% of the suite. That
+  is the argument for instrumenting the framework seam instead of asking each
+  test to opt in — capture now happens in a Playwright fixture that wraps the
+  Locator prototype, and in the APK App class, so a new test is covered the
+  moment it is written and cannot forget.
+  Steps are paired to APK tests BY TIMESTAMP, because node:test exposes no
+  "current test" handle. That is only sound while --test-concurrency=1 holds.
+  If concurrency is ever raised, the pairing misfiles silently instead of
+  failing — the comment in report.mjs says so, and this is the second reason
+  not to raise it.
+  TWO TRAPS WORTH REMEMBERING:
+    - Playwright wipes its outputDir at the start of every run, and that
+      defaulted to test-results/ — so a web run deleted the Android half of
+      the report seconds after it was built, with nothing in the output to
+      say so. outputDir is now test-results/playwright.
+    - Step labels quote what was typed, so the .env.test password was landing
+      in the HTML in plain text. Screenshots were innocent (the browser renders
+      dots), which is exactly why it would have survived a visual check. Now
+      redacted by field name.
+  ALSO FIXED WHILE IN THERE: App.signIn() slept a flat 6s and then checked
+  once. On a loaded emulator that failed in a before() hook and cancelled 37
+  tests, reported as "sign-in did not complete" with no hint the cause was
+  timing. It now polls for 25s and still fails fast on a real rejection.
+
+  EMULATOR HEALTH IS A REAL VARIABLE, worth knowing before diagnosing a red
+  run. Three consecutive runs failed in apk-device with three DIFFERENT
+  startup errors (settings-btn missing, readyState 'interactive', WebView
+  unreachable over CDP) after the emulator had been up for hours under load. A
+  cold restart returned it to 55/55 with no code change. Restart before
+  investigating that class of failure.
+
+  PICK UP HERE — all three need Alex's hands, none needs mine:
+    [ ] Disable the OLD Stripe webhook destination, once one real payment has
+        been seen to work end to end on the new project. Both destinations are
+        live right now; the keeper's fails harmlessly.
+    [ ] Run one analysis in Analyzer. Its rotated key still shows "Last used:
+        —", so the rotation is deployed but unproven, and the old key can't be
+        revoked until it is.
+    [ ] Play Console, when submission resumes: privacy URL
+        https://idisagree.trolleysolution.com/privacy and data-deletion URL
+        …/privacy#delete. STILL UNVERIFIED whether Play accepts an
+        email-based deletion route or insists on a self-serve web form.
+
+  AND THEN, still open and unchanged by today:
+    - Phase 5, the keeper cleanup. TRIGGER FIRST, SCHEMA SECOND. Give it a
+      week from the 08-02 cutover; there is no cost to letting it sit.
+    - Domain warming before twelve testers arrive at once.
+    - Crash reporting before testers land.
+    - Uploading anything at all is still ON HOLD per Alex 2026-07-26, pending
+      automated Android testing. That is now in much better shape: 55/55.
+
+  ============================================================================
+  WHERE WE STOPPED — 2026-08-01, ~20:00. Superseded by the block above.
   ============================================================================
   The Supabase split is most of the way done. New project: hdhqpeevtofevymayvie
 

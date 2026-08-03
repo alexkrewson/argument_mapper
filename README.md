@@ -122,12 +122,15 @@ npm run dev      # http://localhost:5173
 npm run build    # outputs to dist/
 ```
 
-Requires environment variables (`.env.local`):
+Requires environment variables (`.env`):
 ```
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
-VITE_PROXY_SECRET=...
 ```
+
+`.env` is gitignored, so it only affects local builds. The deployed site reads
+these from Cloudflare Pages → Settings → Variables and secrets — changing `.env`
+alone will not move production.
 
 The Supabase Edge Function (`supabase/functions/claude-proxy/`) must be deployed separately and holds `ANTHROPIC_API_KEY`.
 
@@ -135,4 +138,10 @@ The Supabase Edge Function (`supabase/functions/claude-proxy/`) must be deployed
 
 ## Deployment
 
-Push to `master` — GitHub Actions builds with Vite and deploys to GitHub Pages automatically.
+Push to `master` — Cloudflare Pages (project `idisagree`) builds with Vite and
+deploys to https://idisagree.trolleysolution.com automatically. The GitHub Pages
+workflow was removed 2026-06-30.
+
+A push that fails to build is invisible from outside — the site simply keeps
+serving the previous bundle. Confirm with `npm run deploy:verify`, which checks
+the live entry-bundle hash, rather than assuming the push was enough.

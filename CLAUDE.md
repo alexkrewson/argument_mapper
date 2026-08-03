@@ -20,9 +20,14 @@ They are not interchangeable — paths, JDK and emulator differ.
 - **`supabase.from("debates")` is the live table name.** User-facing copy says
   "productive disagreement", but the schema, `data-debate-id`, the
   `debate-flow` anchor and the identifiers are deliberately unchanged.
-- **Auth is shared across every app in this Supabase project.** One pool per
-  project, not per schema (see `apps-shared/todo.md`). Deleting `auth.users`
-  costs that person their Analyzer and packing-list access too.
+- **iDisagree has its own Supabase project: `hdhqpeevtofevymayvie`.** Production
+  moved there 2026-08-02. The old shared project (`ycuuxnscbxiibsnefgef`, "the
+  keeper") still holds packing_lists and comment_cluster/Analyzer, plus an
+  untouched copy of everything as the rollback — do not point anything here at
+  it. Auth is one pool per project, not per schema, so it is *no longer* shared
+  with the other two apps: deleting `auth.users` here costs this app only. Alex
+  consequently has two independent identities under the same email, one in each
+  project; changing the password in one does not change the other.
 - **Never delete rows by position.** Always by id — a test once deleted a real
   user's debate by assuming "topmost History row = mine".
 - **`npm run build:mobile`, never `npm run build`, for Android.** The Vite
@@ -34,10 +39,22 @@ They are not interchangeable — paths, JDK and emulator differ.
 
 ```bash
 npm run dev · npm run lint · npm run validate:apk   # build + 55 checks + report
+npm run test:web            # web suite, free tier (excludes @costly)
+npm run test:web:costly     # spends real credits, opt-in
 npm run test:apk            # static only, ~1s, no device
 npm run test:apk:costly     # spends real credits, opt-in
+npm run report              # rebuild test-results/report/index.html
 npm run ship                # deploy to Cloudflare + verify live + build APK
 ```
+
+**`npx playwright test` with no args RUNS THE @costly TIER** — there's no
+grep-invert in the config, so the free tier is only free if you ask for it by
+name. Use `npm run test:web`.
+
+Every test screenshots every UI action; `test-results/report/index.html` is the
+combined web + Android report (left navbar, collapsible per file). Each suite
+writes its own manifest there, so running one refreshes only its half. Set
+`REPORT_STEPS=0` to skip capture while iterating.
 
 Device suites need an emulator. Launch it **detached** or it dies with the
 shell and takes the run with it:
