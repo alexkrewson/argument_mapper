@@ -32,9 +32,15 @@ export function loadTestEnv() {
   );
 }
 
-const APK_PATH = path.join(
-  repoRoot, "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk",
-);
+// Overridable so the suites can be pointed at a RELEASE build, which is what
+// actually ships. apk-device.test.mjs already honoured APK_PATH; these suites
+// did not, so "the tests pass" only ever meant "the debug build passes" —
+// which says nothing about minification, shrinking or the release manifest.
+//
+//   APK_PATH=android/app/build/outputs/apk/release/app-release.apk npm run test:apk:all
+const APK_PATH = process.env.APK_PATH
+  ? path.resolve(process.env.APK_PATH)
+  : path.join(repoRoot, "android", "app", "build", "outputs", "apk", "debug", "app-debug.apk");
 
 /**
  * Push the freshly built APK before relaunching.
@@ -47,8 +53,25 @@ const APK_PATH = path.join(
 function installCurrentApk() {
   if (!fs.existsSync(APK_PATH)) return "no-apk";
   const res = adb(["install", "-r", "-d", APK_PATH], { timeout: 300_000 });
-  return res.status === 0 ? "installed" : `install-failed: ${res.stderr || res.stdout}`;
+  if (res.status === 0) return "installed";
+
+  // `adb install -r` cannot change an app's signing key, so switching between
+  // a debug build and a release one fails here rather than at the assertion
+  // that eventually notices. Uninstalling first is the only way across, and
+  // it is safe: this is a test device and the app keeps nothing locally that
+  // matters (session included -- the suites sign in).
+  const output = `${res.stderr || ""}${res.stdout || ""}`;
+  if (output.includes("INSTALL_FAILED_UPDATE_INCOMPATIBLE")) {
+    adb(["uninstall", PKG]);
+    const retry = adb(["install", "-r", "-d", APK_PATH], { timeout: 300_000 });
+    if (retry.status === 0) return "installed-after-uninstall";
+    return `install-failed: ${retry.stderr || retry.stdout}`;
+  }
+  return `install-failed: ${output}`;
 }
+
+/** Present on every screen, signed in or out — so it means "the UI is up". */
+const READY_MARKER = "settings-btn";
 
 export async function connect({ relaunch = false, install = relaunch } = {}) {
   if (install) {
@@ -59,11 +82,38 @@ export async function connect({ relaunch = false, install = relaunch } = {}) {
     adb(["shell", "am", "force-stop", PKG]);
     await sleep(1200);
     adb(["shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1"]);
-    await sleep(8000);
+    await sleep(2500);
   }
-  const url = await openWebViewCdp(PKG);
+
+  // The WebView appears a little after the process does, so reaching for CDP
+  // once can miss it on a loaded emulator.
+  let url = null;
+  const cdpDeadline = Date.now() + 30_000;
+  while (!url && Date.now() < cdpDeadline) {
+    url = await openWebViewCdp(PKG);
+    if (!url) await sleep(1000);
+  }
   if (!url) throw new Error("could not reach the app WebView over CDP");
-  return instrument(new App(new CdpSession(url, PKG)));
+
+  const app = instrument(new App(new CdpSession(url, PKG)));
+  if (!relaunch) return app;
+
+  // This used to be a flat 8s sleep after launch, and it was the single
+  // largest source of false failures in these suites — four separate red runs
+  // on 2026-08-03 alone, surfacing as "settings-btn not found" inside signIn()
+  // or as a readyState assertion, none of which named the real cause. A cold
+  // start on a busy emulator is simply not a fixed cost. Wait for the UI to
+  // actually exist instead; a genuinely broken build still fails, just with a
+  // message that says so.
+  const readyDeadline = Date.now() + 45_000;
+  while (Date.now() < readyDeadline) {
+    if (await app.exists(READY_MARKER).catch(() => false)) return app;
+    await sleep(1000);
+  }
+  throw new Error(
+    `app launched but never rendered [data-testid="${READY_MARKER}"] within 45s — ` +
+    "the WebView is up, so this is a render/bundle failure rather than a slow start",
+  );
 }
 
 // ── Step capture ────────────────────────────────────────────────────────────

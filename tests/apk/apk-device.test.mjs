@@ -88,9 +88,18 @@ describe("APK device validation", { skip }, () => {
     ]);
     assert.equal(launch.status, 0, `failed to launch ${PKG}:\n${launch.stderr}`);
 
-    // Cold start on an emulator: give the WebView time to load and paint.
-    await sleep(8000);
-    cdpUrl = await openWebViewCdp(PKG);
+    // Poll rather than sleeping a fixed 8s and looking once. A minified
+    // release build starts measurably slower than a debug one -- enough that
+    // the single lookup missed the WebView on every run and reported it as
+    // "could not reach the app's WebView over CDP... the app died before
+    // rendering", which is a genuinely alarming message for what is only a
+    // slower start. Every other suite already retries via connect().
+    await sleep(3000);
+    const deadline = Date.now() + 30_000;
+    while (!cdpUrl && Date.now() < deadline) {
+      cdpUrl = await openWebViewCdp(PKG);
+      if (!cdpUrl) await sleep(1000);
+    }
   });
 
   after(() => {

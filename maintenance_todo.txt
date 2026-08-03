@@ -292,6 +292,30 @@ supply compliant testers. Steps needed before submitting:
   remembering because the two suites run hours apart, so the natural way to
   discover it would have been opening the report and finding half of it gone.
 
+  THE APK SUITE'S FLAKINESS WAS ONE BUG, AND IT IS FIXED. Four red runs on
+  08-03 blamed on "emulator health" were really a flat `await sleep(8000)`
+  after launch in connect(), plus a single-shot WebView lookup. A cold start
+  on a loaded emulator is not a fixed cost, so the suite would begin driving
+  an app that hadn't rendered — surfacing as "settings-btn not found" inside
+  signIn(), or a readyState assertion, neither of which names the cause.
+  Now it waits for the UI to exist (45s cap) and retries the CDP lookup (30s),
+  in connect() and in apk-device's own before hook. A genuinely broken build
+  still fails, with a message that says which half broke.
+  This is the third instance of the same mistake in this codebase in one day
+  — sign-in, the combined @costly wait, and now launch — so it is worth
+  stating as a rule: ON A DEVICE OR AGAINST A NETWORK, POLL FOR THE CONDITION.
+  A sleep long enough to be reliable is always longer than you want to wait.
+
+  TWO THINGS THE SUITE COULDN'T DO BEFORE, both needed for the minify work:
+    - APK_PATH is now honoured by ALL suites, not just apk-device. Until now
+      "the tests pass" only ever meant "the DEBUG build passes", which says
+      nothing about minification, shrinking or the release manifest — i.e.
+      nothing about the artifact that actually ships.
+    - Installing over a differently-signed build. `adb install -r` cannot
+      change signing keys, so switching debug <-> release failed with
+      INSTALL_FAILED_UPDATE_INCOMPATIBLE. It now uninstalls and retries on
+      exactly that error.
+
   EMULATOR HEALTH IS A REAL VARIABLE, worth knowing before diagnosing a red
   run. Three consecutive runs failed in apk-device with three DIFFERENT
   startup errors (settings-btn missing, readyState 'interactive', WebView
@@ -1077,7 +1101,24 @@ supply compliant testers. Steps needed before submitting:
         tester downloads roughly one ~0.75 MB library, not four.
         THE APK/AAB ON DISK NOW INCLUDE SENTRY BUT NO DSN — they are current
         with master, and will need ONE more rebuild once the DSN exists.
-  [ ] minifyEnabled false: release ships unminified and unobfuscated.
+  [x] minifyEnabled — ENABLED AND VERIFIED 2026-08-03. R8 is on for release.
+        Release APK  6.66 -> 4.56 MB   (-31%)
+        Release AAB  4.81 -> 3.47 MB
+        Proved by running the FULL 55-check suite against the minified
+        RELEASE apk, not the debug one: 55/55. That needed two things the
+        suite couldn't do before — see the flakiness entry below.
+        DEOBFUSCATION IS ALREADY HANDLED FOR PLAY: the AAB ships
+        BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map, so
+        Play Console un-obfuscates crashes by itself. Nothing to upload.
+        SENTRY IS THE GAP, and it is a follow-up rather than a blocker:
+        Sentry has no mapping, so a Java/native stack trace there will be
+        obfuscated. Most crashes in a WebView app are JavaScript, which R8
+        never touched — though those were ALREADY minified by Vite, and
+        making them readable needs sourcemap upload. Both are the same
+        errand (Sentry's Gradle/Vite plugins) and worth doing before the
+        tester round if crash triage turns out to matter.
+        shrinkResources was deliberately NOT enabled in the same pass — one
+        variable at a time. It is the obvious next size win if wanted.
   [x] Drive uploads overwrite one app-debug.apk — DONE 2026-08-03. Uploads are
         now app-debug-v2-20260803-1209-d2b02fc.apk (versionCode, timestamp,
         commit; "-dirty" when the tree wasn't clean). Sorting by name gives
