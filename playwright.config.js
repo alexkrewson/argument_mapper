@@ -12,6 +12,11 @@ try {
 
 export default defineConfig({
   testDir: "./tests",
+  // Must NOT be the default "test-results". Playwright wipes its outputDir at
+  // the start of every run, and test-results/ also holds the APK suite's
+  // results and the combined report — so a web run was silently deleting the
+  // Android half of the report seconds after it was generated.
+  outputDir: "./test-results/playwright",
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,
@@ -23,7 +28,7 @@ export default defineConfig({
   reporter: [
     ["list"],
     ["html", { open: "never" }],
-    ["./tests/support/screenshot-report-reporter.mjs"],
+    ["./tests/support/step-reporter.mjs"],
   ],
 
   use: {

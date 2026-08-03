@@ -26,6 +26,7 @@ import {
   cdpEvaluate,
   sleep,
 } from "./support/android.mjs";
+import { screenshotter } from "./support/app.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.join(__dirname, "..", "..");
@@ -39,6 +40,11 @@ const PKG = JSON.parse(
 ).appId;
 
 const ARTIFACTS = path.join(repoRoot, "test-results", "apk");
+
+// One shooter for the file. Each screenshotter() call carries its own frame
+// counter, so making a second one here would restart numbering at 001 and let
+// two frames land on the same filename.
+const shot = screenshotter("device");
 
 const hasDevice = findAdb() !== null && connectedDevices().length > 0;
 const skip = hasDevice
@@ -217,6 +223,11 @@ describe("APK device validation", { skip }, () => {
     const missing = probes.filter(([, ok]) => !ok).map(([id]) => id);
     console.log(`  data-testid present: ${probes.filter(([, ok]) => ok).map(([id]) => id).join(", ")}`);
 
+    // Captured before the assertion, so a failure leaves behind a picture of
+    // what DID render. "expected UI did not render" is a much cheaper thing to
+    // diagnose next to the screen it's describing.
+    shot("UI probe — what actually mounted");
+
     assert.deepEqual(
       missing,
       [],
@@ -251,17 +262,16 @@ describe("APK device validation", { skip }, () => {
     assert.deepEqual(caught, [], `JS errors while navigating tabs:\n${caught.join("\n")}`);
   });
 
+  // Routed through screenshotter() rather than writing straight to ARTIFACTS,
+  // so the frame reaches the report like every other step. This suite drives
+  // the device over raw CDP instead of through App, so it gets no automatic
+  // capture — this is its one deliberate frame, and it is the most valuable
+  // one in the run: the first thing the app renders after a fresh install.
   test("captures a screenshot artifact", () => {
-    const out = path.join(ARTIFACTS, "launch.png");
-    const bin = findAdb();
-    const res = spawnSync(bin, ["exec-out", "screencap", "-p"], {
-      maxBuffer: 64 * 1024 * 1024,
-      encoding: "buffer",
-    });
-    if (res.status === 0 && res.stdout?.length > 0) {
-      fs.writeFileSync(out, res.stdout);
-      console.log(`  screenshot: ${path.relative(repoRoot, out)} (${res.stdout.length} bytes)`);
-      assert.ok(res.stdout.length > 1000, "screenshot is suspiciously small");
+    const file = shot("app as launched");
+    if (file) {
+      console.log(`  screenshot: ${path.relative(repoRoot, file)}`);
+      assert.ok(fs.statSync(file).size > 1000, "screenshot is suspiciously small");
     } else {
       console.log("  (screenshot unavailable on this device)");
     }

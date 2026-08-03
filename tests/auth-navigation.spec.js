@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Runs signed-out — overrides the shared storageState with a blank one.
 // Only exercises client-side mode switching in the auth modal; never submits

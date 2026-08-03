@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Read-only in the sense that it never touches AI or Supabase writes — just
 // localStorage — free to run anytime.

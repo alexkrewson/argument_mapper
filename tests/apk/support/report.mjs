@@ -1,33 +1,38 @@
-// Builds test-results/apk/report.html from results.json + the screenshot folders.
+// Turns the APK run into the Android half of the combined test report.
 //
-//   npm run test:apk:report              -> report.html, images referenced (~20 KB)
-//   npm run test:apk:report -- --inline  -> report-standalone.html, images embedded
+//   npm run test:apk:report              -> refreshes test-results/report/index.html
+//   npm run report -- --inline           -> single-file copy to hand to someone else
 //
-// The default keeps the report small and is what you open locally. Use --inline
-// to hand a single file to someone outside this machine.
+// Reads three things the run leaves behind:
+//   results.json   one JSON line per test (tests/apk/support/json-reporter.mjs)
+//   steps.jsonl    one line per screenshot, timestamped (screenshotter())
+//   <group>/*.png  the screenshots themselves
+//
+// node:test has no way to ask "which test is running?", so steps are paired to
+// tests by time: each test event carries its end timestamp and duration, and a
+// step belongs to whichever test's window contains it. That holds because the
+// APK suites run with --test-concurrency=1 — they share one device and one app
+// instance, so they cannot overlap. If that ever changes, this pairing breaks
+// before the tests do, and silently.
 
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { findAdb } from "./android.mjs";
+import { REPORT_DIR, resetShots, writeManifest } from "../../support/report-manifest.mjs";
+import { buildCombinedReport, buildStandaloneReport } from "../../../scripts/build-test-report.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.join(__dirname, "..", "..", "..", "test-results", "apk");
-const INLINE = process.argv.includes("--inline");
-const OUT = path.join(root, INLINE ? "report-standalone.html" : "report.html");
+const repoRoot = path.join(__dirname, "..", "..", "..");
+const apkRoot = path.join(repoRoot, "test-results", "apk");
+const SUITE_ID = "apk";
 
-const imgSrc = (group, file) =>
-  INLINE
-    ? `data:image/png;base64,${fs.readFileSync(path.join(root, group, file)).toString("base64")}`
-    : `${group}/${file}`;
-
-const esc = (s) =>
-  String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
 
 function deviceInfo() {
   const adb = findAdb();
-  if (!adb) return { serial: "unknown", model: "unknown", release: "unknown", sdk: "unknown" };
+  if (!adb) return { serial: "unknown", model: "unknown", release: "?", sdk: "?" };
   const get = (args) => spawnSync(adb, args, { encoding: "utf8" }).stdout?.trim() ?? "";
   return {
     serial: (get(["devices"]).split("\n")[1] || "").split(/\s+/)[0] || "none",
@@ -39,7 +44,7 @@ function deviceInfo() {
 
 /** node:test's json reporter emits one JSON object per line. */
 function parseResults() {
-  const file = path.join(root, "results.json");
+  const file = path.join(apkRoot, "results.json");
   if (!fs.existsSync(file)) return [];
   const events = [];
   for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
@@ -48,137 +53,117 @@ function parseResults() {
     try {
       events.push(JSON.parse(t));
     } catch {
-      /* partial line */
+      /* partial line from an interrupted run */
     }
   }
   return events
     .filter((e) => e.type === "test:pass" || e.type === "test:fail")
-    .map((e) => ({
-      name: e.data?.name ?? "(unnamed)",
-      file: e.data?.file ? path.basename(e.data.file) : "",
-      pass: e.type === "test:pass",
-      skipped: Boolean(e.data?.skip),
-      durationMs: e.data?.details?.duration_ms ?? 0,
-      error: e.data?.details?.error?.message ?? e.data?.details?.error?.cause?.message ?? null,
-      nesting: e.data?.nesting ?? 0,
-    }))
-    // Suite-level rollups duplicate their children; keep the leaves.
-    .filter((t) => t.nesting > 0 || !events.some((e) => e.data?.name !== t.name));
+    // Suite-level rollups repeat their children and would swallow every step
+    // in the file into one entry; keep the leaves.
+    .filter((e) => (e.data?.nesting ?? 0) > 0)
+    .map((e) => {
+      const duration = e.data?.details?.duration_ms ?? 0;
+      const end = e.ts ?? 0;
+      return {
+        name: e.data?.name ?? "(unnamed)",
+        file: e.data?.file ? path.basename(e.data.file) : "",
+        status: e.data?.skip ? "skipped" : e.type === "test:pass" ? "passed" : "failed",
+        durationMs: duration,
+        start: end - duration,
+        end,
+        error:
+          e.data?.details?.error?.message ??
+          e.data?.details?.error?.cause?.message ??
+          null,
+      };
+    });
 }
 
-function groups() {
-  if (!fs.existsSync(root)) return [];
-  return fs
-    .readdirSync(root, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => ({
-      name: d.name,
-      shots: fs
-        .readdirSync(path.join(root, d.name))
-        .filter((f) => f.endsWith(".png"))
-        .sort(),
-    }))
-    .filter((g) => g.shots.length > 0);
+function parseSteps() {
+  const file = path.join(apkRoot, "steps.jsonl");
+  if (!fs.existsSync(file)) return [];
+  const out = [];
+  for (const line of fs.readFileSync(file, "utf8").split(/\r?\n/)) {
+    const t = line.trim();
+    if (!t.startsWith("{")) continue;
+    try {
+      out.push(JSON.parse(t));
+    } catch {
+      /* partial line */
+    }
+  }
+  return out.sort((a, b) => a.ts - b.ts);
 }
 
-const dev = deviceInfo();
-const tests = parseResults();
-const passed = tests.filter((t) => t.pass && !t.skipped).length;
-const failed = tests.filter((t) => !t.pass).length;
-const skipped = tests.filter((t) => t.skipped).length;
-const shotGroups = groups();
-const totalShots = shotGroups.reduce((n, g) => n + g.shots.length, 0);
-const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+export function buildApkManifest() {
+  const dev = deviceInfo();
+  const tests = parseResults();
+  const steps = parseSteps();
+  const shotsOut = resetShots(SUITE_ID);
 
-const byFile = {};
-for (const t of tests) (byFile[t.file] ||= []).push(t);
+  const used = new Set();
+  const entries = tests.map((t) => {
+    const id = slug(`${t.file}-${t.name}`);
+    let n = 0;
+    const mine = steps.filter((s, i) => {
+      if (used.has(i)) return false;
+      // Inclusive of the start edge: the first action of a test frequently
+      // lands on the same millisecond the test began.
+      const inWindow = s.ts >= t.start && s.ts <= t.end;
+      if (inWindow) used.add(i);
+      return inWindow;
+    });
 
-const html = `<!doctype html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>iDisagree — APK test report</title>
-<style>
-  :root { color-scheme: dark; --bg:#0f1720; --panel:#182430; --line:#24323f;
-          --fg:#e6edf3; --dim:#8fa3b5; --ok:#3fb950; --bad:#f85149; --warn:#d29922; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg);
-         font:15px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif; }
-  .wrap { max-width:1200px; margin:0 auto; padding:32px 20px 72px; }
-  h1 { font-size:26px; margin:0 0 4px; }
-  .sub { color:var(--dim); margin-bottom:24px; }
-  .cards { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:28px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px;
-          padding:14px 18px; min-width:120px; }
-  .card b { display:block; font-size:24px; }
-  .ok b { color:var(--ok); } .bad b { color:var(--bad); } .warn b { color:var(--warn); }
-  .meta { color:var(--dim); font-size:13px; }
-  h2 { font-size:18px; margin:32px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--line); }
-  table { width:100%; border-collapse:collapse; margin-bottom:8px; }
-  td { padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
-  td.s { width:34px; text-align:center; }
-  td.d { width:80px; text-align:right; color:var(--dim); font-variant-numeric:tabular-nums; }
-  .err { color:var(--bad); font-family:ui-monospace,Consolas,monospace; font-size:12px;
-         white-space:pre-wrap; padding:6px 10px 12px 44px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:14px; }
-  figure { margin:0; background:var(--panel); border:1px solid var(--line);
-           border-radius:10px; overflow:hidden; }
-  figure img { width:100%; display:block; background:#000; cursor:zoom-in; }
-  figcaption { padding:7px 9px; font-size:11.5px; color:var(--dim); word-break:break-all; }
-  dialog { border:none; background:transparent; max-width:96vw; max-height:96vh; padding:0; }
-  dialog::backdrop { background:rgba(0,0,0,.85); }
-  dialog img { max-width:96vw; max-height:96vh; display:block; }
-</style></head><body><div class="wrap">
+    const mySteps = [];
+    for (const s of mine) {
+      if (!s.file) continue;
+      const src = path.join(apkRoot, s.file);
+      if (!fs.existsSync(src)) continue;
+      const name = `${id}-${String(++n).padStart(3, "0")}.png`;
+      try {
+        fs.copyFileSync(src, path.join(shotsOut, name));
+      } catch {
+        continue;
+      }
+      mySteps.push({ label: s.label, src: `shots/${SUITE_ID}/${name}` });
+    }
 
-<h1>iDisagree — APK test report</h1>
-<div class="sub">${esc(stamp)} · ${esc(dev.model || "unknown device")} ·
-  Android ${esc(dev.release)} (API ${esc(dev.sdk)}) · ${esc(dev.serial)}</div>
+    return {
+      id,
+      file: t.file,
+      title: t.name,
+      status: t.status,
+      durationMs: t.durationMs,
+      error: t.error,
+      notes: [],
+      steps: mySteps,
+    };
+  });
 
-<div class="cards">
-  <div class="card ok"><b>${passed}</b><span class="meta">passed</span></div>
-  <div class="card ${failed ? "bad" : ""}"><b>${failed}</b><span class="meta">failed</span></div>
-  <div class="card ${skipped ? "warn" : ""}"><b>${skipped}</b><span class="meta">skipped</span></div>
-  <div class="card"><b>${totalShots}</b><span class="meta">screenshots</span></div>
-</div>
+  const stamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+  writeManifest({
+    id: SUITE_ID,
+    label: "Android · APK on device",
+    meta: `${stamp} · ${dev.model || "unknown device"} · Android ${dev.release} (API ${dev.sdk}) · ${dev.serial}`,
+    tests: entries,
+  });
 
-${
-  tests.length === 0
-    ? `<p class="meta">No results.json found — run <code>npm run test:apk:all</code> first.</p>`
-    : Object.entries(byFile)
-        .map(
-          ([file, list]) => `<h2>${esc(file || "tests")}</h2><table>${list
-            .map(
-              (t) => `<tr>
-        <td class="s">${t.skipped ? "○" : t.pass ? "✓" : "✕"}</td>
-        <td>${esc(t.name)}</td>
-        <td class="d">${Math.round(t.durationMs)}ms</td></tr>${
-          t.error ? `<tr><td colspan="3" class="err">${esc(t.error)}</td></tr>` : ""
-        }`,
-            )
-            .join("")}</table>`,
-        )
-        .join("")
+  return entries;
 }
 
-${shotGroups
-  .map(
-    (g) => `<h2>Screenshots — ${esc(g.name)} <span class="meta">(${g.shots.length})</span></h2>
-<div class="grid">${g.shots
-      .map(
-        (s) => `<figure><img loading="lazy" src="${imgSrc(g.name, s)}" alt="${esc(s)}"
-      onclick="zoom(this.src)"><figcaption>${esc(s.replace(/\.png$/, ""))}</figcaption></figure>`,
-      )
-      .join("")}</div>`,
-  )
-  .join("")}
+const invokedDirectly =
+  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
 
-<dialog id="lb" onclick="this.close()"><img id="lbimg" alt=""></dialog>
-<script>
-  function zoom(src){ const d=document.getElementById('lb');
-    document.getElementById('lbimg').src=src; d.showModal(); }
-</script>
-</div></body></html>`;
-
-fs.mkdirSync(root, { recursive: true });
-fs.writeFileSync(OUT, html, "utf8");
-console.log(`report: ${OUT} (${(fs.statSync(OUT).size / 1024).toFixed(0)} KB)`);
-console.log(`  ${passed} passed, ${failed} failed, ${skipped} skipped, ${totalShots} screenshots`);
+if (invokedDirectly) {
+  const entries = buildApkManifest();
+  const shots = entries.reduce((n, t) => n + t.steps.length, 0);
+  const out = process.argv.includes("--inline")
+    ? await buildStandaloneReport()
+    : buildCombinedReport();
+  console.log(`report: ${out}`);
+  console.log(`  ${entries.length} APK tests, ${shots} screenshots`);
+  if (entries.length === 0) {
+    console.log("  note: no results.json — run `npm run test:apk:all` first.");
+  }
+  console.log(`  manifests: ${REPORT_DIR}`);
+}

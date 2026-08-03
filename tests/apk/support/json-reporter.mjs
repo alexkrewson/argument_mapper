@@ -10,6 +10,10 @@ export default async function* jsonReporter(source) {
     const err = d.details?.error;
     yield `${JSON.stringify({
       type: event.type,
+      // Wall-clock end time. node:test gives no "current test" handle, so
+      // report.mjs pairs screenshots to tests by checking which
+      // [ts - duration_ms, ts] window each one falls in.
+      ts: Date.now(),
       data: {
         name: d.name,
         file: d.file,

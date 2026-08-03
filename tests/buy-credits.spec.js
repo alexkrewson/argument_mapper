@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Creating a Stripe Checkout Session costs nothing until it's actually paid —
 // unpaid sessions just expire on their own. This test verifies the real

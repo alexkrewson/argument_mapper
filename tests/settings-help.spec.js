@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Clipboard write only — no AI, no network call.
 test.describe("Settings — Help", () => {

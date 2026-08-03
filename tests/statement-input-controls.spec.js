@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Local UI state only — name editing, turn switching, and mode switching
 // never call the AI or hit the network until you actually Submit/Process.

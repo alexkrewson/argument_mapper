@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Manual node add/edit/rate/undo/redo/delete are all pure client-side map
 // edits — the App.jsx handlers explicitly make no API call. This test builds

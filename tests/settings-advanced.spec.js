@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // All local state + localStorage — no AI, no Supabase writes.
 test.describe("Settings — Advanced", () => {

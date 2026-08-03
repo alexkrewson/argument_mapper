@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Read-only UI smoke checks — no AI calls, safe to run as often as you like.
 test.describe("Navigation & settings", () => {

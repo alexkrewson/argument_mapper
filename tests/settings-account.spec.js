@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 test.describe("Settings — Account", () => {
   test("Delete my data shows a confirmation that can be cancelled without deleting anything", async ({ page }) => {

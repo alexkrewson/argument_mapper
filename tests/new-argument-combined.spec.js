@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // NOTE: this test submits real statements to the production AI pipeline and
 // spends real credit balance every run. It's tagged @costly and excluded from

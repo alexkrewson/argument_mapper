@@ -9,6 +9,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { adb, findAdb, openWebViewCdp, CdpSession, sleep } from "./android.mjs";
+import { redactValue } from "../../support/report-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const repoRoot = path.join(__dirname, "..", "..", "..");
@@ -62,7 +63,54 @@ export async function connect({ relaunch = false, install = relaunch } = {}) {
   }
   const url = await openWebViewCdp(PKG);
   if (!url) throw new Error("could not reach the app WebView over CDP");
-  return new App(new CdpSession(url, PKG));
+  return instrument(new App(new CdpSession(url, PKG)));
+}
+
+// ── Step capture ────────────────────────────────────────────────────────────
+//
+// Every device action goes through App, so instrumenting these five methods
+// gives the report a screenshot per step for all the APK suites at once — no
+// per-test bookkeeping, and nothing to remember when writing a new test.
+// Composite helpers (signIn, addNode, newDebate) call these internally, so
+// their sub-steps get captured too, which is usually what you want when a
+// multi-stage helper is the thing that broke.
+//
+// The recorder is whatever screenshotter() most recently created, and each
+// step is timestamped so report.mjs can file it against the test that was
+// running at the time — node:test has no "current test" handle to ask.
+//
+// REPORT_STEPS=0 switches this off. Worth doing when iterating on one suite:
+// each screencap is roughly half a second over adb, so full capture adds a
+// minute or two to a complete run.
+
+const AUTO_CAPTURE = {
+  click: (id) => `Tap ${friendly(id)}`,
+  setValue: (id, value) => `Type into ${friendly(id)} — "${truncate(redactValue(id, value))}"`,
+  selectValue: (id, value) => `Choose "${truncate(value)}" in ${friendly(id)}`,
+  tapNode: (id) => (id ? `Open node ${id}` : "Open the first node"),
+  pickTheme: (name) => `Pick the ${name} theme`,
+};
+
+const truncate = (v) => (String(v).length > 60 ? `${String(v).slice(0, 57)}…` : String(v));
+const friendly = (id) => String(id).replace(/[-_]/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+
+let recorder = null;
+
+function instrument(app) {
+  if (process.env.REPORT_STEPS === "0") return app;
+  for (const [name, describe] of Object.entries(AUTO_CAPTURE)) {
+    const original = app[name].bind(app);
+    app[name] = async (...args) => {
+      const result = await original(...args);
+      try {
+        recorder?.(describe(...args));
+      } catch {
+        // A missing frame is not worth failing a device test over.
+      }
+      return result;
+    };
+  }
+  return app;
 }
 
 const q = (sel) => `document.querySelector(${JSON.stringify(sel)})`;
@@ -186,11 +234,21 @@ export class App {
     await this.setValue("auth-email", email);
     await this.setValue("auth-password", password);
     await this.click("auth-submit");
-    await sleep(6000);
-    const err = await this.eval(`${q('[data-testid="auth-error"]')}?.innerText ?? ''`);
-    if (err) throw new Error(`sign-in failed: ${err}`);
-    if (!(await this.isSignedIn())) throw new Error("sign-in did not complete");
-    return "ok";
+
+    // Poll rather than sleeping once and checking. A fixed 6s wait was enough
+    // on a freshly booted emulator and not enough on a loaded one, which made
+    // whole suites fail in their before() hook — 37 tests cancelled by one
+    // slow network round trip, reported as "sign-in did not complete" with no
+    // hint that the cause was timing. A real rejection still fails fast,
+    // because auth-error is checked every pass.
+    const deadline = Date.now() + 25_000;
+    while (Date.now() < deadline) {
+      const err = await this.eval(`${q('[data-testid="auth-error"]')}?.innerText ?? ''`);
+      if (err) throw new Error(`sign-in failed: ${err}`);
+      if (await this.isSignedIn()) return "ok";
+      await sleep(1000);
+    }
+    throw new Error("sign-in did not complete within 25s");
   }
 
   /** Free — places a node directly, no AI call, no credit spend. */
@@ -363,21 +421,38 @@ export class App {
   }
 }
 
-/** Screenshot helper writing into test-results/apk/<group>/. */
+/**
+ * Screenshot helper writing into test-results/apk/<group>/.
+ *
+ * Also registers itself as the active step recorder (see instrument() above)
+ * and appends a timestamped line to steps.jsonl, which is how report.mjs pairs
+ * each frame with the test that produced it. Explicit shot("label") calls and
+ * auto-captured actions go through the same path, so they interleave in the
+ * report in the order they actually happened.
+ */
 export function screenshotter(group) {
   const dir = path.join(repoRoot, "test-results", "apk", group);
   fs.mkdirSync(dir, { recursive: true });
+  const log = path.join(repoRoot, "test-results", "apk", "steps.jsonl");
   let n = 0;
-  return (label) => {
-    const file = path.join(dir, `${String(++n).padStart(2, "0")}-${label}.png`);
+
+  const shoot = (label) => {
+    const safe = String(label).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").slice(0, 60);
+    const name = `${String(++n).padStart(3, "0")}-${safe}.png`;
+    const file = path.join(dir, name);
     const r = spawnSync(findAdb(), ["exec-out", "screencap", "-p"], {
       maxBuffer: 64 * 1024 * 1024,
       encoding: "buffer",
     });
-    if (r.status === 0 && r.stdout?.length > 1000) {
-      fs.writeFileSync(file, r.stdout);
-      return file;
-    }
-    return null;
+    const ok = r.status === 0 && r.stdout?.length > 1000;
+    if (ok) fs.writeFileSync(file, r.stdout);
+    fs.appendFileSync(
+      log,
+      `${JSON.stringify({ ts: Date.now(), group, label: String(label), file: ok ? `${group}/${name}` : null })}\n`,
+    );
+    return ok ? file : null;
   };
+
+  recorder = shoot;
+  return shoot;
 }

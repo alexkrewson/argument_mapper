@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./support/fixtures.js";
 
 // Fully static content — nav collapse and section-scroll are the only
 // interactive parts.
