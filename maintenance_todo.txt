@@ -160,17 +160,24 @@ supply compliant testers. Steps needed before submitting:
        local .env. Then ASK FOR AN APK/AAB REBUILD — the DSN is inlined at
        build time, so today's artifacts have crash reporting compiled OUT.
        Until this is done, crash reporting is merged but inert.
-    2. Run one analysis in Analyzer, so its rotated key stops showing
-       "Last used: —" and the old key can finally be revoked.
-    3. Play Console, whenever submission resumes. Note the Data Safety form
-       now has to declare crash logs / diagnostics — that changed today.
-    4. Disable the OLD Stripe webhook destination, but only after one real
+    2. Play Console, whenever submission resumes. Note the Data Safety form
+       now has to declare crash logs / diagnostics — that changed 08-03.
+    3. Disable the OLD Stripe webhook destination, but only after one real
        payment has been seen to work end to end on the new project.
 
-  SMALLER, ALSO ALEX'S: copy upload-keystore.jks to the Ubuntu box and retire
-  idisagree-release.jks there; re-mint the Cloudflare API token; get
-  Analyzer's Reddit client id/secret from reddit.com/prefs/apps directly;
-  warm the sending domain before twelve testers arrive at once.
+  SMALLER, ALSO ALEX'S: re-mint the Cloudflare API token; warm the sending
+  domain before twelve testers arrive at once.
+
+  OUT OF SCOPE FOR THIS FILE — Alex, 2026-08-05.
+    ANALYZER is a separate app. Its errands are gone from here: running an
+    analysis to retire the rotated key, and chasing its Reddit client
+    id/secret. If they still matter they belong in that repo, not this one.
+    THE UBUNTU BOX IS RETIRED. Windows is the only dev machine. There is no
+    keystore to copy anywhere and no second idisagree-release.jks to retire —
+    android/upload-keystore.jks on this box is simply the one, and Bitwarden
+    is the off-machine backup.
+  Blocks further down still mention both, and ANDROID_SETUP_HANDOFF.md still
+  documents the Ubuntu setup. That is history, not instructions.
 
   TWO THINGS DELIBERATELY NOT STARTED, because they need decisions and not
   guesses: mocking the Thorough test tier (Alex asked for it scoped before any
@@ -212,9 +219,10 @@ supply compliant testers. Steps needed before submitting:
   The AAB above is signed with it (META-INF/UPLOAD.RSA), and
   android/keystore.properties on this box already pointed at it, so nothing
   had to change. Chosen over the Ubuntu idisagree-release.jks because it is
-  stronger and lives on the machine builds happen on. STILL TO DO: copy the
-  .jks to the Ubuntu box, and retire idisagree-release.jks there so a future
-  session can't sign with the wrong one. Both are in Bitwarden regardless.
+  stronger and lives on the machine builds happen on. NOTHING IS LEFT TO DO
+  HERE — the follow-up that used to sit in this spot (copy the .jks to Ubuntu,
+  retire the old one there) died with the Ubuntu box on 2026-08-05. Bitwarden
+  holds both regardless.
   Worth recording because this file made the choice sound more fateful than it
   is: with Play App Signing (the default for new apps) this is only the UPLOAD
   key, and a lost upload key can be reset by Google. The unrecoverable scenario

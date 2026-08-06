@@ -2,18 +2,20 @@
 
 Read the shared conventions first: `CHANGELOG.md`, then `best-practices.md`,
 `css-best-practices.md` and `testing-guidelines.md`. They live in the
-`apps-shared` repo — `../apps-shared/` here, `/home/alex/apps/shared/` on the
-Ubuntu box, otherwise `github.com/alexkrewson/apps-shared`. Say "sync shared"
-to have them re-applied to this project.
+`apps-shared` repo — `../apps-shared/` here, otherwise
+`github.com/alexkrewson/apps-shared`. Say "sync shared" to have them re-applied
+to this project.
 
-**Start at the `START HERE NEXT SESSION` block in `maintenance_todo.txt`.** It
-carries the current state, what's deliberately unpushed and why, and what's
-blocking Play submission.
+**Start at the `START HERE` block in `maintenance_todo.txt`** — the one dated
+2026-08-03, near the top. It carries the current state, what's deliberately
+unpushed and why, and what's blocking Play submission. Do not start at the
+older `START HERE NEXT SESSION` block further down; it is superseded history.
 
 ## Machine setup
 
-`ANDROID_SETUP_WINDOWS.md` (Windows) or `ANDROID_SETUP_HANDOFF.md` (Ubuntu).
-They are not interchangeable — paths, JDK and emulator differ.
+`ANDROID_SETUP_WINDOWS.md`. Windows is the only dev machine — the Ubuntu box
+was retired 2026-08-05, and `ANDROID_SETUP_HANDOFF.md` is kept only as a
+record of it. Nothing needs copying between machines any more.
 
 ## Non-negotiables
 
