@@ -95,10 +95,36 @@ describe("APK device validation", { skip }, () => {
     // rendering", which is a genuinely alarming message for what is only a
     // slower start. Every other suite already retries via connect().
     await sleep(3000);
-    const deadline = Date.now() + 30_000;
+    const launchedAt = Date.now();
+    const deadline = launchedAt + 30_000;
     while (!cdpUrl && Date.now() < deadline) {
       cdpUrl = await openWebViewCdp(PKG);
       if (!cdpUrl) await sleep(1000);
+    }
+
+    // A reachable CDP target is not a mounted app. The target appears as soon
+    // as the WebView exists, and measured on this emulator the DOM is not
+    // complete for another 1.3-2.9s after that -- so the probes below were
+    // reading a half-loaded document and calling it a blank screen. Enabling
+    // Sentry is what pushed it over, but the race was always there: the wait
+    // tested for a proxy (does a debug target exist) rather than the condition
+    // the assertions actually need.
+    //
+    // This deliberately does NOT weaken the blank-screen detector. An app that
+    // never mounts still exhausts the deadline and still fails, with the same
+    // message; only the false negative goes away.
+    while (cdpUrl && Date.now() < deadline) {
+      const raw = await cdpEvaluate(
+        cdpUrl,
+        `(() => { const r = document.getElementById('root');
+           return JSON.stringify({ rs: document.readyState, kids: r ? r.children.length : 0 }); })()`,
+      );
+      const { rs, kids } = JSON.parse(raw);
+      if (rs === "complete" && kids > 0) {
+        console.log(`  app mounted ${Date.now() - launchedAt}ms after launch`);
+        break;
+      }
+      await sleep(250);
     }
   });
 

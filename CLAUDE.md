@@ -69,11 +69,18 @@ Start-Process "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" `
 
 ## Crash reporting
 
-Sentry, wired in `src/utils/monitoring.js`. **No-ops without `VITE_SENTRY_DSN`**,
-so dev and the test suites never report. The DSN is a write-only ingest key and
-is meant to be public; web reads it from Cloudflare Pages variables, the APK
-bakes in whatever `.env` held at build time — so **changing it needs a rebuild**,
-same as the Supabase anon key.
+Sentry, wired in `src/utils/monitoring.js`, live since 2026-08-05 — project
+`idisagree`. **No-ops without `VITE_SENTRY_DSN`**, which is still true of a
+fresh clone but **no longer true of this machine**: `.env` now holds the DSN, so
+`npm run dev` and the APK suites report to the *production* project. Only
+errors are sent, so a green run is silent, but a failing test can file an issue
+that looks like a real user's crash. Unresolved on purpose — the fix is a
+separate `environment` or a flag in `beforeSend`, not deleting the DSN from test
+builds, because the suite is supposed to test the build that ships.
+
+The DSN is a write-only ingest key and is meant to be public; web reads it from
+Cloudflare Pages variables, the APK bakes in whatever `.env` held at build time
+— so **changing it needs a rebuild**, same as the Supabase anon key.
 
 Breadcrumbs from `console`, `dom` and `ui.*` are dropped on purpose: people
 paste real arguments into this app, and those categories carry the user's own

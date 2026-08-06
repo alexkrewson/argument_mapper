@@ -175,6 +175,36 @@ supply compliant testers. Steps needed before submitting:
   `idisagree`. Wait until a real trace is unreadable; the shape of the fix
   depends on what it looks like.
 
+  ALSO UNSOLVED, and this one is a live hazard: THE SUITES CAN NOW REPORT TO
+  THE PRODUCTION SENTRY PROJECT. The "dev and the test suites never report"
+  guarantee held only because no DSN existed. .env now has one, so the debug
+  APK bakes it in and `npm run dev` (which the Playwright suite drives) reads
+  it. Only errors are sent, so a green run is silent — but a failing test can
+  file an issue indistinguishable from a tester's crash. DO NOT fix it by
+  stripping the DSN from test builds: 08-03 established that the suite tests
+  the build that ships. Fix it with a distinct `environment`, or a flag
+  beforeSend checks. Not decided, so not done.
+
+  THE DSN BROKE THE DEVICE SUITE, AND THE BUG IT EXPOSED WAS OLDER THAN THE DSN.
+  53/55 on the first run after the rebuild: both failures in apk-device, the
+  blank-screen detector reading readyState 'interactive' and an unmounted React
+  root. Every other suite passed on the same app, so it was never broken — the
+  probes were reading a half-loaded document.
+  `before()` polled until the CDP target was REACHABLE and then started
+  asserting. Those are different moments. Measured on this emulator, twice:
+        CDP target reachable    3.8s / 3.9s after launch
+        DOM complete + mounted  6.7s / 5.2s
+        the gap                 2.9s / 1.3s
+  So the wait tested a proxy (does a debug target exist) rather than the thing
+  the assertions need (has the app mounted). Sentry's extra startup work pushed
+  the variance over the edge; it did not create the race. Fixed by polling for
+  readyState complete AND a non-empty #root, on the same 30s deadline — an app
+  that genuinely never mounts still exhausts it and still fails with the same
+  message, so the detector keeps its teeth. 11/11 after.
+  This is the third time on this file that a flat or proxy wait has been the
+  culprit (the 8s launch sleep, the 220s @costly budget, now this). The pattern
+  worth remembering: wait on the condition you are about to assert.
+
   DO THESE FIRST — in this order, all of them Alex's:
     1. Play Console, whenever submission resumes. Note the Data Safety form
        now has to declare crash logs / diagnostics — that changed 08-03.
