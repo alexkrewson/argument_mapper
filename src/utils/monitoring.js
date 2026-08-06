@@ -34,6 +34,28 @@ const DSN = import.meta.env.VITE_SENTRY_DSN;
  */
 const CONTENT_BEARING = new Set(["console", "dom", "ui.click", "ui.input"]);
 
+/**
+ * The Android emulator the APK suite runs on, recognised from the WebView UA:
+ *
+ *   Mozilla/5.0 (Linux; Android 16; sdk_gphone64_x86_64 Build/BE2A...; wv) ...
+ *
+ * This exists because enabling the DSN made the test suites into reporters. The
+ * debug APK bakes in whatever .env holds, so from 2026-08-05 every device run
+ * was one broken assertion away from filing an issue indistinguishable from a
+ * tester's crash — on a project whose whole purpose is telling us what twelve
+ * strangers hit.
+ *
+ * Matched on the user agent rather than solved by building the test APK without
+ * a DSN, because 08-03 settled that the suite tests the build that ships. The
+ * APK the emulator runs is byte-identical to the one a tester would get; only
+ * the transmission is suppressed, and only when the hardware is fake.
+ */
+const EMULATOR = /sdk_gphone|google_sdk|Android SDK built for|Emulator/i;
+
+function isEmulator() {
+  return typeof navigator !== "undefined" && EMULATOR.test(navigator.userAgent || "");
+}
+
 function scrubBreadcrumb(crumb) {
   if (CONTENT_BEARING.has(crumb.category)) return null;
   // Query strings on Supabase REST calls carry row ids and filter values.
@@ -44,6 +66,11 @@ function scrubBreadcrumb(crumb) {
 }
 
 function scrubEvent(event) {
+  // Dropped here rather than by skipping init, deliberately: init still runs on
+  // the emulator, so the suite goes on proving that the shipping startup path
+  // works. Returning null is the last gate before the network.
+  if (isEmulator()) return null;
+
   // sendDefaultPii is already false; this is the belt to that's braces.
   delete event.user;
   delete event.request?.cookies;
@@ -57,6 +84,16 @@ export function initMonitoring() {
     if (import.meta.env.DEV) {
       console.info("monitoring: VITE_SENTRY_DSN not set — crash reporting is off");
     }
+    return false;
+  }
+
+  // Never report from a dev server. `npm run dev` reads the same .env a build
+  // does, and the Playwright suite drives that dev server — so the day a DSN
+  // existed, this machine started filing its own crashes as production issues.
+  // Nothing is lost by dropping them: whoever caused the crash is already
+  // watching the terminal it printed in.
+  if (import.meta.env.DEV) {
+    console.info("monitoring: dev server — crash reporting is off");
     return false;
   }
 

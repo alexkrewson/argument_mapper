@@ -175,15 +175,22 @@ supply compliant testers. Steps needed before submitting:
   `idisagree`. Wait until a real trace is unreadable; the shape of the fix
   depends on what it looks like.
 
-  ALSO UNSOLVED, and this one is a live hazard: THE SUITES CAN NOW REPORT TO
-  THE PRODUCTION SENTRY PROJECT. The "dev and the test suites never report"
-  guarantee held only because no DSN existed. .env now has one, so the debug
-  APK bakes it in and `npm run dev` (which the Playwright suite drives) reads
-  it. Only errors are sent, so a green run is silent — but a failing test can
-  file an issue indistinguishable from a tester's crash. DO NOT fix it by
-  stripping the DSN from test builds: 08-03 established that the suite tests
-  the build that ships. Fix it with a distinct `environment`, or a flag
-  beforeSend checks. Not decided, so not done.
+  THE SUITES NO LONGER REPORT — FIXED 2026-08-05, same day it was introduced.
+  Enabling the DSN had quietly turned both suites into reporters: the debug APK
+  bakes in whatever .env holds, and `npm run dev` — which Playwright drives —
+  reads the same file. Green runs were silent, since only errors are sent, but
+  one broken assertion could file an issue indistinguishable from a tester's.
+  Two guards in src/utils/monitoring.js:
+    - `import.meta.env.DEV` returns early. Kills local dev AND the whole web
+      suite in one line. No trade-off — whoever caused a dev crash is already
+      reading the terminal it printed in.
+    - the emulator is dropped in beforeSend, matched on the WebView UA
+      (`sdk_gphone64_x86_64`; ro.kernel.qemu=1 confirms the hardware is fake).
+  DROPPED IN beforeSend RATHER THAN BY SKIPPING init, deliberately: init still
+  runs on the emulator, so the suite goes on proving the shipping startup path
+  works, and the APK under test stays byte-identical to a tester's. Building a
+  DSN-free test APK would have been easier and would have broken the 08-03
+  rule that the suite tests the build that ships.
 
   THE DSN BROKE THE DEVICE SUITE, AND THE BUG IT EXPOSED WAS OLDER THAN THE DSN.
   53/55 on the first run after the rebuild: both failures in apk-device, the
@@ -201,9 +208,23 @@ supply compliant testers. Steps needed before submitting:
   readyState complete AND a non-empty #root, on the same 30s deadline — an app
   that genuinely never mounts still exhausts it and still fails with the same
   message, so the detector keeps its teeth. 11/11 after.
-  This is the third time on this file that a flat or proxy wait has been the
-  culprit (the 8s launch sleep, the 220s @costly budget, now this). The pattern
-  worth remembering: wait on the condition you are about to assert.
+  AND THEN A SECOND ONE, SAME SPECIES, IN signIn(). After the monitoring guards
+  went in, apk-turns died in its before() hook with "sign-in modal did not
+  open". The app was signed IN. connect() returns the moment READY_MARKER
+  renders, but isSignedIn() can only see tab-history, and Supabase restores the
+  session after first paint — measured 104ms and 210ms behind the marker on two
+  cold starts. Ask once inside that window and a signed-in app goes hunting for
+  a sign-in modal through all three routes, finds none, and reports the one
+  thing that isn't true. signIn() now polls up to 5s before concluding you are
+  signed out; the cost is paid once per suite and only when genuinely signed
+  out. 55/55 after.
+  THIS IS THE FOURTH TIME on this file (the 8s launch sleep, the 220s @costly
+  budget, the CDP-reachable proxy, now auth restore). Every one was the same
+  mistake: asserting on state that was still settling, and every one reported
+  itself as something else entirely — a dead WebView, a product bug, a broken
+  auth UI. The rule is: wait on the condition you are about to assert, not on
+  something that usually happens near it. Worth promoting into the shared
+  testing-guidelines.md rather than being learned a fifth time here.
 
   DO THESE FIRST — in this order, all of them Alex's:
     1. Play Console, whenever submission resumes. Note the Data Safety form

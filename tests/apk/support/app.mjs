@@ -256,7 +256,19 @@ export class App {
   }
 
   async signIn(email, password) {
-    if (await this.isSignedIn()) return "already";
+    // Auth restore lands AFTER first paint. connect() returns the moment
+    // READY_MARKER exists, but isSignedIn() can only see tab-history, which was
+    // measured 104ms and 210ms behind it on two cold starts here. Asking once
+    // lands inside that window often enough to kill a before() hook, and the
+    // failure is maximally misleading: an app that IS signed in goes hunting
+    // for a sign-in modal, finds none of the three routes, and reports
+    // "sign-in modal did not open" — which reads like a broken auth UI.
+    // Costs the full window only when genuinely signed out, once per suite.
+    const settled = Date.now() + 5000;
+    while (Date.now() < settled) {
+      if (await this.isSignedIn()) return "already";
+      await sleep(250);
+    }
 
     // The form reaches the screen three different ways depending on where the
     // app was left: already inline, behind the ACCOUNT section, or via the
