@@ -25,6 +25,7 @@ import {
   openWebViewCdp,
   cdpEvaluate,
   sleep,
+  waitFor,
 } from "./support/android.mjs";
 import { screenshotter } from "./support/app.mjs";
 
@@ -96,11 +97,16 @@ describe("APK device validation", { skip }, () => {
     // slower start. Every other suite already retries via connect().
     await sleep(3000);
     const launchedAt = Date.now();
-    const deadline = launchedAt + 30_000;
-    while (!cdpUrl && Date.now() < deadline) {
-      cdpUrl = await openWebViewCdp(PKG);
-      if (!cdpUrl) await sleep(1000);
-    }
+
+    // Both waits swallow their timeout on purpose. The tests below assert these
+    // same conditions with messages written for a human reading a red run, and
+    // a throw in before() would cancel all eleven of them and replace those
+    // messages with one hook failure.
+    cdpUrl = await waitFor(() => openWebViewCdp(PKG), {
+      what: `a debuggable WebView for ${PKG}`,
+      timeout: 30_000,
+      interval: 1000,
+    }).catch(() => null);
 
     // A reachable CDP target is not a mounted app. The target appears as soon
     // as the WebView exists, and measured on this emulator the DOM is not
@@ -111,20 +117,22 @@ describe("APK device validation", { skip }, () => {
     // the assertions actually need.
     //
     // This deliberately does NOT weaken the blank-screen detector. An app that
-    // never mounts still exhausts the deadline and still fails, with the same
-    // message; only the false negative goes away.
-    while (cdpUrl && Date.now() < deadline) {
-      const raw = await cdpEvaluate(
-        cdpUrl,
-        `(() => { const r = document.getElementById('root');
-           return JSON.stringify({ rs: document.readyState, kids: r ? r.children.length : 0 }); })()`,
-      );
-      const { rs, kids } = JSON.parse(raw);
-      if (rs === "complete" && kids > 0) {
-        console.log(`  app mounted ${Date.now() - launchedAt}ms after launch`);
-        break;
-      }
-      await sleep(250);
+    // never mounts still exhausts the deadline, and the tests still fail with
+    // the message that names the real symptom; only the false negative goes.
+    if (cdpUrl) {
+      const mounted = await waitFor(
+        async () => {
+          const raw = await cdpEvaluate(
+            cdpUrl,
+            `(() => { const r = document.getElementById('root');
+               return JSON.stringify({ rs: document.readyState, kids: r ? r.children.length : 0 }); })()`,
+          );
+          const { rs, kids } = JSON.parse(raw);
+          return rs === "complete" && kids > 0;
+        },
+        { what: "the app to mount (readyState complete and a non-empty #root)", timeout: 30_000 },
+      ).catch(() => false);
+      if (mounted) console.log(`  app mounted ${Date.now() - launchedAt}ms after launch`);
     }
   });
 

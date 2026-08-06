@@ -223,8 +223,22 @@ supply compliant testers. Steps needed before submitting:
   mistake: asserting on state that was still settling, and every one reported
   itself as something else entirely — a dead WebView, a product bug, a broken
   auth UI. The rule is: wait on the condition you are about to assert, not on
-  something that usually happens near it. Worth promoting into the shared
-  testing-guidelines.md rather than being learned a fifth time here.
+  something that usually happens near it.
+  SO IT IS NOW STRUCTURAL, not a fifth comment. `waitFor(probe, {what})` lives
+  in tests/apk/support/android.mjs and all four hot spots use it; `what` is
+  REQUIRED and the helper throws without it, because a bare "timed out" would
+  recreate the diagnosis problem it exists to remove. The rule, and all four
+  incidents as a table, are in apps-shared/testing-guidelines.md.
+  TWO LOOPS ARE STILL HAND-ROLLED ON PURPOSE — signIn's completion poll and
+  submitStatement's. Both fail fast on a second condition, and waitFor reads a
+  throwing probe as "not yet", so a rejected password would surface 25s later
+  as a timeout instead of as a rejection. Each says so in a comment.
+  NOT DONE, and it is the obvious next job: ~45 fixed sleep() calls remain
+  across apk-flows, apk-settings and apk-turns — 1.2s after a click, 2.5s after
+  a submit. Every one is this same bug waiting for a slower machine. Left alone
+  because converting them is a large mechanical change against a green suite
+  and wants its own session with a run between batches, not the tail end of
+  another. 55/55 after the refactor.
 
   DO THESE FIRST — in this order, all of them Alex's:
     1. Play Console, whenever submission resumes. Note the Data Safety form

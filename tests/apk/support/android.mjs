@@ -74,6 +74,51 @@ export function connectedDevices() {
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
+ * Poll `probe` until it returns something truthy, or give up and throw.
+ *
+ * THIS EXISTS BECAUSE THE SAME BUG HAS BEEN WRITTEN FOUR TIMES IN THESE SUITES,
+ * and every instance reported itself as something else:
+ *
+ *   - an 8s sleep after launch          -> "settings-btn not found", read as a
+ *                                          broken build (2026-08-03, four red
+ *                                          runs, most of a day)
+ *   - a 220s budget for a combined run  -> read as a product bug; the same
+ *                                          conversation later passed in 1.7m
+ *   - waiting for a CDP target to exist -> "blank screen", on an app that had
+ *                                          simply not finished mounting
+ *   - asking isSignedIn() once          -> "sign-in modal did not open", on an
+ *                                          app that was already signed in
+ *
+ * Each was an assertion racing a state that was still settling, and none of the
+ * messages pointed at timing. The rule that would have prevented all four: wait
+ * on the condition you are about to assert, not on something that usually
+ * happens near it.
+ *
+ * `what` is not decoration — it becomes the timeout message, so the failure says
+ * which condition never arrived. A helper that throws "timed out" reintroduces
+ * exactly the diagnosis problem this exists to remove.
+ *
+ * Returns the probe's value, so `const el = await waitFor(...)` works. A probe
+ * that throws is treated as "not yet": transient CDP errors during startup are
+ * the normal case, not a reason to abort.
+ */
+export async function waitFor(probe, { what, timeout = 30_000, interval = 250 } = {}) {
+  if (!what) throw new Error("waitFor needs a `what` — the timeout message depends on it");
+  const deadline = Date.now() + timeout;
+  let last;
+  while (Date.now() < deadline) {
+    try {
+      last = await probe();
+      if (last) return last;
+    } catch {
+      last = undefined;
+    }
+    await sleep(interval);
+  }
+  throw new Error(`timed out after ${timeout}ms waiting for ${what}`);
+}
+
+/**
  * Locate the debuggable WebView belonging to `pkg`, forward it to a local TCP
  * port, and return its CDP websocket URL.
  *

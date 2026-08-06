@@ -8,7 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { adb, findAdb, openWebViewCdp, CdpSession, sleep } from "./android.mjs";
+import { adb, findAdb, openWebViewCdp, CdpSession, sleep, waitFor } from "./android.mjs";
 import { redactValue } from "../../support/report-manifest.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -87,13 +87,11 @@ export async function connect({ relaunch = false, install = relaunch } = {}) {
 
   // The WebView appears a little after the process does, so reaching for CDP
   // once can miss it on a loaded emulator.
-  let url = null;
-  const cdpDeadline = Date.now() + 30_000;
-  while (!url && Date.now() < cdpDeadline) {
-    url = await openWebViewCdp(PKG);
-    if (!url) await sleep(1000);
-  }
-  if (!url) throw new Error("could not reach the app WebView over CDP");
+  const url = await waitFor(() => openWebViewCdp(PKG), {
+    what: `the app's WebView over CDP (${PKG}) — the process may have died before rendering`,
+    timeout: 30_000,
+    interval: 1000,
+  });
 
   const app = instrument(new App(new CdpSession(url, PKG)));
   if (!relaunch) return app;
@@ -105,15 +103,14 @@ export async function connect({ relaunch = false, install = relaunch } = {}) {
   // start on a busy emulator is simply not a fixed cost. Wait for the UI to
   // actually exist instead; a genuinely broken build still fails, just with a
   // message that says so.
-  const readyDeadline = Date.now() + 45_000;
-  while (Date.now() < readyDeadline) {
-    if (await app.exists(READY_MARKER).catch(() => false)) return app;
-    await sleep(1000);
-  }
-  throw new Error(
-    `app launched but never rendered [data-testid="${READY_MARKER}"] within 45s — ` +
-    "the WebView is up, so this is a render/bundle failure rather than a slow start",
-  );
+  await waitFor(() => app.exists(READY_MARKER), {
+    what:
+      `[data-testid="${READY_MARKER}"] to render — the WebView is up, so this is a ` +
+      "render/bundle failure rather than a slow start",
+    timeout: 45_000,
+    interval: 1000,
+  });
+  return app;
 }
 
 // ── Step capture ────────────────────────────────────────────────────────────
@@ -264,11 +261,15 @@ export class App {
     // for a sign-in modal, finds none of the three routes, and reports
     // "sign-in modal did not open" — which reads like a broken auth UI.
     // Costs the full window only when genuinely signed out, once per suite.
-    const settled = Date.now() + 5000;
-    while (Date.now() < settled) {
-      if (await this.isSignedIn()) return "already";
-      await sleep(250);
-    }
+    //
+    // The timeout is swallowed because "still signed out after 5s" is the
+    // ordinary case here, not a failure — it just means we go on to open the
+    // form below.
+    const already = await waitFor(() => this.isSignedIn(), {
+      what: "the restored session to appear (tab-history)",
+      timeout: 5000,
+    }).catch(() => false);
+    if (already) return "already";
 
     // The form reaches the screen three different ways depending on where the
     // app was left: already inline, behind the ACCOUNT section, or via the
@@ -297,6 +298,11 @@ export class App {
     await this.setValue("auth-password", password);
     await this.click("auth-submit");
 
+    // Deliberately NOT waitFor(): this loop has a fail-fast arm, and waitFor
+    // treats a throwing probe as "not yet". A rejected password would be
+    // swallowed and reported 25s later as a timeout instead of as the rejection
+    // it is. When a wait has a second exit condition, hand-roll it.
+    //
     // Poll rather than sleeping once and checking. A fixed 6s wait was enough
     // on a freshly booted emulator and not enough on a loaded one, which made
     // whole suites fail in their before() hook — 37 tests cancelled by one
@@ -472,6 +478,9 @@ export class App {
     const before = await this.nodeCount();
     await this.click("statement-submit");
 
+    // Hand-rolled for the same reason as signIn's completion loop: the
+    // auth-submit arm has to fail fast, and waitFor reads a throwing probe as
+    // "not yet".
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       await sleep(3000);
