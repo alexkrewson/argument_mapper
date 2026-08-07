@@ -191,6 +191,67 @@ describe("APK node lifecycle (free)", { skip }, () => {
     created = created.filter((c) => c !== id);
   });
 
+  // Both oval incidents shipped in an APK that this suite called green, because
+  // every check here asked whether nodes EXIST, never what they look like. The
+  // web suite has the same two cases in tests/map-styling.spec.js; these are the
+  // on-device half, and they matter more, because the WebView is where Alex saw
+  // it and where the R8-minified build actually runs.
+  describe("map styling — nodes must never fall back to cytoscape defaults", () => {
+    let baseline;
+
+    test("a placed node is styled by the app, not by cytoscape", async () => {
+      const id = await app.addNode("Manual testing is obsolete");
+      assert.ok(id, "no node was added");
+      created.push(id);
+
+      baseline = await app.nodeStyle(id);
+      shot("styling-baseline");
+      assert.ok(baseline, "could not read a node style");
+      assert.equal(baseline.shape, "roundrectangle", `node rendered as ${baseline.shape}`);
+      assert.notEqual(baseline.width, "30px", "node fell back to the default 30px width");
+    });
+
+    test("renaming the speaker leaves the map alone", async () => {
+      // The stylesheet never reads a speaker name. It used to be rebuilt anyway,
+      // because App's resolvedTheme changes identity on every keystroke here.
+      const name = await app.shuffleName();
+      const after = await app.nodeStyle();
+      shot("styling-after-rename");
+      assert.deepEqual(after, baseline, `shuffling to "${name}" restyled the map`);
+    });
+
+    test("switching theme restyles the nodes instead of unstyling them", async () => {
+      await app.openSettings();
+      if ((await app.themeCards()).length === 0) {
+        await app.click("settings-themes-toggle");
+        await sleep(1000);
+      }
+      const cards = await app.themeCards();
+      assert.ok(cards.length > 1, `need at least two themes, found ${cards.length}`);
+
+      // Any preset other than the one already applied — the colour has to move
+      // for "it restyled" to mean anything.
+      let changed = null;
+      for (const name of cards) {
+        await app.pickTheme(name);
+        await app.closeSettings();
+        const now = await app.nodeStyle();
+        if (now && now.bg !== baseline.bg) { changed = { name, style: now }; break; }
+        await app.openSettings();
+        if ((await app.themeCards()).length === 0) {
+          await app.click("settings-themes-toggle");
+          await sleep(1000);
+        }
+      }
+      shot("styling-after-theme");
+      assert.ok(changed, "no theme changed the node colour — the stylesheet never reached the map");
+      assert.equal(changed.style.shape, "roundrectangle",
+        `theme ${changed.name} left nodes as ${changed.style.shape}`);
+      assert.equal(changed.style.width, baseline.width,
+        `theme ${changed.name} changed node geometry, not just colour`);
+    });
+  });
+
   test("all four tabs render", async () => {
     for (const tab of ["tab-map", "tab-moderator", "tab-history", "tab-about"]) {
       assert.ok(await app.exists(tab), `${tab} missing`);

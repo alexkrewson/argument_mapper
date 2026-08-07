@@ -233,6 +233,32 @@ export class App {
     return Number(await this.cy("cy.nodes().length"));
   }
 
+  /**
+   * Computed cytoscape style of one node. `shape` is the tell: no theme, no
+   * speaker and no node type ever renders a node as an ellipse, so reading
+   * "ellipse" means styling has collapsed to cytoscape's defaults — which is
+   * what both the 2026-08-03 and 2026-08-07 oval bugs did, each while every
+   * other assertion in this suite went on passing.
+   */
+  async nodeStyle(id = null) {
+    const pick = id ? `cy.getElementById(${JSON.stringify(id)})` : "cy.nodes()[0]";
+    const raw = await this.cy(`(() => {
+      const n = ${pick};
+      if (!n || !n.length) return null;
+      return JSON.stringify({
+        shape: n.style('shape'), width: n.style('width'), bg: n.style('background-color'),
+      });
+    })()`);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  /** Presses the ⟳ beside the speaker name and returns the name it produced. */
+  async shuffleName() {
+    await this.click("speaker-name-refresh");
+    await sleep(800);
+    return this.speakerName();
+  }
+
   async nodeIds() {
     return JSON.parse((await this.cy("JSON.stringify(cy.nodes().map(n => n.id()))")) || "[]");
   }
