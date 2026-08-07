@@ -551,7 +551,11 @@ export default function NodeDetailPopup({
                   <span className="flag-chip-sub flag-chip-sub--quote">“{pc.text}”</span>
                 </>
               ) : (
-                <span className="flag-chip-sub">Flagged by hand, not inferred from anything said.</span>
+                <span className="flag-chip-sub">
+                  {pc?.suggested_by
+                    ? `${speakerName(pc.suggested_by, theme)} suggested this by hand — nothing in the wording was read as a concession.`
+                    : "Flagged by hand, not inferred from anything said."}
+                </span>
               )}
             </div>
           );

@@ -234,6 +234,16 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     await page.getByTestId("node-flag-concession").click();
     await expect(page.locator('[data-node-id="node_2"]')).toContainText("possible concession");
 
+    // The suggestion is about the NODE'S OWNER, not whoever pressed the button.
+    // Recording the flagger as the conceder would read as Blue conceding to
+    // Green, which is the opposite claim and would make "only the owner may
+    // remove it" incoherent.
+    await openNode(page, "node_2");
+    const chip = page.locator(".flag-chip--possible-concession");
+    await expect(chip).toContainText("retracting their own point");
+    await expect(chip).toContainText("suggested this by hand");
+    await page.keyboard.press("Escape");
+
     // Reopen it: the suggest button is gone (it only ever adds), and there is no
     // edit window on someone else's node, so Blue cannot take it back.
     await openNode(page, "node_2");

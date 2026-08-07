@@ -669,6 +669,7 @@ export default function App() {
                 type: item.type,
                 speaker: item.concedingBy,
                 ...(item.agreedByText ? { text: item.agreedByText } : {}),
+                ...(item.suggestedBy ? { suggested_by: item.suggestedBy } : {}),
               },
             },
           }
@@ -677,11 +678,17 @@ export default function App() {
   };
 
   /**
-   * Flag someone else's node as a possible concession by hand. Only ever ADDS,
-   * and only ever to the other speaker's node: saying "you conceded that" is a
-   * claim about them, so they are the one who gets to withdraw it, from their
-   * own edit window. Nothing is rated -- a manual flag is the same suggestion
-   * the AI's is, and carries the same weight.
+   * Suggest, by hand, that the OTHER speaker conceded a point of their own.
+   *
+   * The conceder is the node's OWNER, not whoever pressed the button -- "I
+   * think you gave that one up" is a claim about them, which is why it is
+   * type "self" and why only they can withdraw it, from an edit window that
+   * opens for the owner alone. Flagging your own node is not offered: conceding
+   * your own point is what the concede button is for, and it settles the matter
+   * outright rather than suggesting anything.
+   *
+   * Nothing is rated. A hand-made suggestion carries exactly the weight the
+   * AI's does, which is none until somebody confirms it.
    */
   const handleFlagPossibleConcession = (nodeId) => {
     const inner = argumentMap.argument_map;
@@ -689,7 +696,8 @@ export default function App() {
     if (!target || target.speaker === currentSpeaker) return;
     pushHistory(
       { argument_map: { ...inner, nodes: markPossibleConcession(inner.nodes, {
-        type: "other", nodeId, concedingBy: currentSpeaker, agreedByText: null,
+        type: "self", nodeId, concedingBy: target.speaker,
+        agreedByText: null, suggestedBy: currentSpeaker,
       }) } },
       moderatorAnalysis,
     );
