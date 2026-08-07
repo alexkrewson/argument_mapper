@@ -1077,7 +1077,9 @@
   transition: max-height 280ms ease-in-out, opacity 200ms ease-in-out, margin-bottom 280ms ease-in-out;
 }
 .controls-row--expanded {
-  max-height: 90px;
+  /* Room for a two-line label. The row is overflow:hidden, so a max-height cut
+     to fit one line would clip the wrap rather than show it. */
+  max-height: 110px;
   opacity: 1;
   margin-bottom: 0.5rem;
 }
@@ -1094,7 +1096,12 @@
   background: #f8fafc;
   color: #475569;
   cursor: pointer;
-  flex: 1;
+  /* Was flex:1, which forced all seven buttons to one width whatever their
+     label -- so "Skip" got the same room as "Changes (1)" and the long ones
+     spilled over their borders. Sizing to content lets each take what it needs;
+     shrinking is still allowed, so a genuinely cramped row degrades by wrapping
+     the multi-word labels rather than by overflowing. */
+  flex: 0 1 auto;
   min-width: 0;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -1111,8 +1118,15 @@
   font-size: 10px;
   font-weight: 500;
   color: #94a3b8;
-  white-space: nowrap;
-  line-height: 1;
+  /* .ctrl-btn is flex:1 with min-width:0, so a button is ALLOWED to be narrower
+     than its own label -- and with nowrap and no overflow rule the text simply
+     spilled over its neighbours. Measured at 360px: "Add Node" and "Combined"
+     each ran 8px past their button, and "Changes (1)", which only appears once
+     the AI has pending changes and is the longest label of the seven, ran clean
+     off the row. The button can't grow, so the label wraps instead. */
+  white-space: normal;
+  text-align: center;
+  line-height: 1.15;
 }
 .ctrl-btn--active .ctrl-label { color: var(--speaker-color); opacity: 0.8; }
 
