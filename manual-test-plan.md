@@ -25,6 +25,15 @@ It is signed with `android/upload-keystore.jks` (alias `upload`). Play re-signs
 with the app-signing key on delivery, so a tester's copy differs in signature
 but not in behaviour.
 
+**Uninstall before installing, every time.** Every local build is `versionCode 2`
+/ `versionName 1.0`, so Android's App Info cannot tell two of them apart, and the
+Drive filenames differ only in the timestamp — `…-0915-…` and `…-0938-…` sitting
+next to each other. On 2026-08-07 a whole cycle was spent debugging the *app*
+when the finding was that the old APK was still installed: the email template is
+server-side, so a new-style email arrived into an old-style app and the symptom
+pointed at the code. If a build behaves like the one before it, rule this out
+first.
+
 ## Three things to know before you start
 
 - **Sentry fires from a real phone.** The emulator is dropped in `beforeSend` by
@@ -38,6 +47,20 @@ but not in behaviour.
   up on the web.
 - **Use a throwaway account for the auth cases**, not the `.env.test` one. If you
   clean up afterwards, delete by id or by title — never by position.
+
+## Confirmed so far
+
+Ticks are deliberately not used below, because a tick doesn't say *which build*
+it passed on and every build so far has looked identical from the phone.
+
+| | build | result |
+|---|---|---|
+| B1, B2 | release `0938`, 2026-08-07 | sign-up shows the code screen; the email carries a code and no link; the code confirms the account in-app |
+
+Accounts left behind on the way: `alex.krewson+test2@gmail.com` and
+`+test3@gmail.com` are real but **unconfirmed** — `+test3` was created against
+the old build and can't reach a code screen. Worth deleting before the tester
+round, by id.
 
 ---
 
@@ -70,11 +93,10 @@ but not in behaviour.
 - [ ] B4. Sign in with the wrong password — clear rejection, fast, no hang.
 - [ ] B5. Forgot password → code by email → type it in the app → set a new
       password → signed in. Entirely in-app, no link.
-      **Count the digits.** Until 2026-08-07 this screen demanded exactly 8 and
-      the Verify button stayed disabled below that, so a 6-digit token — the
-      Supabase default — made the flow impossible to submit. It now accepts 6–8.
-      If what arrives isn't in that range, the project's Email OTP Length setting
-      is the thing to look at.
+      **This project sends 8-digit codes** — confirmed on 2026-08-07. The screen
+      accepts 6–8 rather than pinning the literal, so changing Email OTP Length
+      in the dashboard can't strand anyone on a Verify button that never enables.
+      If what arrives is outside 6–8, that setting is the thing to look at.
 - [ ] B6. Sign in with the new password after a force-stop.
 - [ ] B7. Change password from settings → ACCOUNT: wrong current password must be
       refused, then the right one works.
