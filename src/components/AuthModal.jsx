@@ -10,8 +10,11 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
   const [newPassword, setNewPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [signupDone, setSignupDone] = useState(false);
   const [changeDone, setChangeDone] = useState(false);
+  // Which flow sent us to otp_verify: "signup" confirms a new address, "recovery"
+  // is the first leg of a password reset. Same screen, different verifyOtp type
+  // and different destination once the code checks out.
+  const [otpPurpose, setOtpPurpose] = useState("recovery");
 
   const clearError = () => setError(null);
 
@@ -37,7 +40,12 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) throw error;
-      setSignupDone(true);
+      // Deliberately a code rather than a confirmation link. A link opens the
+      // WEB app, which is pixel-identical to this one — so on Android you leave
+      // the app without noticing, and end up with a session in the browser and
+      // none in the app you thought you were using.
+      setOtpPurpose("signup");
+      setMode("otp_verify");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -55,6 +63,7 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
         options: { shouldCreateUser: false },
       });
       if (error) throw error;
+      setOtpPurpose("recovery");
       setMode("otp_verify");
     } catch (err) {
       setError(err.message);
@@ -68,9 +77,32 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
     clearError();
     setLoading(true);
     try {
-      const { error } = await supabase.auth.verifyOtp({ email, token: otp, type: "email" });
+      const signup = otpPurpose === "signup";
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: signup ? "signup" : "email",
+      });
       if (error) throw error;
-      setMode("reset_password");
+      // Confirming a signup returns a session, so there is nothing left to ask
+      // for. A recovery code only proves the address; the password comes next.
+      if (signup) onClose();
+      else setMode("reset_password");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (otpPurpose !== "signup") { setMode("forgot"); setOtp(""); clearError(); return; }
+    clearError();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (error) throw error;
+      setOtp("");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -119,9 +151,11 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
     }
   };
 
-  const goToSignIn = () => { setMode("signin"); setOtp(""); setNewPassword(""); clearError(); };
+  const goToSignIn = () => {
+    setMode("signin"); setOtp(""); setNewPassword(""); setOtpPurpose("recovery"); clearError();
+  };
 
-  const title = {
+  const title = mode === "otp_verify" && otpPurpose === "signup" ? "Confirm your email" : {
     signin: "Sign in",
     signup: "Create account",
     forgot: "Reset password",
@@ -135,15 +169,7 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
       <div className="concession-modal auth-modal">
         <div className="concession-modal-header">{title}</div>
 
-        {signupDone ? (
-          <div className="auth-signup-done">
-            <p>Check your email for a confirmation link, then sign in.</p>
-            <button className="concession-btn-confirm" onClick={() => { setSignupDone(false); setMode("signin"); }}>
-              Go to sign in
-            </button>
-          </div>
-
-        ) : changeDone ? (
+        {changeDone ? (
           <div className="auth-signup-done">
             <p data-testid="auth-change-done">Password updated.</p>
             <button className="concession-btn-confirm" onClick={onClose} data-testid="auth-change-close">
@@ -222,16 +248,25 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
 
         ) : mode === "otp_verify" ? (
           <form className="auth-form" onSubmit={handleVerifyOtp}>
-            <p className="auth-hint">Enter the 8-digit code sent to {email}.</p>
+            <p className="auth-hint" data-testid="auth-otp-hint">
+              {otpPurpose === "signup"
+                ? `Enter the code we sent to ${email} to confirm your account.`
+                : `Enter the code sent to ${email}.`}
+            </p>
+            {/* Length is not pinned to a literal: the emailed token is however
+                many digits the Supabase project is configured to send, and a
+                screen that demands 8 when 6 arrive can never be submitted. */}
             <input className="auth-input auth-otp-input" type="text" inputMode="numeric"
-              placeholder="00000000" maxLength={8} value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} required autoFocus />
-            {error && <p className="auth-error">{error}</p>}
-            <button className="concession-btn-confirm" type="submit" disabled={loading || otp.length < 8}>
+              placeholder="000000" maxLength={8} value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} required autoFocus
+              data-testid="auth-otp" />
+            {error && <p className="auth-error" data-testid="auth-error">{error}</p>}
+            <button className="concession-btn-confirm" type="submit"
+              disabled={loading || otp.length < 6} data-testid="auth-otp-submit">
               {loading ? "..." : "Verify code"}
             </button>
-            <button type="button" className="auth-toggle-link"
-              onClick={() => { setMode("forgot"); setOtp(""); clearError(); }}>
+            <button type="button" className="auth-toggle-link" onClick={handleResendCode}
+              disabled={loading} data-testid="auth-otp-resend">
               Resend code
             </button>
             <button type="button" className="auth-toggle-link" onClick={goToSignIn}>
