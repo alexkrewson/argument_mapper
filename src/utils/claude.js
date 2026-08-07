@@ -100,7 +100,7 @@ JSON schema:
       "id": "edge_1",
       "from": "source_node_id",
       "to": "target_node_id",
-      "relationship": "supports|strongly_supports|opposes|refutes|clarifies|rebuts"
+      "relationship": "supports|strongly_supports|opposes|refutes|clarifies|rebuts|unrelated"
     }]
   },
   "moderator_analysis": {
@@ -158,8 +158,9 @@ Rules:
 
 Non-sequitur detection:
 - When a speaker's new statement does not logically connect to any existing node in the argument map — it introduces a wholly unrelated topic, switches the subject without any argumentative link, or is simply off-topic — set "metadata.non_sequitur": true on the new node.
-- A non-sequitur still needs exactly one outgoing edge like every other node — it must never be left disconnected. Since a non-sequitur has no logical relationship to reason about, do NOT search for a semantically related node to attach it to. Instead, connect it to whichever node comes immediately before it in generation order: if it's the first new node produced from the current statement, that's the most recent node that existed before this turn; if the current statement is compound and produced other new nodes before this one, that's the immediately preceding new node. Pick whichever relationship type reads most naturally (this edge is structural, not a claim about logical validity).
-- Only flag genuine non-sequiturs. A statement that challenges, supports, clarifies, or even loosely relates to the topic should be connected normally.
+- A non-sequitur still needs exactly one outgoing edge like every other node — it must never be left disconnected. Since a non-sequitur has no logical relationship to reason about, do NOT search for a semantically related node to attach it to. Instead, connect it to whichever node comes immediately before it in generation order: if it's the first new node produced from the current statement, that's the most recent node that existed before this turn; if the current statement is compound and produced other new nodes before this one, that's the immediately preceding new node. Use relationship "unrelated" for that edge, and only for that edge. Every other relationship in the schema asserts that the statement follows from, or bears on, its parent — which is the one thing a non-sequitur does not do. Calling it "supports" contradicts the flag on the very same node.
+- Only flag genuine non-sequiturs, and apply this test before you do: could a reader say what this statement is responding to? If yes, it is not a non-sequitur, however weak or wrong-headed the response is. A statement that challenges, supports, clarifies, or even loosely relates to the topic must be connected normally.
+- In particular, attacking the OTHER speaker's criterion, standard or method is a direct response, not a non-sequitur — "sorting by how we cook fails too" is an argument about how to categorise, which is exactly what was under discussion. Introducing a fresh counterexample or a new line of support for your own position is likewise on-topic. Reserve the flag for a genuine change of subject, where nothing in the statement bears on the disagreement at all.
 - Omit the field entirely (do not set it to false) when the statement logically belongs in the tree.
 
 Contradiction detection:

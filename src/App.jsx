@@ -139,12 +139,27 @@ function sanitizeNodeContent(map, theme) {
   }
   const dedupedEdges = Array.from(bestEdge.values());
 
+  // A non-sequitur's edge exists only to keep the single-root rule; it is not a
+  // claim that the statement follows from anything. But every other relationship
+  // in the schema asserts exactly that, so a node could arrive flagged
+  // non-sequitur AND joined by "supports" -- two statements about the same edge
+  // that cannot both be true. Enforced here rather than left to the prompt,
+  // because the model is the thing being guarded against.
+  const nonSequiturIds = new Set(
+    (inner.nodes ?? []).filter((n) => n.metadata?.non_sequitur).map((n) => n.id),
+  );
+  const reconciledEdges = dedupedEdges.map((e) =>
+    nonSequiturIds.has(e.from) && e.relationship !== "unrelated"
+      ? { ...e, relationship: "unrelated" }
+      : e,
+  );
+
   return {
     ...map,
     argument_map: {
       ...inner,
       nodes: inner.nodes.map((n) => ({ ...n, content: fix(n.content) })),
-      edges: dedupedEdges,
+      edges: reconciledEdges,
     },
   };
 }
