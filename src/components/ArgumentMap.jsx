@@ -282,6 +282,24 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   const themeRef = useRef(theme);
   useEffect(() => { themeRef.current = theme; }, [theme]);
 
+  // buildStylesheet reads exactly four things off the theme: the two speaker
+  // backgrounds and the dark/lcars flags. Never a name. But the `theme` prop is
+  // App's resolvedTheme, which is rebuilt whenever playerNames changes -- so it
+  // gets a fresh identity on every keystroke in the speaker-name field, and on
+  // every press of the shuffle button.
+  //
+  // Re-applying the stylesheet on those is not merely wasteful, it is fatal:
+  // swapping cytoscape's Style instance out from under elements that are
+  // already rendered leaves them computing stock defaults -- grey ellipses,
+  // 30px wide -- permanently. The sheet still reads back correctly, no bypass
+  // is set on the element, and neither style().update() nor re-applying the
+  // sheet brings them back. Only the data() mappers survive, which is why the
+  // ovals keep their per-node height and look deceptively deliberate.
+  //
+  // So key the effects on the VALUES the stylesheet is built from. A rename is
+  // then a no-op here, which it always should have been.
+  const styleKey = `${!!theme.dark}|${!!theme.lcars}|${theme.a.bg}|${theme.b.bg}`;
+
   // tplRef holds the badge template function. It's updated on every render so
   // that HMR-patched code takes effect immediately without needing a remount.
   const tplRef = useRef(null);
@@ -537,8 +555,15 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
-    cy.style(buildStylesheet(theme)).update();
-  }, [theme]);
+    // fromJson, NOT cy.style(sheet). Handing a stylesheet to cy.style() swaps in
+    // a fresh Style instance that the already-rendered elements are never
+    // re-bound to: they fall back to stock cytoscape defaults -- grey ellipses,
+    // 30px wide -- and stay there. The sheet reads back correctly afterwards and
+    // no bypass is set on the element, which is what made this look like a
+    // rendering bug rather than a stylesheet one. fromJson mutates the Style the
+    // elements already point at, so the update actually reaches them.
+    cy.style().fromJson(buildStylesheet(themeRef.current)).update();
+  }, [styleKey]);
 
   // Wire up node tap → onNodeClick; background mouse-click → toggleUI (desktop)
   useEffect(() => {
@@ -774,14 +799,16 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         .filter((n) => newNodeIds.has(n.id()))
         .forEach((el) => {
           const spk = el.data("speaker");
-          const color = spk === "Blue"  ? theme.a.bg
-                      : spk === "Green" ? theme.b.bg
+          const t = themeRef.current;
+          const color = spk === "Blue"  ? t.a.bg
+                      : spk === "Green" ? t.b.bg
                       : "#94a3b8";
           pulseNode(el, color);
         });
     }, 350);
     return () => clearTimeout(timer);
-  }, [newNodeIds, theme]);
+    // styleKey, not theme — a rename must not re-pulse nodes that are no longer new.
+  }, [newNodeIds, styleKey]);
 
   return (
     <div className="argument-map">
