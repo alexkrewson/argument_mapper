@@ -140,7 +140,98 @@ supply compliant testers. Steps needed before submitting:
         being true.
 
   ============================================================================
-  START HERE — end of 2026-08-03. Everything below this block is history.
+  START HERE — end of 2026-08-07. Everything below this block is history.
+  ============================================================================
+
+  STATE OF PLAY. A full manual pass on a real phone, and it found seven real
+  bugs. All seven are fixed, committed and tested; the suites are 24/24 web and
+  21/21 on device. NOTHING TECHNICAL BLOCKS PLAY SUBMISSION -- that was already
+  true on 08-03 and still is. What is new is that the app is materially better
+  than the one that was going to be submitted.
+
+  TWO THINGS ARE NOT DONE, AND BOTH ARE ALEX'S:
+    1. TEN COMMITS ARE UNPUSHED, and production is still serving the 08-05
+       build. Note these are the same act: Cloudflare Pages builds from master,
+       so `git push` IS the deploy. `npm run ship` (wrangler + deploy:verify)
+       was blocked by the permission classifier this session, so it has to be
+       run by hand -- `! npm run ship` puts the output in the session.
+    2. The Play Console work from the 08-03 block, unchanged: upload, Data
+       Safety (now including crash logs), privacy + data-deletion URLs, and the
+       12 testers.
+
+  THE PHONE IS WHERE THE BUGS WERE. Not one of the seven was visible to the
+  automated suites beforehand, and three of them had been shipping for weeks:
+        auth        sign-up sent a confirmation LINK, which opened the WEB app.
+                    Pixel-identical, so you leave the Android app without
+                    noticing and end up with a session in the browser and none
+                    in the app you thought you were using. Now a code, in-app.
+        map         the ovals were back, and NOT the 08-03 bug. cy.style(sheet)
+                    swaps in a Style instance the rendered elements are never
+                    re-bound to. Theme switching had been doing this to every
+                    map with nodes on it since the effect was written.
+        css         control labels painted over their buttons at 360px.
+        android     the hardware back button exited the app from anywhere.
+        auth        signing out left the argument on screen, editable and
+                    auto-saving, for whoever picked up the phone next.
+        concessions applied without asking, by two separate routes.
+        map         a node flagged non-sequitur was joined by "supports".
+
+  THE LESSON WORTH KEEPING, because it is the same one twice: a suite that
+  asks whether something EXISTS will not notice it looking wrong. 55 checks
+  passed on a map rendered entirely as grey ellipses, and apk-settings cycled
+  all eight themes while asserting only that the body still said "iDisagree".
+  Both oval incidents shipped green. The map tests now assert on `shape`,
+  because no theme, speaker or node type ever makes a node an ellipse -- so
+  "ellipse" means styling collapsed to defaults whatever the cause.
+
+  CONCESSIONS ARE NOW SUGGESTIONS, per Alex. There is one outcome for "maybe":
+  metadata.possible_concession -> a teal 🤝? badge and an explanation quoting
+  the phrase it was inferred from. Nothing is rated, faded or scored.
+  Turns mode still asks first and only badges on decline; Combined mode never
+  asks. TWO ROUTES FEED IT and only one was obvious: the rating Claude sets,
+  and despite_concession_of on a concessive rebuttal, which records the
+  concession on the REBUTTING node and so had no rating to intercept. The
+  second is derived rather than stored, so maps saved before today get it too.
+
+  ONE THING IS FIXED BUT UNPROVEN: why node_6 was flagged non-sequitur when it
+  plainly answered the other speaker. The EDGE contradiction is deterministic
+  and closed (relationship "unrelated" now exists, enforced in
+  sanitizeNodeContent). The CLASSIFICATION is a prompt change and only a real
+  Combined run can show whether it took. Watch for it.
+
+  TWO TRAPS THAT COST TIME, both worth knowing before the next device session:
+    - EVERY LOCAL BUILD IS versionCode 2 / versionName 1.0, so Android's App
+      Info cannot tell two of them apart and the Drive filenames differ only by
+      a timestamp. A cycle went into debugging the app when the old APK was
+      simply still installed. UNINSTALL BEFORE INSTALLING, every time.
+    - AN "Application Not Responding: com.android.systemui" DIALOG owns the
+      focus and eats every `adb shell input keyevent`, on a freshly booted
+      emulator as well as a tired one. A listener registered by hand in the
+      page didn't fire either, which is what separated "the key never arrived"
+      from "the handler is wrong". Fix:
+          adb shell settings put global hide_error_dialogs 1 && adb reboot
+
+  ALSO WORTH REMEMBERING, found the hard way while writing tests:
+    - The Supabase client is created with db.schema "argument_mapper", so a raw
+      PostgREST call needs Accept-Profile AND Content-Profile or it 404s with
+      "Could not find the table 'public.debates'".
+    - debates.map_data is a history ENTRY, { map, analysis }, not the map.
+    - Inserting a debate needs user_id or RLS rejects it. That is the policy
+      working, and it is the same guard that stops one tester reading another's
+      arguments.
+
+  NEW DEPENDENCY: @capacitor/app 8.1.1 (it versions independently of core --
+  there is no 8.3.1). The clean-clone check was run and passes:
+        git clone --depth 1 file://<repo> /tmp/x && cd /tmp/x && npm ci && npm run build
+  Do that for ANY dependency change before pushing. Two outages have come from
+  ranges that only break under `npm ci`, and both were silent from outside.
+
+  MANUAL TEST PLAN: manual-test-plan.md, 50-odd cases weighted towards what the
+  suites cannot reach. Kept current with what has been verified and on which
+  build, since nothing distinguishes builds from the phone.
+
+  ============================================================================
+  Superseded — end of 2026-08-03. Everything below this block is history.
   ============================================================================
 
   STATE OF PLAY, in one paragraph. The Supabase split is done through Phase 4;

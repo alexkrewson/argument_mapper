@@ -56,6 +56,14 @@ it passed on and every build so far has looked identical from the phone.
 | | build | result |
 |---|---|---|
 | B1, B2 | release `0938`, 2026-08-07 | sign-up shows the code screen; the email carries a code and no link; the code confirms the account in-app |
+| D6 | release `1136`, 2026-08-07 | back closes settings, returns to the map from a tab, and takes two presses to exit — asserted on the focused window |
+| I1, I2 | release `1316`, 2026-08-07 | a concession implied in Combined mode badges the node and applies nothing |
+
+**Current build: `app-release-v2-20260807-1336-aafbe97.apk`.** Seven fixes went
+in during the 08-07 pass — sign-up by code, the ovals, control labels, the back
+button, sign-out clearing the map, concessions as suggestions, and the
+non-sequitur edge. Anything ticked against an earlier build was ticked against
+a different app.
 
 Accounts left behind on the way: `alex.krewson+test2@gmail.com` and
 `+test3@gmail.com` are real but **unconfirmed** — `+test3` was created against
@@ -142,9 +150,14 @@ round, by id.
       nodes end up off-screen with no way back?
 - [ ] D5. Open the keyboard in the statement input. Does it cover the input or the
       submit button? Does the layout recover when it closes?
-- [ ] D6. **Android back button** at every level: node popup, settings dropdown,
-      modal, main map. It closes the thing on top rather than exiting the app.
-      Back on an empty map exits cleanly.
+- [ ] D6. **Android back button** closes the topmost layer, in this order:
+      concession confirm → node popup → add-node → changelog → buy-credits →
+      auth → settings → and from any other tab, back to the Map tab.
+      On the Map with nothing open it takes **two presses within 2 seconds**,
+      with a "Press back again to exit" toast between them. One press, then a
+      pause, then another must NOT exit.
+      *Until 2026-08-07 a single press exited the app from anywhere, including
+      from inside a modal.*
 
 ## E. Settings, themes, clipboard
 
@@ -193,6 +206,34 @@ round, by id.
       by trying to sign in.
 - [ ] G5. The delete dialog says nothing else is affected. That has been true
       since the Supabase split.
+
+## I. Concessions — suggestions, never verdicts
+
+Changed wholesale on 2026-08-07. Nothing may be conceded without the user
+saying so; the rest is a badge and an explanation.
+
+- [ ] I1. **Turns mode**, where a statement implies you accept the other
+      speaker's point ("fair enough", "granted, but…"): a confirmation appears.
+      **Confirm** it — the node is rated and the badge does not appear.
+- [ ] I2. Do it again and **decline**. The node must get a teal `🤝? possible
+      concession` badge, and **nothing else may change** — no rating, no fade,
+      no score movement. Declining used to leave no trace at all.
+- [ ] I3. Open that node. The info box explains who may have conceded what, says
+      nobody has confirmed it, and **quotes the phrase** it was inferred from.
+      The quote is the point: it's what lets you judge the suggestion.
+- [ ] I4. **Combined mode** with a conversation containing a concession
+      ("You're right, I'll grant that…"). **No confirmation popups at all** —
+      the map builds, and the conceded node carries the badge.
+- [ ] I5. A **concessive rebuttal** — someone granting a point and arguing on
+      anyway. The node they conceded gets the badge, and the rebutting node
+      reads "Despite a possible concession of N". Neither may say "conceded"
+      flatly. *This route had no rating to intercept and so was still asserting
+      a concession until 2026-08-07.*
+- [ ] I6. A node flagged **non-sequitur** must not also claim to support its
+      parent. Its edge is `unrelated`; the flag and the edge can't contradict.
+      And check the flag is deserved — if you can say what the statement was
+      responding to, it isn't a non-sequitur. *A prompt change, so this one is
+      a judgement call every run.*
 
 ## H. Crash reporting
 

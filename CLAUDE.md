@@ -7,9 +7,14 @@ Read the shared conventions first: `CHANGELOG.md`, then `best-practices.md`,
 to this project.
 
 **Start at the `START HERE` block in `maintenance_todo.txt`** — the one dated
-2026-08-03, near the top. It carries the current state, what's deliberately
-unpushed and why, and what's blocking Play submission. Do not start at the
-older `START HERE NEXT SESSION` block further down; it is superseded history.
+2026-08-07, near the top. It carries the current state, what's deliberately
+unpushed and why, and what's blocking Play submission. Every block below it is
+superseded history, including the 08-03 one that used to be the entry point.
+
+`manual-test-plan.md` is the on-device pass: ~50 cases weighted towards what the
+automated suites can't reach (touch, the back button, a real inbox, a real
+network). It records what's been verified and **on which build** — every local
+build is `versionCode 2`, so nothing distinguishes them from the phone.
 
 ## Machine setup
 
