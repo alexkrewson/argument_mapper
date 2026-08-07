@@ -18,7 +18,7 @@ const NODE_TYPES = ["claim", "premise", "objection", "rebuttal", "evidence", "cl
 export default function NodeDetailPopup({
   node, isNew, originalText, onClose,
   fadedNodeIds, nodes, edges,
-  onNodeClick, onRate, onSave, onDelete,
+  onNodeClick, onRate, onSave, onDelete, onFlagConcession,
   currentSpeaker, loading, theme, gameMode,
 }) {
   const [editMode, setEditMode] = useState(!!isNew);
@@ -37,6 +37,12 @@ export default function NodeDetailPopup({
   const [editGoalposts,   setEditGoalposts]   = useState(node?.metadata?.moves_goalposts_from ?? "");
   const [editTwins,       setEditTwins]       = useState(node?.metadata?.twins ?? []);
   const [editNonSequitur, setEditNonSequitur] = useState(node?.metadata?.non_sequitur ?? false);
+  const [removeConcession, setRemoveConcession] = useState(false);
+
+  // Both sources of the badge, tested here because edit mode returns before the
+  // view-mode lookups further down are in scope.
+  const concededHere = !!node?.metadata?.possible_concession
+    || !!nodes?.some((n) => n.metadata?.despite_concession_of === node?.id);
 
   // Escape: cancel edit, or close popup
   useEffect(() => {
@@ -71,6 +77,7 @@ export default function NodeDetailPopup({
       moves_goalposts_from: editGoalposts || null,
       twins: editTwins,
       non_sequitur: editNonSequitur,
+      removePossibleConcession: removeConcession,
     }, editParent || null);
     if (!isNew) setEditMode(false);
   };
@@ -261,6 +268,27 @@ export default function NodeDetailPopup({
               </button>
             </div>
           </div>
+
+          {/* Possible concession — removal only, and only when there is one to
+              remove. Anyone may SUGGEST that you conceded; only you can say you
+              didn't, which is why adding lives on the other speaker's node and
+              withdrawing lives here, behind an edit window that opens for the
+              owner alone. */}
+          {!isNew && concededHere && (
+            <div className="popup-section">
+              <h4>Possible concession</h4>
+              <div className="popup-edit-flag-row">
+                <button
+                  type="button"
+                  className={`flag-toggle flag-toggle--possible-concession${removeConcession ? "" : " flag-toggle--on"}`}
+                  onClick={() => setRemoveConcession((prev) => !prev)}
+                  data-testid="node-edit-concession-toggle"
+                >
+                  {removeConcession ? "🤝? Will be removed on save" : "🤝? Someone thinks you conceded here"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Twin nodes */}
           {!isNew && (
@@ -509,8 +537,14 @@ export default function NodeDetailPopup({
           // here with despite_concession_of.
           const pc = node.metadata?.possible_concession;
           const by = pc?.speaker ?? despiteRebuttalNode?.speaker;
+          // Clickable only when there is somewhere to go. The metadata-only
+          // route names no second node, so a cursor promising navigation there
+          // would be a lie.
+          const goTo = despiteRebuttalNode;
           return (
-            <div className="flag-chip flag-chip--possible-concession">
+            <div
+              className={`flag-chip flag-chip--possible-concession${goTo ? " flag-chip--linked" : ""}`}
+              onClick={goTo ? () => { onClose(); onNodeClick?.(goTo); } : undefined}>
               <span className="flag-chip-label">🤝? Possible concession</span>
               <span className="flag-chip-sub">
                 {pc?.type === "self"
@@ -520,6 +554,9 @@ export default function NodeDetailPopup({
               </span>
               {pc?.text && (
                 <span className="flag-chip-sub flag-chip-sub--quote">“{pc.text}”</span>
+              )}
+              {goTo && (
+                <span className="flag-chip-sub">Tap to open {fmtNodeId(goTo.id)}, which implies it.</span>
               )}
             </div>
           );
@@ -689,6 +726,25 @@ export default function NodeDetailPopup({
             </div>
           );
         })()}
+
+        {/* Suggesting a concession on the OTHER speaker's node. Not on your own:
+            "I conceded" is what the concede button below is for. Absent once
+            one is already recorded, since this only ever adds. */}
+        {onFlagConcession && node.speaker !== currentSpeaker && !concededHere && (
+          <div className="popup-section">
+            <button
+              className="concede-btn"
+              data-testid="node-flag-concession"
+              disabled={loading}
+              onClick={() => { onFlagConcession(node.id); onClose(); }}
+            >
+              🤝? Suggest {speakerName(node.speaker, theme)} conceded this
+            </button>
+            <p className="popup-hint">
+              A suggestion only — nothing is scored, and {speakerName(node.speaker, theme)} can remove it.
+            </p>
+          </div>
+        )}
 
         {/* Concede button */}
         {onRate && (() => {

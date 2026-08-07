@@ -112,6 +112,98 @@ const SCENARIOS = [
     ],
     expect: { nonSequitur: false },
   },
+  {
+    name: "goalpost-move",
+    why: "A narrows their own claim only after B produces a counterexample.",
+    turns: [
+      "User A: No phone under £300 has a decent camera.",
+      "User B: The Pixel 8a is £299 and its camera is excellent.",
+      "User A: I meant no phone under £300 has a decent camera and good battery life.",
+    ],
+    expect: { goalpost: true },
+  },
+  {
+    name: "false-dilemma",
+    why: "B presents two options as exhaustive when they plainly aren't.",
+    turns: [
+      "User A: The new hospital wing should be funded.",
+      "User B: Either we fund the hospital or we fund the schools. There is no third option.",
+    ],
+    expect: { tacticsAny: ["false_dilemma"] },
+  },
+  {
+    name: "circular-reasoning",
+    why: "A's reason restates the claim.",
+    turns: [
+      "User A: Speeding fines reduce accidents, and we know they reduce accidents because they cut the number of crashes.",
+      "User B: That reasoning doesn't establish anything.",
+    ],
+    expect: { tacticsAny: ["circular_reasoning"] },
+  },
+  {
+    name: "no-true-scotsman",
+    why: "A redefines the category to exclude B's counterexample.",
+    turns: [
+      "User A: Real cyclists always signal before turning.",
+      "User B: My friend cycles every day and never signals.",
+      "User A: Then he isn't a real cyclist.",
+    ],
+    expect: { tacticsAny: ["no_true_scotsman"] },
+  },
+  {
+    name: "slippery-slope",
+    why: "B chains unsupported consequences from one modest proposal.",
+    turns: [
+      "User A: E-scooters should be allowed on cycle paths.",
+      "User B: Allow that and next it's motorbikes, then cars, and there will be no cycle paths left at all.",
+    ],
+    expect: { tacticsAny: ["slippery_slope"] },
+  },
+  {
+    name: "hasty-generalization",
+    why: "A generalises from a sample of two.",
+    turns: [
+      "User A: I met two rude people in Paris, so Parisians are rude.",
+      "User B: That's two people out of two million.",
+    ],
+    expect: { tacticsAny: ["hasty_generalization"] },
+  },
+  {
+    name: "red-herring",
+    why: "B answers a spending question with a different administration's spending.",
+    turns: [
+      "User A: The council overspent on the leisure centre.",
+      "User B: What about all the money the previous administration wasted on consultants?",
+    ],
+    expect: { tacticsAny: ["red_herring"] },
+  },
+  {
+    name: "appeal-to-authority",
+    why: "B's whole case is who said it, not what the evidence is.",
+    turns: [
+      "User A: Intermittent fasting has no proven benefit.",
+      "User B: Dr Hoffman is a Nobel laureate and he says it does, so it does.",
+    ],
+    expect: { tacticsAny: ["appeal_to_authority"] },
+  },
+  {
+    name: "steel-man",
+    why: "B states A's point at its strongest before answering it.",
+    turns: [
+      "User A: Congestion charging is just a tax on the poor.",
+      "User B: The strongest version of that is that a flat charge takes a bigger share of a low income, which is true. Exemptions can be means-tested though.",
+    ],
+    expect: { tacticsAny: ["steel_man"] },
+  },
+  {
+    name: "analogy",
+    why: "B argues from a parallel case rather than directly.",
+    turns: [
+      "User A: Banning phones in schools will never work.",
+      "User B: Schools already ban alcohol and that works — a phone ban is the same kind of rule.",
+    ],
+    expect: { tacticsAny: ["analogy"] },
+  },
 ];
 
 /** Structural facts that must hold whatever the model decided. */
@@ -142,6 +234,15 @@ function invariants(map) {
     for (const ref of ["contradicts", "moves_goalposts_from", "despite_concession_of"]) {
       if (m[ref] && !ids.has(m[ref])) problems.push(`${n.id}.${ref} points at a node that does not exist: ${m[ref]}`);
     }
+    // "A speaker cannot move the goalposts of the OTHER speaker — that is just
+    // normal counter-argument." Deterministic, so it belongs here rather than
+    // in a scenario's expectations.
+    if (m.moves_goalposts_from) {
+      const from = nodes.find((x) => x.id === m.moves_goalposts_from);
+      if (from && from.speaker !== n.speaker) {
+        problems.push(`${n.id} (${n.speaker}) claims to move the goalposts of ${from.id} (${from.speaker})`);
+      }
+    }
     if (m.non_sequitur) {
       const edge = edges.find((e) => e.from === n.id);
       if (edge && edge.relationship !== "unrelated") {
@@ -167,6 +268,7 @@ function findings(map) {
     possibleConcession: nodes.some((n) => n.metadata?.possible_concession)
       || nodes.some((n) => n.metadata?.despite_concession_of),
     contradiction: nodes.some((n) => n.metadata?.contradicts),
+    goalpost: nodes.some((n) => n.metadata?.moves_goalposts_from),
     nonSequitur: nodes.some((n) => n.metadata?.non_sequitur),
     ratings: nodes.filter((n) => n.rating).map((n) => `${n.id}=${n.rating}`),
     nodeCount: nodes.length,
@@ -219,6 +321,9 @@ test.describe("AI judgement — does the model reach the right conclusion", () =
       }
       if (s.expect.noRatings) {
         check("applies no rating", found.ratings.length === 0, `rated: ${found.ratings.join(", ")}`);
+      }
+      if (s.expect.goalpost) {
+        check("spots the goalpost move", found.goalpost, "no node carried metadata.moves_goalposts_from");
       }
       if (s.expect.contradiction) {
         check("spots the self-contradiction", found.contradiction, "no node carried metadata.contradicts");

@@ -4279,3 +4279,36 @@ button {
   pointer-events: none;
   white-space: nowrap;
 }
+
+/* A possible-concession chip that has somewhere to go. The metadata-only route
+   names no second node, so only the derived one gets the affordance. */
+.flag-chip--linked { cursor: pointer; }
+.flag-chip--linked:hover { filter: brightness(1.1); }
+
+.flag-toggle--possible-concession.flag-toggle--on {
+  background: #0d9488;
+  border-color: #0d9488;
+  color: #fff;
+}
+[data-dark="true"] .flag-toggle--possible-concession.flag-toggle--on {
+  background: #0f766e;
+  border-color: #0f766e;
+}
+
+.popup-hint {
+  margin: 0.35rem 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
+/* History was unscrollable once the list outgrew the screen. .history-list had
+   overflow-y:auto and flex:1, but .app-main is not a flex container -- so the
+   flex:1 did nothing, the list grew to its content, and .app-main's
+   overflow:hidden simply cut off every row past the fold with no way to reach
+   them. A bounded height is what makes the overflow rule mean anything. */
+.history-list {
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}

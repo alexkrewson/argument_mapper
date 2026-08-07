@@ -32,6 +32,62 @@ async function openNode(page, id) {
   await page.waitForSelector(".popup-summary, .flag-chip", { timeout: 10000 });
 }
 
+
+// Seed a two-node map: node_1 owned by Blue, node_2 by Green. `link` decides
+// which route produces the badge — the metadata on node_1, or a concessive
+// rebuttal pointing at it from node_2.
+async function seedPair(page, link) {
+  await page.goto("/");
+  await page.getByTestId("tab-history").click();
+  await page.getByTestId("history-new-argument").click();
+  const insert = page.waitForResponse(
+    (r) => r.url().includes("/rest/v1/debates") && r.request().method() === "POST");
+  await page.getByTestId("controls-chevron").click();
+  await page.getByTestId("ctrl-add-node").click();
+  await page.getByTestId("node-edit-content").fill("A sandwich is a filling between bread");
+  await page.getByTestId("node-edit-save").click();
+  await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
+  const id = (await (await insert).json()).id;
+
+  const base = process.env.VITE_SUPABASE_URL, anon = process.env.VITE_SUPABASE_ANON_KEY;
+  await page.evaluate(async ({ id, link, base, anon }) => {
+    const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
+    const token = JSON.parse(localStorage.getItem(key)).access_token;
+    const headers = { apikey: anon, Authorization: `Bearer ${token}`, "Content-Type": "application/json",
+      "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper", Prefer: "return=representation" };
+    const [row] = await (await fetch(`${base}/rest/v1/debates?id=eq.${id}&select=map_data`, { headers })).json();
+    const map = row.map_data;
+    const inner = map.map?.argument_map ?? map.argument_map;
+    inner.nodes.push({ id: "node_2", type: "premise", speaker: "Green", rating: null,
+      content: "Structure is what decides it, not filling",
+      metadata: link === "despite" ? { despite_concession_of: "node_1" } : {} });
+    if (link === "metadata") {
+      inner.nodes[0].metadata = { ...(inner.nodes[0].metadata || {}),
+        possible_concession: { type: "other", speaker: "Green", text: "granted, the bread part is right" } };
+    }
+    await fetch(`${base}/rest/v1/debates?id=eq.${id}`, { method: "PATCH", headers, body: JSON.stringify({ map_data: map }) });
+  }, { id, link, base, anon });
+
+  await page.reload();
+  await page.getByTestId("tab-history").click();
+  await page.getByTestId("history-new-argument").click();
+  await page.getByTestId("tab-history").click();
+  await page.locator(`[data-debate-id="${id}"]`).getByTestId("history-row-title").click();
+  await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
+  return id;
+}
+
+async function cleanup(page, id) {
+  const base = process.env.VITE_SUPABASE_URL, anon = process.env.VITE_SUPABASE_ANON_KEY;
+  await page.evaluate(async ({ id, base, anon }) => {
+    const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
+    const token = JSON.parse(localStorage.getItem(key)).access_token;
+    await fetch(`${base}/rest/v1/debates?id=eq.${id}`, { method: "DELETE",
+      headers: { apikey: anon, Authorization: `Bearer ${token}`,
+                 "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper" } });
+  }, { id, base, anon });
+}
+
 test.describe("Possible concession — a suggestion, not a verdict", () => {
   test("badge and explanation survive a save/load round trip", async ({ page }) => {
     await page.goto("/");
@@ -219,5 +275,47 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
                    "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper" },
       });
     }, { id: debateId, base, anon });
+  });
+
+  test("the chip opens the node that implies the concession", async ({ page }) => {
+    const id = await seedPair(page, "despite");
+    await openNode(page, "node_1");
+    const chip = page.locator(".flag-chip--possible-concession");
+    await expect(chip).toHaveClass(/flag-chip--linked/);
+    await chip.click();
+    // The popup should now be node_2 — the rebuttal that implies the concession.
+    await expect(page.locator(".flag-chip--despite")).toContainText("Despite a possible concession of");
+    await cleanup(page, id);
+  });
+
+  test("the owner can withdraw it, and that clears the implying reference too", async ({ page }) => {
+    const id = await seedPair(page, "despite");
+    await expect(page.locator('[data-node-id="node_1"]')).toContainText("possible concession");
+
+    // node_1 belongs to Blue, the current speaker, so the edit window opens.
+    await openNode(page, "node_1");
+    await page.getByTestId("node-view-edit-btn").click();
+    await page.getByTestId("node-edit-concession-toggle").click();
+    await page.getByTestId("node-edit-save").click();
+
+    // Gone from the map. The badge came from node_2's despite_concession_of, so
+    // clearing only node_1's own metadata would have left it exactly where it was.
+    await expect(page.locator('[data-node-id="node_1"]')).not.toContainText("possible concession");
+    await cleanup(page, id);
+  });
+
+  test("you may suggest one on the other speaker's node, but not withdraw it", async ({ page }) => {
+    const id = await seedPair(page, "none");
+    // node_2 is Green's; the current speaker is Blue.
+    await openNode(page, "node_2");
+    await page.getByTestId("node-flag-concession").click();
+    await expect(page.locator('[data-node-id="node_2"]')).toContainText("possible concession");
+
+    // Reopen it: the suggest button is gone (it only ever adds), and there is no
+    // edit window on someone else's node, so Blue cannot take it back.
+    await openNode(page, "node_2");
+    await expect(page.getByTestId("node-flag-concession")).toHaveCount(0);
+    await expect(page.getByTestId("node-view-edit-btn")).toHaveCount(0);
+    await cleanup(page, id);
   });
 });

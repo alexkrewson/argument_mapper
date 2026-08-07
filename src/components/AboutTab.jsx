@@ -155,7 +155,7 @@ export default function AboutTab({ isActive }) {
       <div className="about-content">
         <h2 id="about">iDisagree</h2>
         <p className="about-lead">
-          A browser-based tool for productive disagreement between two people. You take turns submitting arguments, and an AI (Claude)
+          A tool for productive disagreement between two people, in your browser or as an Android app (iOS coming soon). You take turns submitting arguments, and an AI (Claude)
           analyzes each statement, builds a live visual map of the disagreement, detects rhetorical tactics,
           moderates the exchange, tracks concessions, and — if you enable Game Mode — scores both
           participants in real time.

@@ -676,6 +676,25 @@ export default function App() {
     );
   };
 
+  /**
+   * Flag someone else's node as a possible concession by hand. Only ever ADDS,
+   * and only ever to the other speaker's node: saying "you conceded that" is a
+   * claim about them, so they are the one who gets to withdraw it, from their
+   * own edit window. Nothing is rated -- a manual flag is the same suggestion
+   * the AI's is, and carries the same weight.
+   */
+  const handleFlagPossibleConcession = (nodeId) => {
+    const inner = argumentMap.argument_map;
+    const target = inner.nodes.find((n) => n.id === nodeId);
+    if (!target || target.speaker === currentSpeaker) return;
+    pushHistory(
+      { argument_map: { ...inner, nodes: markPossibleConcession(inner.nodes, {
+        type: "other", nodeId, concedingBy: currentSpeaker, agreedByText: null,
+      }) } },
+      moderatorAnalysis,
+    );
+  };
+
   /** Concession queue handlers */
   const handleConfirmConcession = () => {
     const [item, ...rest] = concessionQueue;
@@ -807,7 +826,16 @@ export default function App() {
         else delete meta.twins;
         if (data.non_sequitur) meta.non_sequitur = true;
         else delete meta.non_sequitur;
+        if (data.removePossibleConcession) delete meta.possible_concession;
         return { ...n, content: data.content, type: data.type, metadata: meta };
+      }
+      // The badge has two sources and only one lives on this node. Clearing the
+      // metadata without clearing the concessive rebuttal that points here would
+      // leave the badge exactly where it was, and the control looking broken.
+      if (data.removePossibleConcession && n.metadata?.despite_concession_of === nodeId) {
+        const meta = { ...n.metadata };
+        delete meta.despite_concession_of;
+        return { ...n, metadata: meta };
       }
       if (addedTwins.includes(n.id)) {
         const t = new Set(n.metadata?.twins ?? []);
@@ -1496,6 +1524,7 @@ export default function App() {
             onRate={handleRate}
             onSave={handleNodeSave}
             onDelete={handleDeleteNode}
+            onFlagConcession={handleFlagPossibleConcession}
             currentSpeaker={currentSpeaker}
             loading={loading}
             theme={resolvedTheme}
