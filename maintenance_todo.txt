@@ -149,15 +149,20 @@ supply compliant testers. Steps needed before submitting:
   true on 08-03 and still is. What is new is that the app is materially better
   than the one that was going to be submitted.
 
-  TWO THINGS ARE NOT DONE, AND BOTH ARE ALEX'S:
-    1. TEN COMMITS ARE UNPUSHED, and production is still serving the 08-05
-       build. Note these are the same act: Cloudflare Pages builds from master,
-       so `git push` IS the deploy. `npm run ship` (wrangler + deploy:verify)
-       was blocked by the permission classifier this session, so it has to be
-       run by hand -- `! npm run ship` puts the output in the session.
-    2. The Play Console work from the 08-03 block, unchanged: upload, Data
-       Safety (now including crash logs), privacy + data-deletion URLs, and the
-       12 testers.
+  EVERYTHING IS PUSHED AND LIVE, confirmed by bundle hash rather than assumed.
+  Latest APK: app-release-v2-20260807-1601-d1354d4.apk.
+  WHAT REMAINS IS THE PLAY CONSOLE WORK from the 08-03 block, unchanged: upload,
+  Data Safety (now including crash logs), privacy + data-deletion URLs, and the
+  12 testers.
+
+  A TRAP WORTH KNOWING BEFORE YOU RUN deploy:verify BY HAND. It compares the
+  live site against your LOCAL dist/, and `build:apk:release` leaves dist/ as
+  the MOBILE build -- different Vite base, different bundle hash. Running the
+  two in that order reports a perfectly good deploy as broken, which cost a
+  round of hunting a phantom Cloudflare failure. `npm run ship` does the web
+  build itself, so this only bites when the steps are run separately. Run
+  `npm run build` first, or add the guard to scripts/verify-deploy.mjs that
+  refuses to compare against a mobile build.
 
   THE PHONE IS WHERE THE BUGS WERE. Not one of the seven was visible to the
   automated suites beforehand, and three of them had been shipping for weeks:
@@ -229,6 +234,79 @@ supply compliant testers. Steps needed before submitting:
   MANUAL TEST PLAN: manual-test-plan.md, 50-odd cases weighted towards what the
   suites cannot reach. Kept current with what has been verified and on which
   build, since nothing distinguishes builds from the phone.
+
+  ---------------------------------------------------------------------------
+  AFTERNOON OF 2026-08-07 — a suite that judges the AI, and four rounds on
+  concessions.
+
+  tests/ai-judgement.spec.js TESTS CLAUDE, NOT THE APP. 17 scenarios, each a
+  two- or three-line conversation engineered so there is only one defensible
+  answer, covering all 16 tactics and every metadata flag. Two layers, because
+  they fail for different reasons: INVARIANTS (one root, one parent per node, no
+  dangling reference, no unknown tactic, a non-sequitur's edge never claiming
+  support, a possible concession never carrying a rating, goalposts only within
+  one speaker) are deterministic and mean the app is broken; JUDGEMENT is
+  whether the conclusion was right, asserted rather than warned because the
+  scenarios are blatant enough that a model worth shipping gets them every time.
+        npm run test:web:judgement     ~63p, ~4 minutes, 17 scenarios
+  Every run writes the full map and a per-expectation verdict to
+  test-results/judgement/<scenario>.json. READ THOSE, not just the pass count:
+  a tactic detected on the WRONG node passes a map-level assertion.
+  17/17 with every invariant clean. THE ONE THAT MATTERED: an on-topic reply
+  that must NOT be flagged a non-sequitur -- the exact shape the model got wrong
+  that morning -- came back correctly tagged addresses_counterargument, which is
+  the only evidence that the prompt fix took.
+
+  FIVE SCENARIOS FAILED THE FIRST RUN AND ALL FIVE PASSED THE SECOND. "no new
+  node for 90s after 0 node(s)" -- not one call got through, and the spend
+  proves it: 117.3p over exactly the 28 turns that succeeded, nothing for the
+  failures. Transient, and it took the last five consecutively after ~13 minutes
+  of continuous calls. Suspect the API before the scenarios if this recurs.
+
+  THAT EXPOSED A REAL BUG AND IT IS NOW FIXED. claude.js had NO REQUEST TIMEOUT.
+  A fetch that never settles never rejects, so App.jsx's catch never ran: the
+  page sat with an empty map and nothing on screen. All five proxy calls now go
+  through postToProxy with a 120s AbortController -- generous on purpose, since
+  a healthy turn is 20-45s and killing a slow-but-working call is the failure
+  this prevents, not causes. Aborting is client-side only; the Edge Function may
+  still charge for the turn.
+
+  THE REPORT WAS SILENTLY DROPPING A TEST PER RUN. The id was a slug truncated
+  to 80 characters and treated as unique. A long describe title eats the budget:
+  "Map styling — nodes must never fall back to cytoscape defaults" is itself 80,
+  so BOTH its tests had the same id and only one ever appeared, and the
+  retry-dedup line overwrote the other's screenshots. Every web run today
+  reported one fewer test than it ran. Now slug + 6-char hash of the full key.
+
+  CONCESSIONS, in four rounds, all Alex's calls:
+    - navigate, withdraw, suggest. The chip opened the node implying it; the
+      owner can clear the flag from their edit window (which already opens only
+      for its owner, so the permission fell out of the existing model); anyone
+      can suggest one on the OTHER speaker's node. Anyone may suggest, only the
+      owner may deny.
+    - a SETTLED concession stops being a question. agreed_by/conceded_by is the
+      answer, so the badge and the hedged wording both yield to it.
+    - THE "YEAH BUT" MARKER IS GONE ENTIRELY. despite_concession_of removed from
+      the prompt, the map, the info box and the CSS: "a concession is a
+      concession", and a rebuttal of some other aspect of the parent is not a
+      qualification of it. The sibling PLACEMENT survives -- attaching to the
+      conceded node's parent is a real claim about shape -- only the marker went.
+      The badge now has ONE source: metadata written when a confirmation was
+      declined, or when Combined mode never asked.
+  Old saved maps still carry despite_concession_of in their JSON. It is inert
+  and no longer rendered.
+
+  ALSO: history would not scroll (.history-list had overflow-y:auto and flex:1,
+  but .app-main is not a flex container, so nothing bounded its height and
+  .app-main's overflow:hidden simply clipped every row past the fold -- verified
+  fixed against 79 real rows); About no longer calls itself browser-only.
+
+  STILL UNPROVEN, both needing a real Combined run on the current build: whether
+  the model has stopped emitting despite_concession_of, and whether the
+  non-sequitur classification holds outside the judgement scenario.
+
+  LOOSE END: the .env.test account holds 79 saved debates of accumulated test
+  debris. Worth clearing by id before the tester round.
 
   ============================================================================
   Superseded — end of 2026-08-03. Everything below this block is history.

@@ -19,6 +19,43 @@ import { supabase } from "./supabase.js";
 
 const API_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claude-proxy`;
 
+// Every call to the proxy goes through this, so a stalled request becomes a
+// visible error instead of an indefinite wait.
+//
+// It had none. A fetch that never settles never rejects, so App.jsx's catch --
+// which does call setError -- was simply never reached: combined mode sat there
+// with the map empty and nothing on screen to say anything had gone wrong. Five
+// judgement tests died this way on 2026-08-07, every one reporting "no new node
+// for 90s after 0 node(s)" against a page showing no error at all.
+//
+// 120s is deliberately generous. A healthy turn measured 20-45s and the suite's
+// own helper allows 75s per turn before it starts worrying, so anything past two
+// minutes is dead rather than slow. Cutting it finer would kill working calls on
+// a bad connection, which is the failure this is meant to prevent, not cause.
+//
+// Aborting is client-side only: the Edge Function carries on and may still have
+// charged for the turn. Better a charge the user knows about than a screen that
+// never changes.
+const REQUEST_TIMEOUT_MS = 120_000;
+
+async function postToProxy(options) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    return await postToProxy({ ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error(
+        `The AI didn't respond within ${REQUEST_TIMEOUT_MS / 1000} seconds. ` +
+        "Check your connection and try again.",
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
@@ -214,7 +251,7 @@ New statement from ${displayName} (speaker: "${speaker}"):
 
 Return the updated map JSON.`;
 
-  const response = await fetch(API_URL, {
+  const response = await postToProxy({
     method: "POST",
     headers: await getAuthHeaders(),
     body: JSON.stringify({
@@ -267,7 +304,7 @@ Return the updated map JSON.`;
  * @returns {Array<{ speaker: "Blue"|"Green", text: string }>}
  */
 export async function parseConversation(text, speakerNames, onCreditsUpdate = null) {
-  const response = await fetch(API_URL, {
+  const response = await postToProxy({
     method: "POST",
     headers: await getAuthHeaders(),
     body: JSON.stringify({
@@ -315,7 +352,7 @@ If someone sends multiple consecutive messages, treat each as a separate object.
  */
 export async function extractConversationFromImage(imageBase64, mimeType, speakerNames, onCreditsUpdate = null) {
   const headers = await getAuthHeaders();
-  const response = await fetch(API_URL, {
+  const response = await postToProxy({
     method: "POST",
     headers,
     body: JSON.stringify({
@@ -411,7 +448,7 @@ Rules:
   const recentHistory = chatHistory.length > 20 ? chatHistory.slice(-20) : chatHistory;
   const messages = recentHistory.map((msg) => ({ role: msg.role, content: msg.content }));
 
-  const response = await fetch(API_URL, {
+  const response = await postToProxy({
     method: "POST",
     headers: await getAuthHeaders(),
     body: JSON.stringify({
