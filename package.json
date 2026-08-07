@@ -33,7 +33,8 @@
     "ship": "npm run deploy && npm run deploy:verify && npm run build:apk",
     "report": "node scripts/build-test-report.mjs",
     "test:web": "playwright test --grep-invert @costly",
-    "test:web:costly": "playwright test --grep @costly"
+    "test:web:costly": "playwright test --grep @costly",
+    "test:web:judgement": "playwright test --grep @judgement"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",
