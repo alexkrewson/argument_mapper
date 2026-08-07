@@ -24,8 +24,11 @@ const CopyIcon = () => (
 
 const SUPPORT_EMAIL = "support@trolleysolution.com";
 
-export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemePreviewStart, onThemePreviewEnd, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, creditBalance, onBuyCredits, onCopyContext }) {
-  const [open, setOpen] = useState(false);
+// `open` is owned by App rather than by this component, so the Android back
+// button can close the panel before it decides to do anything else. Aliased to
+// setOpen in the destructure so every existing call site is untouched --
+// including setOpen(v => !v), which works because App passes the real setter.
+export default function SettingsPanel({ open, onOpenChange: setOpen, currentThemeKey, onThemeChange, onThemePreviewStart, onThemePreviewEnd, user, onOpenAuth, gameMode, onGameModeChange, gameSounds, onGameSoundsChange, creditBalance, onBuyCredits, onCopyContext }) {
   const [copied, setCopied] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
   const [showAccount, setShowAccount] = useState(false);
@@ -125,7 +128,7 @@ export default function SettingsPanel({ currentThemeKey, onThemeChange, onThemeP
       document.removeEventListener("mousedown", handler);
       document.removeEventListener("touchstart", handler);
     };
-  }, [open, onThemePreviewEnd]);
+  }, [open, onThemePreviewEnd, setOpen]);
 
   return (
     <div className="settings-wrap" ref={ref}>

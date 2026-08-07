@@ -4244,3 +4244,23 @@ button {
 [data-dark="true"] .combined-image-thumb { border-color: #334155; }
 [data-dark="true"] .combined-attach-btn { border-color: #334155; color: #92a1b5; }
 [data-dark="true"] .combined-attach-btn:hover:not(:disabled) { background: #1e293b; }
+
+/* "Press back again to exit" — Android only, shown for the 2s the first press
+   arms. Sits above everything including modals, because the back press that
+   raised it was aimed at the app as a whole. */
+.exit-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  pointer-events: none;
+  white-space: nowrap;
+}

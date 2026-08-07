@@ -9,6 +9,8 @@
 
 import { useState, useCallback, useMemo, useReducer, useRef, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
+// Aliased: this module's own default export is also called App.
+import { App as CapacitorApp } from "@capacitor/app";
 import StatementInput from "./components/StatementInput";
 import ArgumentMap from "./components/ArgumentMap";
 import NodeDetailPopup from "./components/NodeDetailPopup";
@@ -241,6 +243,8 @@ export default function App() {
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
   const [creditBalance, setCreditBalance] = useState(null);
   const [showBuyCredits, setShowBuyCredits] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [exitArmed, setExitArmed] = useState(false); // Android: "press back again to exit"
   const [lastUsage, setLastUsage] = useState(null); // { input, output, costCents }
   const [inputMode, setInputMode] = useState("turns"); // "turns" | "combined"
   const [combiningProgress, setCombiningProgress] = useState(null); // { current, total } | null
@@ -391,6 +395,16 @@ export default function App() {
     setSelectedNode(null);
     setActiveTab("map");
   };
+
+  // Signing out has to clear the map. It didn't: the argument stayed on screen
+  // after "Sign out" -- still rendered, still editable, still auto-saving -- so
+  // the next person to use the phone got the previous account's disagreement.
+  const prevUserRef = useRef(user);
+  useEffect(() => {
+    const wasSignedIn = prevUserRef.current;
+    prevUserRef.current = user;
+    if (wasSignedIn && !user) handleNewDebate();
+  }, [user]);
 
   // Current scores derived from the live map
   const scores = useMemo(() => computeScores(inner.nodes), [inner.nodes]);
@@ -659,6 +673,42 @@ export default function App() {
   const handleDismissConcession = () => {
     setConcessionQueue((prev) => prev.slice(1));
   };
+
+  // --- Android hardware back button ----------------------------------------
+  // There is no router, so the WebView has no history to pop, and Android's
+  // default with an empty history is to exit the app -- from inside a modal,
+  // from any tab, from anywhere. Close the topmost layer instead, in the order
+  // the layers actually stack on screen.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let handle = null;
+    let cancelled = false;
+
+    CapacitorApp.addListener("backButton", () => {
+      if (concessionQueue.length > 0) { handleDismissConcession(); return; }
+      if (selectedNode)   { setSelectedNode(null); return; }
+      if (addNodeOpen)    { setAddNodeOpen(false); return; }
+      if (showChangeLog)  { setShowChangeLog(false); return; }
+      if (showBuyCredits) { setShowBuyCredits(false); return; }
+      if (showAuthModal)  { setShowAuthModal(false); setAuthInitialMode("signin"); return; }
+      if (settingsOpen)   { setSettingsOpen(false); return; }
+      if (activeTab !== "map") { setActiveTab("map"); return; }
+      // On the map with nothing open. Two presses to leave, so a stray back
+      // never discards an argument someone is in the middle of.
+      if (exitArmed) { CapacitorApp.exitApp(); return; }
+      setExitArmed(true);
+    }).then((h) => { if (cancelled) h.remove(); else handle = h; });
+
+    return () => { cancelled = true; handle?.remove(); };
+  }, [concessionQueue.length, selectedNode, addNodeOpen, showChangeLog, showBuyCredits,
+      showAuthModal, settingsOpen, activeTab, exitArmed]);
+
+  // Disarm, so a back press now and another a minute later isn't an exit.
+  useEffect(() => {
+    if (!exitArmed) return;
+    const t = setTimeout(() => setExitArmed(false), 2000);
+    return () => clearTimeout(t);
+  }, [exitArmed]);
 
   /**
    * Manual node edit — updates an existing node's fields and optionally re-parents it.
@@ -1120,7 +1170,7 @@ export default function App() {
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
           )}
-          <SettingsPanel currentThemeKey={themeKey} onThemeChange={handleThemeChange} onThemePreviewStart={setPreviewThemeKey} onThemePreviewEnd={handleThemePreviewEnd} user={user} onOpenAuth={(mode = "signin") => { setAuthInitialMode(mode); setShowAuthModal(true); }} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => copyText(JSON.stringify(argumentMap, null, 2))} />
+          <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} currentThemeKey={themeKey} onThemeChange={handleThemeChange} onThemePreviewStart={setPreviewThemeKey} onThemePreviewEnd={handleThemePreviewEnd} user={user} onOpenAuth={(mode = "signin") => { setAuthInitialMode(mode); setShowAuthModal(true); }} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => copyText(JSON.stringify(argumentMap, null, 2))} />
         </header>
         <nav className="tab-bar">
         <button
@@ -1455,6 +1505,10 @@ export default function App() {
 
       {/* Buy credits modal */}
       {showBuyCredits && <BuyCreditsModal onClose={() => setShowBuyCredits(false)} />}
+
+      {exitArmed && (
+        <div className="exit-toast" role="status" data-testid="exit-toast">Press back again to exit</div>
+      )}
     </div>
   );
 }
