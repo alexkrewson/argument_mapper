@@ -101,4 +101,14 @@ export const test = base.extend({
   },
 });
 
+/**
+ * Explicit capture, for a state worth showing that no locator action produced —
+ * a modal that appeared on its own, a map after the AI finished. The automatic
+ * wrapper only fires on locator ACTIONS, so without this the interesting moment
+ * between two clicks never reaches the report.
+ */
+export async function shot(label) {
+  await capture(label);
+}
+
 export { expect };

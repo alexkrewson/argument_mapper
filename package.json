@@ -34,7 +34,8 @@
     "report": "node scripts/build-test-report.mjs",
     "test:web": "playwright test --grep-invert @costly",
     "test:web:costly": "playwright test --grep @costly",
-    "test:web:judgement": "playwright test --grep @judgement"
+    "test:web:judgement": "playwright test --grep @judgement",
+    "test:web:concession": "playwright test --grep @concession"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.1",

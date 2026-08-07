@@ -14,7 +14,7 @@ export default function ConcessionConfirmModal({ concession, onConfirm, onDismis
 
   return (
     <div className="concession-overlay">
-      <div className="concession-modal">
+      <div className="concession-modal" data-testid="concession-modal">
         <div className="concession-modal-header">
           {isSelf ? "Self-retraction detected" : "Concession detected"}
         </div>
@@ -61,10 +61,10 @@ export default function ConcessionConfirmModal({ concession, onConfirm, onDismis
         )}
 
         <div className="concession-modal-actions">
-          <button className="concession-btn-confirm" onClick={onConfirm}>
+          <button className="concession-btn-confirm" data-testid="concession-confirm" onClick={onConfirm}>
             {isSelf ? "Yes, retract this point" : "Yes, concede this point"}
           </button>
-          <button className="concession-btn-dismiss" onClick={onDismiss}>
+          <button className="concession-btn-dismiss" data-testid="concession-dismiss" onClick={onDismiss}>
             No, ignore
           </button>
         </div>

@@ -42,7 +42,7 @@ async function postToProxy(options) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    return await postToProxy({ ...options, signal: controller.signal });
+    return await fetch(API_URL, { ...options, signal: controller.signal });
   } catch (err) {
     if (err.name === "AbortError") {
       throw new Error(
