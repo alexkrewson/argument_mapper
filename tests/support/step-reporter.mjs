@@ -12,6 +12,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import crypto from "node:crypto";
 import { REPORT_DIR, shotsDir, writeManifest } from "./report-manifest.mjs";
 import { buildCombinedReport } from "../../scripts/build-test-report.mjs";
 
@@ -19,6 +20,19 @@ const SHOT_PREFIX = "report-shot:";
 const SUITE_ID = "web";
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80);
+
+// The slug is truncated for readable filenames, so it is NOT unique on its own:
+// a long describe title eats the budget and leaves only the first few letters of
+// the test name. tests/ai-judgement.spec.js hit this exactly -- 76 of the 80
+// characters went on "AI judgement — does the model reach the right conclusion",
+// so "non-sequitur-genuine" and "non-sequitur-false-positive" both ended at
+// "non-". Identical ids meant the retry-dedup below read the second as a rerun
+// of the first, dropped it from the manifest, and overwrote its screenshots.
+// Silently: the report simply had one fewer row than the run had tests.
+// The hash is of the FULL key, so retries of one test still collide (which is
+// what dedup wants) and two different tests never can.
+const idFor = (key) =>
+  `${slug(key)}-${crypto.createHash("sha1").update(key).digest("hex").slice(0, 6)}`;
 const stripAnsi = (s) => String(s ?? "").replace(/\[[0-9;]*m/g, "");
 
 export default class StepReporter {
@@ -45,7 +59,7 @@ export default class StepReporter {
 
     // Retries land here twice; keep the last attempt, which is the one the
     // run's exit code reflects.
-    let id = slug(`${file}-${title}`);
+    let id = idFor(`${file}-${title}`);
     if (this.seen.has(id)) this.tests = this.tests.filter((t) => t.id !== id);
     this.seen.add(id);
 
