@@ -665,9 +665,14 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const tactics      = node.metadata?.tactics || [];
       const flagPairs    = flagPairsMap.get(node.id) || [];
       const non_sequitur = node.metadata?.non_sequitur || false;
+      // A settled concession answers the question the badge asks, so the badge
+      // goes. Both routes yield to it: the rebutting node still points here with
+      // despite_concession_of -- that relationship is still true -- but "might
+      // have conceded" is no longer something to ask once somebody has said yes.
+      const settled = !!(node.metadata?.agreed_by || node.metadata?.conceded_by);
       const impliedBy = impliedConcessionBy.get(node.id);
-      const possible_concession = node.metadata?.possible_concession
-        || (impliedBy ? { type: "other", speaker: impliedBy.speaker, impliedBy: impliedBy.id } : null);
+      const possible_concession = settled ? null : (node.metadata?.possible_concession
+        || (impliedBy ? { type: "other", speaker: impliedBy.speaker, impliedBy: impliedBy.id } : null));
       const badgeRows    = estimateBadgeRows(tactics, flagPairs, non_sequitur, possible_concession);
       // Summary placement rule: gap(badge_bottom → text_top) = gap(text_bottom → node_bottom)
       //   Both gaps = BADGE_BASE_TOP (matches left/top badge inset for visual unity).

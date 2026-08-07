@@ -41,8 +41,13 @@ export default function NodeDetailPopup({
 
   // Both sources of the badge, tested here because edit mode returns before the
   // view-mode lookups further down are in scope.
-  const concededHere = !!node?.metadata?.possible_concession
-    || !!nodes?.some((n) => n.metadata?.despite_concession_of === node?.id);
+  // agreed_by / conceded_by are what a CONFIRMED concession writes. Once one is
+  // there the suggestion has been resolved, so no badge, nothing to withdraw,
+  // and nothing left to suggest.
+  const concessionSettled = !!(node?.metadata?.agreed_by || node?.metadata?.conceded_by);
+  const concededHere = !concessionSettled
+    && (!!node?.metadata?.possible_concession
+      || !!nodes?.some((n) => n.metadata?.despite_concession_of === node?.id));
 
   // Escape: cancel edit, or close popup
   useEffect(() => {
@@ -446,7 +451,7 @@ export default function NodeDetailPopup({
             {node.metadata?.non_sequitur && (
               <span className="node-flag-chip node-flag-chip--non-sequitur">⚡ non-sequitur</span>
             )}
-            {(node.metadata?.possible_concession || despiteRebuttalNode) && (
+            {concededHere && (
               <span className="node-flag-chip node-flag-chip--possible-concession">🤝? possible concession</span>
             )}
             {despiteNode && (
@@ -530,7 +535,7 @@ export default function NodeDetailPopup({
             warning colour: it points at no other node, and it is a question
             rather than a fault. The quoted phrase is the whole point — it is
             what lets a reader judge the suggestion instead of trusting it. */}
-        {(node.metadata?.possible_concession || despiteRebuttalNode) && (() => {
+        {concededHere && (() => {
           // Two routes to the same badge: metadata written when a confirmation
           // was declined (or when Combined mode never asked), and a concessive
           // rebuttal, where the concession is implied by another node pointing
@@ -593,14 +598,19 @@ export default function NodeDetailPopup({
 
         {despiteNode && (
           <div className="flag-chip flag-chip--despite" onClick={() => { onClose(); onNodeClick?.(despiteNode); }}>
-            <span className="flag-chip-label">⇲ Despite a possible concession of {fmtNodeId(despiteNode.id)}</span>
+            <span className="flag-chip-label">
+              ⇲ {despiteNode.metadata?.agreed_by || despiteNode.metadata?.conceded_by
+                   ? "Despite conceding" : "Despite a possible concession of"} {fmtNodeId(despiteNode.id)}
+            </span>
             <span className="flag-chip-sub">{despiteNode.content.length > 80 ? despiteNode.content.slice(0, 77) + "…" : despiteNode.content}</span>
           </div>
         )}
 
         {despiteRebuttalNode && (
           <div className="flag-chip flag-chip--despite" onClick={() => { onClose(); onNodeClick?.(despiteRebuttalNode); }}>
-            <span className="flag-chip-label">⇲ Possibly conceded here, rebutted by {fmtNodeId(despiteRebuttalNode.id)}</span>
+            <span className="flag-chip-label">
+              ⇲ {concessionSettled ? "Conceded here" : "Possibly conceded here"}, rebutted by {fmtNodeId(despiteRebuttalNode.id)}
+            </span>
             <span className="flag-chip-sub">{despiteRebuttalNode.content.length > 80 ? despiteRebuttalNode.content.slice(0, 77) + "…" : despiteRebuttalNode.content}</span>
           </div>
         )}
@@ -730,7 +740,7 @@ export default function NodeDetailPopup({
         {/* Suggesting a concession on the OTHER speaker's node. Not on your own:
             "I conceded" is what the concede button below is for. Absent once
             one is already recorded, since this only ever adds. */}
-        {onFlagConcession && node.speaker !== currentSpeaker && !concededHere && (
+        {onFlagConcession && node.speaker !== currentSpeaker && !concededHere && !concessionSettled && (
           <div className="popup-section">
             <button
               className="concede-btn"

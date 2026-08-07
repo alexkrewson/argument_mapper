@@ -60,7 +60,12 @@ async function seedPair(page, link) {
     const inner = map.map?.argument_map ?? map.argument_map;
     inner.nodes.push({ id: "node_2", type: "premise", speaker: "Green", rating: null,
       content: "Structure is what decides it, not filling",
-      metadata: link === "despite" ? { despite_concession_of: "node_1" } : {} });
+      metadata: link === "despite" || link === "settled" ? { despite_concession_of: "node_1" } : {} });
+    if (link === "settled") {
+      inner.nodes[0].rating = "up";
+      inner.nodes[0].metadata = { ...(inner.nodes[0].metadata || {}),
+        agreed_by: { speaker: "Green", text: "yeah you're right about the bread" } };
+    }
     if (link === "metadata") {
       inner.nodes[0].metadata = { ...(inner.nodes[0].metadata || {}),
         possible_concession: { type: "other", speaker: "Green", text: "granted, the bread part is right" } };
@@ -316,6 +321,28 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     await openNode(page, "node_2");
     await expect(page.getByTestId("node-flag-concession")).toHaveCount(0);
     await expect(page.getByTestId("node-view-edit-btn")).toHaveCount(0);
+    await cleanup(page, id);
+  });
+
+  // From Alex's screw-type map: node_3 had rating "up" AND agreed_by -- an
+  // explicitly confirmed concession -- and still wore the badge, because the
+  // derived rule badged anything a despite_concession_of pointed at without
+  // asking whether the question had already been answered.
+  test("an explicitly conceded node loses the badge and the hedged wording", async ({ page }) => {
+    const id = await seedPair(page, "settled");
+
+    await expect(page.locator('[data-node-id="node_1"]')).not.toContainText("possible concession");
+
+    await openNode(page, "node_1");
+    await expect(page.locator(".flag-chip--possible-concession")).toHaveCount(0);
+    // The relationship is still true and still shown — only the hedge goes.
+    await expect(page.locator(".flag-chip--despite")).toContainText("Conceded here, rebutted by");
+    await expect(page.locator(".flag-chip--despite")).not.toContainText("Possibly conceded");
+
+    // And from the rebutting node's side.
+    await openNode(page, "node_2");
+    await expect(page.locator(".flag-chip--despite")).toContainText("Despite conceding");
+    await expect(page.locator(".flag-chip--despite")).not.toContainText("possible concession of");
     await cleanup(page, id);
   });
 });
