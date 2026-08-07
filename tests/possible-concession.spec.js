@@ -21,6 +21,17 @@ try {
 
 const SEEDED_QUOTE = "fair enough, that part is true";
 
+// Open a node's popup by emitting the tap cytoscape itself listens for. Clicking
+// the badge's centre in page coordinates looked equivalent and wasn't: once a
+// map has two roots the layout moves, and the click landed on the neighbour.
+async function openNode(page, id) {
+  await page.evaluate((nodeId) => {
+    const el = [...document.querySelectorAll("div")].find((d) => d._cyreg);
+    el._cyreg.cy.getElementById(nodeId).emit("tap");
+  }, id);
+  await page.waitForSelector(".popup-summary, .flag-chip", { timeout: 10000 });
+}
+
 test.describe("Possible concession — a suggestion, not a verdict", () => {
   test("badge and explanation survive a save/load round trip", async ({ page }) => {
     await page.goto("/");
@@ -103,9 +114,7 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     // In the info box: what it means, and the words it was inferred from —
     // the quote is the whole point, since it's what lets a reader judge the
     // suggestion rather than take it on trust.
-    const badge = page.locator('[data-node-id="node_1"]');
-    const box = await badge.boundingBox();
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await openNode(page, "node_1");
     const chip = page.locator(".flag-chip--possible-concession");
     await expect(chip).toBeVisible();
     await expect(chip).toContainText("Possible concession");
@@ -133,6 +142,81 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
           "Accept-Profile": "argument_mapper",
           "Content-Profile": "argument_mapper",
         },
+      });
+    }, { id: debateId, base, anon });
+  });
+
+  // The second route into the badge, and the one that shipped unbadged: a
+  // concessive rebuttal. Claude records that on the REBUTTING node, as
+  // metadata.despite_concession_of, which never passed through the rating
+  // interception and so never became a question. The map said "conceded here"
+  // about a node nobody had agreed to concede.
+  test("a concessive rebuttal badges the node it concedes", async ({ page }) => {
+    await page.goto("/");
+    await page.getByTestId("tab-history").click();
+    await page.getByTestId("history-new-argument").click();
+
+    const insertResponse = page.waitForResponse(
+      (r) => r.url().includes("/rest/v1/debates") && r.request().method() === "POST",
+    );
+    await page.getByTestId("controls-chevron").click();
+    await page.getByTestId("ctrl-add-node").click();
+    await page.getByTestId("node-edit-content").fill("A sandwich is a filling between bread");
+    await page.getByTestId("node-edit-save").click();
+    await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
+    const debateId = (await (await insertResponse).json()).id;
+
+    const base = process.env.VITE_SUPABASE_URL;
+    const anon = process.env.VITE_SUPABASE_ANON_KEY;
+
+    const seeded = await page.evaluate(async ({ id, base, anon }) => {
+      const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
+      const token = JSON.parse(localStorage.getItem(key)).access_token;
+      const headers = {
+        apikey: anon, Authorization: `Bearer ${token}`, "Content-Type": "application/json",
+        "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper",
+        Prefer: "return=representation",
+      };
+      const [row] = await (await fetch(`${base}/rest/v1/debates?id=eq.${id}&select=map_data`, { headers })).json();
+      const map = row.map_data;
+      const inner = map.map?.argument_map ?? map.argument_map;
+      inner.nodes.push({
+        id: "node_2", type: "premise", speaker: "Green", rating: null,
+        content: "BLT and Reuben are sandwiches because of structure",
+        metadata: { despite_concession_of: "node_1" },
+      });
+      const res = await fetch(`${base}/rest/v1/debates?id=eq.${id}`, {
+        method: "PATCH", headers, body: JSON.stringify({ map_data: map }),
+      });
+      return res.ok;
+    }, { id: debateId, base, anon });
+    expect(seeded).toBe(true);
+
+    await page.reload();
+    await page.getByTestId("tab-history").click();
+    await page.getByTestId("history-new-argument").click();
+    await page.getByTestId("tab-history").click();
+    await page.locator(`[data-debate-id="${debateId}"]`).getByTestId("history-row-title").click();
+    await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
+
+    // The conceded node carries the badge, even though the metadata lives on
+    // the OTHER node.
+    await expect(page.locator('[data-node-id="node_1"]')).toContainText("possible concession");
+
+    await openNode(page, "node_1");
+    const chip = page.locator(".flag-chip--possible-concession");
+    await expect(chip).toBeVisible();
+    await expect(chip).toContainText("Nobody has confirmed it");
+    // And nothing anywhere may claim it as settled.
+    await expect(page.locator(".popup-overlay, .concession-modal, body")).not.toContainText("Conceded here, rebutted");
+
+    await page.evaluate(async ({ id, base, anon }) => {
+      const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
+      const token = JSON.parse(localStorage.getItem(key)).access_token;
+      await fetch(`${base}/rest/v1/debates?id=eq.${id}`, {
+        method: "DELETE",
+        headers: { apikey: anon, Authorization: `Bearer ${token}`,
+                   "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper" },
       });
     }, { id: debateId, base, anon });
   });

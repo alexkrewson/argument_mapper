@@ -623,6 +623,19 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       return visited;
     }
     const nodeById = new Map(nodes.map((n) => [n.id, n]));
+
+    // A concessive rebuttal records the concession STRUCTURALLY, on the
+    // rebutting node, as despite_concession_of — a separate mechanism from the
+    // rating Claude used to set, and one that never passed through a
+    // confirmation. Left alone it asserted "conceded here" about a node nobody
+    // had agreed to concede. Derived rather than written into metadata so that
+    // maps already saved get the badge too.
+    const impliedConcessionBy = new Map();
+    for (const n of nodes) {
+      const target = n.metadata?.despite_concession_of;
+      if (target && !impliedConcessionBy.has(target)) impliedConcessionBy.set(target, n);
+    }
+
     const flagPairsMap = new Map();
     const addPair = (nodeId, pair) => {
       if (!flagPairsMap.has(nodeId)) flagPairsMap.set(nodeId, []);
@@ -652,7 +665,9 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const tactics      = node.metadata?.tactics || [];
       const flagPairs    = flagPairsMap.get(node.id) || [];
       const non_sequitur = node.metadata?.non_sequitur || false;
-      const possible_concession = node.metadata?.possible_concession || null;
+      const impliedBy = impliedConcessionBy.get(node.id);
+      const possible_concession = node.metadata?.possible_concession
+        || (impliedBy ? { type: "other", speaker: impliedBy.speaker, impliedBy: impliedBy.id } : null);
       const badgeRows    = estimateBadgeRows(tactics, flagPairs, non_sequitur, possible_concession);
       // Summary placement rule: gap(badge_bottom → text_top) = gap(text_bottom → node_bottom)
       //   Both gaps = BADGE_BASE_TOP (matches left/top badge inset for visual unity).

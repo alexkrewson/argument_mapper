@@ -418,11 +418,11 @@ export default function NodeDetailPopup({
             {node.metadata?.non_sequitur && (
               <span className="node-flag-chip node-flag-chip--non-sequitur">⚡ non-sequitur</span>
             )}
-            {node.metadata?.possible_concession && (
+            {(node.metadata?.possible_concession || despiteRebuttalNode) && (
               <span className="node-flag-chip node-flag-chip--possible-concession">🤝? possible concession</span>
             )}
             {despiteNode && (
-              <span className="node-flag-chip node-flag-chip--despite">⇲ despite {fmtNodeId(despiteNode.id)}</span>
+              <span className="node-flag-chip node-flag-chip--despite">⇲? despite {fmtNodeId(despiteNode.id)}</span>
             )}
             {despiteRebuttalNode && (
               <span className="node-flag-chip node-flag-chip--despite">⇲↙ {fmtNodeId(despiteRebuttalNode.id)}</span>
@@ -502,22 +502,28 @@ export default function NodeDetailPopup({
             warning colour: it points at no other node, and it is a question
             rather than a fault. The quoted phrase is the whole point — it is
             what lets a reader judge the suggestion instead of trusting it. */}
-        {node.metadata?.possible_concession && (
-          <div className="flag-chip flag-chip--possible-concession">
-            <span className="flag-chip-label">🤝? Possible concession</span>
-            <span className="flag-chip-sub">
-              {node.metadata.possible_concession.type === "self"
-                ? `${speakerName(node.metadata.possible_concession.speaker, theme)} may have been retracting their own point here.`
-                : `${speakerName(node.metadata.possible_concession.speaker, theme)} may have been accepting this point.`}
-              {" Nobody has confirmed it, so nothing has been scored or faded."}
-            </span>
-            {node.metadata.possible_concession.text && (
-              <span className="flag-chip-sub flag-chip-sub--quote">
-                “{node.metadata.possible_concession.text}”
+        {(node.metadata?.possible_concession || despiteRebuttalNode) && (() => {
+          // Two routes to the same badge: metadata written when a confirmation
+          // was declined (or when Combined mode never asked), and a concessive
+          // rebuttal, where the concession is implied by another node pointing
+          // here with despite_concession_of.
+          const pc = node.metadata?.possible_concession;
+          const by = pc?.speaker ?? despiteRebuttalNode?.speaker;
+          return (
+            <div className="flag-chip flag-chip--possible-concession">
+              <span className="flag-chip-label">🤝? Possible concession</span>
+              <span className="flag-chip-sub">
+                {pc?.type === "self"
+                  ? `${speakerName(by, theme)} may have been retracting their own point here.`
+                  : `${speakerName(by, theme)} may have been accepting this point${despiteRebuttalNode ? ` while arguing on in ${fmtNodeId(despiteRebuttalNode.id)}` : ""}.`}
+                {" Nobody has confirmed it, so nothing has been scored or faded."}
               </span>
-            )}
-          </div>
-        )}
+              {pc?.text && (
+                <span className="flag-chip-sub flag-chip-sub--quote">“{pc.text}”</span>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Contradiction / goalpost chips — prominent labels for the two directly involved nodes */}
         {contradictsNode && (
@@ -550,14 +556,14 @@ export default function NodeDetailPopup({
 
         {despiteNode && (
           <div className="flag-chip flag-chip--despite" onClick={() => { onClose(); onNodeClick?.(despiteNode); }}>
-            <span className="flag-chip-label">⇲ Despite conceding {fmtNodeId(despiteNode.id)}</span>
+            <span className="flag-chip-label">⇲ Despite a possible concession of {fmtNodeId(despiteNode.id)}</span>
             <span className="flag-chip-sub">{despiteNode.content.length > 80 ? despiteNode.content.slice(0, 77) + "…" : despiteNode.content}</span>
           </div>
         )}
 
         {despiteRebuttalNode && (
           <div className="flag-chip flag-chip--despite" onClick={() => { onClose(); onNodeClick?.(despiteRebuttalNode); }}>
-            <span className="flag-chip-label">⇲ Conceded here, rebutted by {fmtNodeId(despiteRebuttalNode.id)}</span>
+            <span className="flag-chip-label">⇲ Possibly conceded here, rebutted by {fmtNodeId(despiteRebuttalNode.id)}</span>
             <span className="flag-chip-sub">{despiteRebuttalNode.content.length > 80 ? despiteRebuttalNode.content.slice(0, 77) + "…" : despiteRebuttalNode.content}</span>
           </div>
         )}
