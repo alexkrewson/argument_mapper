@@ -538,8 +538,20 @@ export default function NodeDetailPopup({
                   : `${speakerName(by, theme)} may have been accepting this point.`}
                 {" Nobody has confirmed it, so nothing has been scored or faded."}
               </span>
-              {pc?.text && (
-                <span className="flag-chip-sub flag-chip-sub--quote">“{pc.text}”</span>
+              {pc?.text ? (
+                <>
+                  {/* Alex looked for the node this refers to and there isn't one:
+                      a turn that only concedes produces no node, so the phrase
+                      below is the entire record of it. Saying so is cheaper than
+                      letting the chip imply a link it cannot have. */}
+                  <span className="flag-chip-sub">
+                    Said in {speakerName(by, theme)}'s own words. That turn created no node of
+                    its own, so this is all there is of it:
+                  </span>
+                  <span className="flag-chip-sub flag-chip-sub--quote">“{pc.text}”</span>
+                </>
+              ) : (
+                <span className="flag-chip-sub">Flagged by hand, not inferred from anything said.</span>
               )}
             </div>
           );

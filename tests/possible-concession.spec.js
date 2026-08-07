@@ -183,6 +183,9 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     await expect(chip).toContainText("Possible concession");
     await expect(chip).toContainText("Nobody has confirmed it");
     await expect(chip).toContainText(SEEDED_QUOTE);
+    // It must not imply a node to click through to — there isn't one.
+    await expect(chip).toContainText("created no node of its own");
+    await expect(chip).not.toHaveClass(/flag-chip--linked/);
 
     // Nothing was applied: a suggestion must not move the score or fade anything.
     const applied = await page.evaluate(`(() => {
