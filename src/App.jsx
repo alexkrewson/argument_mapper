@@ -829,14 +829,6 @@ export default function App() {
         if (data.removePossibleConcession) delete meta.possible_concession;
         return { ...n, content: data.content, type: data.type, metadata: meta };
       }
-      // The badge has two sources and only one lives on this node. Clearing the
-      // metadata without clearing the concessive rebuttal that points here would
-      // leave the badge exactly where it was, and the control looking broken.
-      if (data.removePossibleConcession && n.metadata?.despite_concession_of === nodeId) {
-        const meta = { ...n.metadata };
-        delete meta.despite_concession_of;
-        return { ...n, metadata: meta };
-      }
       if (addedTwins.includes(n.id)) {
         const t = new Set(n.metadata?.twins ?? []);
         t.add(nodeId);

@@ -93,7 +93,6 @@ JSON schema:
         "moves_goalposts_from": "node_id_or_null",
         "non_sequitur": true,
         "twins": ["node_id_of_twin"],
-        "despite_concession_of": "node_id"
       }
     }],
     "edges": [{
@@ -177,11 +176,10 @@ Goalpost moving detection:
 
 Concessive rebuttal detection ("yeah, but..."):
 - When a speaker implicitly or explicitly acknowledges that an OPPONENT's node is valid, but continues to argue their own position anyway, this is a concessive rebuttal. Signals: "yeah, but...", "even if that's true...", "granted, but...", "I'll concede that, however...", "that may be so, but...", or any phrasing that accepts a point while continuing to dispute the conclusion.
-- Do TWO things when you detect this:
-  1. On the conceded node (the opponent's node being acknowledged): set metadata.agreed_by = { "speaker": "<current speaker>", "text": "<exact phrase from their statement that expresses the concession>" }.
-  2. Create the new rebuttal node as a SIBLING of the conceded node — connect it to the conceded node's PARENT (not to the conceded node itself). Set metadata.despite_concession_of = "<conceded_node_id>" on the new node. Use relationship "rebuts" or "opposes" to the parent.
-- The new node represents "despite that being true, here is why my argument still stands." It belongs at the SAME level as the conceded node, not below it — making it a child of the conceded node would imply it supports or follows from it, which is wrong.
-- Only apply this when the concession is genuine and explicit enough that a neutral observer would clearly read it as an acknowledgment. Omit despite_concession_of if not applicable.
+- Treat the two halves separately, because they are separate. The concession is a concession: handle it exactly as any other agreement below, on the conceded node. The rebuttal is an ordinary rebuttal of the PARENT.
+- Create the new rebuttal node as a SIBLING of the conceded node — connect it to the conceded node's PARENT, not to the conceded node itself, using relationship "rebuts" or "opposes". It belongs at the SAME level as the conceded node: making it a child would imply it supports or follows from the very thing it argues around.
+- Do NOT mark the rebuttal as being made "despite" the concession. Once a point is conceded it is conceded, and whatever the speaker goes on to say about a different aspect of the parent is not a qualification of it.
+- Only treat this as a concession at all when it is genuine and explicit enough that a neutral observer would clearly read it as an acknowledgment.
 - When a speaker explicitly or implicitly agrees with an opposing speaker's node (e.g. "I agree that...", "You're right about...", "Fair point on...", or conceding a point), set "rating": "up" on that agreed-upon node.
 - Also set "metadata.agreed_by": { "speaker": "<the agreeing speaker>", "text": "<the original agreeing statement verbatim>" } on that node. The "speaker" is who agreed (the current speaker), and "text" is the exact words from their statement that express agreement.
 - Only set rating "up" on nodes belonging to the OTHER speaker — a speaker cannot agree with their own nodes.

@@ -231,7 +231,7 @@ function invariants(map) {
     for (const t of m.tactics ?? []) {
       if (!TACTIC_KEYS.includes(t)) problems.push(`${n.id} carries an unknown tactic "${t}"`);
     }
-    for (const ref of ["contradicts", "moves_goalposts_from", "despite_concession_of"]) {
+    for (const ref of ["contradicts", "moves_goalposts_from"]) {
       if (m[ref] && !ids.has(m[ref])) problems.push(`${n.id}.${ref} points at a node that does not exist: ${m[ref]}`);
     }
     // "A speaker cannot move the goalposts of the OTHER speaker — that is just
@@ -265,8 +265,7 @@ function findings(map) {
   const nodes = map.argument_map.nodes ?? [];
   return {
     tactics: [...new Set(nodes.flatMap((n) => n.metadata?.tactics ?? []))],
-    possibleConcession: nodes.some((n) => n.metadata?.possible_concession)
-      || nodes.some((n) => n.metadata?.despite_concession_of),
+    possibleConcession: nodes.some((n) => n.metadata?.possible_concession),
     contradiction: nodes.some((n) => n.metadata?.contradicts),
     goalpost: nodes.some((n) => n.metadata?.moves_goalposts_from),
     nonSequitur: nodes.some((n) => n.metadata?.non_sequitur),

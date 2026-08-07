@@ -60,10 +60,12 @@ async function seedPair(page, link) {
     const inner = map.map?.argument_map ?? map.argument_map;
     inner.nodes.push({ id: "node_2", type: "premise", speaker: "Green", rating: null,
       content: "Structure is what decides it, not filling",
-      metadata: link === "despite" || link === "settled" ? { despite_concession_of: "node_1" } : {} });
+      metadata: {} });
     if (link === "settled") {
+      // Both at once: the shape a map saved before b597f16 can still hold.
       inner.nodes[0].rating = "up";
       inner.nodes[0].metadata = { ...(inner.nodes[0].metadata || {}),
+        possible_concession: { type: "other", speaker: "Green", text: "granted, the bread part is right" },
         agreed_by: { speaker: "Green", text: "yeah you're right about the bread" } };
     }
     if (link === "metadata") {
@@ -207,94 +209,8 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     }, { id: debateId, base, anon });
   });
 
-  // The second route into the badge, and the one that shipped unbadged: a
-  // concessive rebuttal. Claude records that on the REBUTTING node, as
-  // metadata.despite_concession_of, which never passed through the rating
-  // interception and so never became a question. The map said "conceded here"
-  // about a node nobody had agreed to concede.
-  test("a concessive rebuttal badges the node it concedes", async ({ page }) => {
-    await page.goto("/");
-    await page.getByTestId("tab-history").click();
-    await page.getByTestId("history-new-argument").click();
-
-    const insertResponse = page.waitForResponse(
-      (r) => r.url().includes("/rest/v1/debates") && r.request().method() === "POST",
-    );
-    await page.getByTestId("controls-chevron").click();
-    await page.getByTestId("ctrl-add-node").click();
-    await page.getByTestId("node-edit-content").fill("A sandwich is a filling between bread");
-    await page.getByTestId("node-edit-save").click();
-    await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
-    const debateId = (await (await insertResponse).json()).id;
-
-    const base = process.env.VITE_SUPABASE_URL;
-    const anon = process.env.VITE_SUPABASE_ANON_KEY;
-
-    const seeded = await page.evaluate(async ({ id, base, anon }) => {
-      const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
-      const token = JSON.parse(localStorage.getItem(key)).access_token;
-      const headers = {
-        apikey: anon, Authorization: `Bearer ${token}`, "Content-Type": "application/json",
-        "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper",
-        Prefer: "return=representation",
-      };
-      const [row] = await (await fetch(`${base}/rest/v1/debates?id=eq.${id}&select=map_data`, { headers })).json();
-      const map = row.map_data;
-      const inner = map.map?.argument_map ?? map.argument_map;
-      inner.nodes.push({
-        id: "node_2", type: "premise", speaker: "Green", rating: null,
-        content: "BLT and Reuben are sandwiches because of structure",
-        metadata: { despite_concession_of: "node_1" },
-      });
-      const res = await fetch(`${base}/rest/v1/debates?id=eq.${id}`, {
-        method: "PATCH", headers, body: JSON.stringify({ map_data: map }),
-      });
-      return res.ok;
-    }, { id: debateId, base, anon });
-    expect(seeded).toBe(true);
-
-    await page.reload();
-    await page.getByTestId("tab-history").click();
-    await page.getByTestId("history-new-argument").click();
-    await page.getByTestId("tab-history").click();
-    await page.locator(`[data-debate-id="${debateId}"]`).getByTestId("history-row-title").click();
-    await expect(page.locator('[data-node-id="node_1"]')).toBeVisible();
-
-    // The conceded node carries the badge, even though the metadata lives on
-    // the OTHER node.
-    await expect(page.locator('[data-node-id="node_1"]')).toContainText("possible concession");
-
-    await openNode(page, "node_1");
-    const chip = page.locator(".flag-chip--possible-concession");
-    await expect(chip).toBeVisible();
-    await expect(chip).toContainText("Nobody has confirmed it");
-    // And nothing anywhere may claim it as settled.
-    await expect(page.locator(".popup-overlay, .concession-modal, body")).not.toContainText("Conceded here, rebutted");
-
-    await page.evaluate(async ({ id, base, anon }) => {
-      const key = Object.keys(localStorage).find((k) => k.startsWith("sb-") && k.endsWith("-auth-token"));
-      const token = JSON.parse(localStorage.getItem(key)).access_token;
-      await fetch(`${base}/rest/v1/debates?id=eq.${id}`, {
-        method: "DELETE",
-        headers: { apikey: anon, Authorization: `Bearer ${token}`,
-                   "Accept-Profile": "argument_mapper", "Content-Profile": "argument_mapper" },
-      });
-    }, { id: debateId, base, anon });
-  });
-
-  test("the chip opens the node that implies the concession", async ({ page }) => {
-    const id = await seedPair(page, "despite");
-    await openNode(page, "node_1");
-    const chip = page.locator(".flag-chip--possible-concession");
-    await expect(chip).toHaveClass(/flag-chip--linked/);
-    await chip.click();
-    // The popup should now be node_2 — the rebuttal that implies the concession.
-    await expect(page.locator(".flag-chip--despite")).toContainText("Despite a possible concession of");
-    await cleanup(page, id);
-  });
-
-  test("the owner can withdraw it, and that clears the implying reference too", async ({ page }) => {
-    const id = await seedPair(page, "despite");
+  test("the owner can withdraw it from their edit window", async ({ page }) => {
+    const id = await seedPair(page, "metadata");
     await expect(page.locator('[data-node-id="node_1"]')).toContainText("possible concession");
 
     // node_1 belongs to Blue, the current speaker, so the edit window opens.
@@ -303,8 +219,7 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     await page.getByTestId("node-edit-concession-toggle").click();
     await page.getByTestId("node-edit-save").click();
 
-    // Gone from the map. The badge came from node_2's despite_concession_of, so
-    // clearing only node_1's own metadata would have left it exactly where it was.
+    // Gone from the map.
     await expect(page.locator('[data-node-id="node_1"]')).not.toContainText("possible concession");
     await cleanup(page, id);
   });
@@ -324,25 +239,18 @@ test.describe("Possible concession — a suggestion, not a verdict", () => {
     await cleanup(page, id);
   });
 
-  // From Alex's screw-type map: node_3 had rating "up" AND agreed_by -- an
-  // explicitly confirmed concession -- and still wore the badge, because the
-  // derived rule badged anything a despite_concession_of pointed at without
-  // asking whether the question had already been answered.
-  test("an explicitly conceded node loses the badge and the hedged wording", async ({ page }) => {
+  // From Alex's screw-type map: a node carried rating "up" AND agreed_by -- an
+  // explicitly confirmed concession -- and still wore the badge. Confirming
+  // strips possible_concession now, but a map saved before b597f16 can hold
+  // both, so the badge has to yield to the settled answer rather than assume
+  // the two never coexist.
+  test("an explicitly conceded node shows no badge", async ({ page }) => {
     const id = await seedPair(page, "settled");
 
     await expect(page.locator('[data-node-id="node_1"]')).not.toContainText("possible concession");
 
     await openNode(page, "node_1");
     await expect(page.locator(".flag-chip--possible-concession")).toHaveCount(0);
-    // The relationship is still true and still shown — only the hedge goes.
-    await expect(page.locator(".flag-chip--despite")).toContainText("Conceded here, rebutted by");
-    await expect(page.locator(".flag-chip--despite")).not.toContainText("Possibly conceded");
-
-    // And from the rebutting node's side.
-    await openNode(page, "node_2");
-    await expect(page.locator(".flag-chip--despite")).toContainText("Despite conceding");
-    await expect(page.locator(".flag-chip--despite")).not.toContainText("possible concession of");
     await cleanup(page, id);
   });
 });

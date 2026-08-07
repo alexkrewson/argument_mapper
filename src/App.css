@@ -486,7 +486,6 @@
 .node-flag-chip--goalposts      { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--non-sequitur   { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--possible-concession { background: rgba(13, 148, 136, 0.9); }
-.node-flag-chip--despite        { background: rgba(14, 116, 144, 0.9); }
 
 .map-tree-crosslink {
   font-size: 0.6rem;
@@ -838,11 +837,6 @@
 .flag-chip-sub--quote {
   font-style: italic;
   opacity: 0.9;
-}
-.flag-chip--despite {
-  background: #0e7490;
-  color: #fff;
-  cursor: pointer;
 }
 .flag-chip-label {
   font-weight: 800;
@@ -2163,7 +2157,6 @@
 [data-dark="true"] .flag-chip--goalposts     { background: #b91c1c; }
 [data-dark="true"] .flag-chip--non-sequitur  { background: #b91c1c; }
 [data-dark="true"] .flag-chip--possible-concession { background: #0f766e; }
-[data-dark="true"] .flag-chip--despite       { background: #0e7490; }
 
 [data-dark="true"] .inactive-banner {
   background: #1e293b;
@@ -4279,11 +4272,6 @@ button {
   pointer-events: none;
   white-space: nowrap;
 }
-
-/* A possible-concession chip that has somewhere to go. The metadata-only route
-   names no second node, so only the derived one gets the affordance. */
-.flag-chip--linked { cursor: pointer; }
-.flag-chip--linked:hover { filter: brightness(1.1); }
 
 .flag-toggle--possible-concession.flag-toggle--on {
   background: #0d9488;
