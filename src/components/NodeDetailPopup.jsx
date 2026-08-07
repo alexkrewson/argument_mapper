@@ -418,6 +418,9 @@ export default function NodeDetailPopup({
             {node.metadata?.non_sequitur && (
               <span className="node-flag-chip node-flag-chip--non-sequitur">⚡ non-sequitur</span>
             )}
+            {node.metadata?.possible_concession && (
+              <span className="node-flag-chip node-flag-chip--possible-concession">🤝? possible concession</span>
+            )}
             {despiteNode && (
               <span className="node-flag-chip node-flag-chip--despite">⇲ despite {fmtNodeId(despiteNode.id)}</span>
             )}
@@ -492,6 +495,27 @@ export default function NodeDetailPopup({
                 This argument supports a statement that has been agreed on, retracted, or walked back
               </div>
             </div>
+          </div>
+        )}
+
+        {/* A concession nobody confirmed. Deliberately not clickable and not a
+            warning colour: it points at no other node, and it is a question
+            rather than a fault. The quoted phrase is the whole point — it is
+            what lets a reader judge the suggestion instead of trusting it. */}
+        {node.metadata?.possible_concession && (
+          <div className="flag-chip flag-chip--possible-concession">
+            <span className="flag-chip-label">🤝? Possible concession</span>
+            <span className="flag-chip-sub">
+              {node.metadata.possible_concession.type === "self"
+                ? `${speakerName(node.metadata.possible_concession.speaker, theme)} may have been retracting their own point here.`
+                : `${speakerName(node.metadata.possible_concession.speaker, theme)} may have been accepting this point.`}
+              {" Nobody has confirmed it, so nothing has been scored or faded."}
+            </span>
+            {node.metadata.possible_concession.text && (
+              <span className="flag-chip-sub flag-chip-sub--quote">
+                “{node.metadata.possible_concession.text}”
+              </span>
+            )}
           </div>
         )}
 

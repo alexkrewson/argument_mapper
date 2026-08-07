@@ -630,6 +630,37 @@ export default function App() {
     triggerGameFeedback(nodesBefore, finalNodes, currentSpeaker);
   };
 
+  /**
+   * Records an implied concession as a SUGGESTION on the node instead of
+   * applying it. Nothing about the map changes otherwise: the rating stays
+   * untouched, nothing fades, no score moves. The node earns a badge and an
+   * explanation in its info box, and that is all.
+   *
+   * This is what both "no thanks" in Turns mode and every implied concession in
+   * Combined mode now produce. Applying one silently was too easy to miss and
+   * too hard to undo; asking about every one of them in Combined mode meant a
+   * queue of popups before you had even seen the map.
+   */
+  const markPossibleConcession = (nodes, item) => {
+    const twinIds = new Set(nodes.find((n) => n.id === item.nodeId)?.metadata?.twins ?? []);
+    const targets = new Set([item.nodeId, ...twinIds]);
+    return nodes.map((node) =>
+      targets.has(node.id)
+        ? {
+            ...node,
+            metadata: {
+              ...node.metadata,
+              possible_concession: {
+                type: item.type,
+                speaker: item.concedingBy,
+                ...(item.agreedByText ? { text: item.agreedByText } : {}),
+              },
+            },
+          }
+        : node,
+    );
+  };
+
   /** Concession queue handlers */
   const handleConfirmConcession = () => {
     const [item, ...rest] = concessionQueue;
@@ -641,12 +672,16 @@ export default function App() {
 
     const nodes = inner.nodes.map((node) => {
       if (!allToUpdate.has(node.id)) return node;
+      // A confirmed concession answers the question the badge was asking, so
+      // the badge goes. Stripped rather than left alongside, or a node would
+      // read as both "conceded" and "might have been conceded".
+      const { possible_concession: _dropped, ...restMeta } = node.metadata || {};
       if (item.type === "self") {
         return {
           ...node,
           rating: "down",
           metadata: {
-            ...node.metadata,
+            ...restMeta,
             conceded_by: { speaker: item.concedingBy, ...(item.agreedByText ? { text: item.agreedByText } : {}) },
           },
         };
@@ -655,7 +690,7 @@ export default function App() {
         ...node,
         rating: "up",
         metadata: {
-          ...node.metadata,
+          ...restMeta,
           agreed_by: { speaker: item.concedingBy, ...(item.agreedByText ? { text: item.agreedByText } : {}) },
         },
       };
@@ -670,9 +705,31 @@ export default function App() {
     setConcessionQueue(rest);
   };
 
+  /**
+   * "No, I didn't concede that." The suggestion doesn't vanish — it becomes a
+   * badge, so a reader can still see that something in the wording read like an
+   * acknowledgement, and decide for themselves. Declining used to leave nothing
+   * at all behind.
+   */
   const handleDismissConcession = () => {
-    setConcessionQueue((prev) => prev.slice(1));
+    const [item, ...rest] = concessionQueue;
+    setConcessionQueue(rest);
+    if (!item) return;
+    const inner = argumentMap.argument_map;
+    pushHistory(
+      { argument_map: { ...inner, nodes: markPossibleConcession(inner.nodes, item) } },
+      moderatorAnalysis,
+    );
   };
+
+  // The back listener must call the CURRENT dismiss handler. That handler now
+  // reads concessionQueue and argumentMap, so one captured on an older render
+  // would push a stale map -- and re-registering the listener every render
+  // instead would leave an async gap in which a back press is handled by
+  // nobody. Assigned in an effect rather than during render, which the
+  // react-hooks/refs rule (rightly) rejects.
+  const dismissConcessionRef = useRef(handleDismissConcession);
+  useEffect(() => { dismissConcessionRef.current = handleDismissConcession; });
 
   // --- Android hardware back button ----------------------------------------
   // There is no router, so the WebView has no history to pop, and Android's
@@ -685,7 +742,7 @@ export default function App() {
     let cancelled = false;
 
     CapacitorApp.addListener("backButton", () => {
-      if (concessionQueue.length > 0) { handleDismissConcession(); return; }
+      if (concessionQueue.length > 0) { dismissConcessionRef.current(); return; }
       if (selectedNode)   { setSelectedNode(null); return; }
       if (addNodeOpen)    { setAddNodeOpen(false); return; }
       if (showChangeLog)  { setShowChangeLog(false); return; }
@@ -935,6 +992,7 @@ export default function App() {
       let workingMap = argumentMap;
       let workingSpeaker = currentSpeaker;
       const pendingConcessions = [];
+      let lastAnalysis = moderatorAnalysis;
 
       for (let i = 0; i < allTurns.length; i++) {
         setCombiningProgress({ current: i + 1, total: allTurns.length });
@@ -965,7 +1023,9 @@ export default function App() {
           };
         }
 
-        // Detect implied concessions — strip ratings and queue for confirmation
+        // Detect implied concessions — strip the rating Claude set and collect
+        // them. In Combined mode they never become questions: the map is built
+        // first, and each one lands as a badge below.
         const oldNodeRatings = new Map(workingMap.argument_map.nodes.map((n) => [n.id, n.rating]));
         const strippedNodes = updatedMap.argument_map.nodes.map((n) => {
           if (n.rating === "up" && oldNodeRatings.get(n.id) !== "up") {
@@ -990,13 +1050,23 @@ export default function App() {
         }
 
         const cleanMap = sanitizeNodeContent(updatedMap, resolvedTheme);
-        pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
+        lastAnalysis = sanitizeAnalysis(updatedMap.moderator_analysis || null);
+        pushHistory(cleanMap, lastAnalysis);
         workingMap = cleanMap;
         workingSpeaker = workingSpeaker === "Blue" ? "Green" : "Blue";
       }
 
+      // Combined mode asks nothing. A pasted conversation can imply half a dozen
+      // concessions, and a stack of modals in front of a map you have not seen
+      // yet is not a decision anyone can make well. They become badges instead,
+      // each explained in its own info box, and the reader decides at leisure.
       if (pendingConcessions.length > 0) {
-        setConcessionQueue((prev) => [...prev, ...pendingConcessions]);
+        const inner = workingMap.argument_map;
+        let marked = inner.nodes;
+        for (const item of pendingConcessions) marked = markPossibleConcession(marked, item);
+        const markedMap = { argument_map: { ...inner, nodes: marked } };
+        pushHistory(markedMap, lastAnalysis);
+        workingMap = markedMap;
       }
       setCurrentSpeaker(workingSpeaker);
       setHasSubmitted({ a: true, b: true });

@@ -27,10 +27,10 @@ const BADGE_BASE_TOP = 4;    // top & left inset for badge area
 const NODE_WIDTH     = 260;  // must match stylesheet width
 const BADGE_AVAIL    = NODE_WIDTH - 2 * BADGE_BASE_TOP;  // 252px
 
-function estimateBadgeRows(tactics, flagPairs, nonSequitur) {
+function estimateBadgeRows(tactics, flagPairs, nonSequitur, possibleConcession) {
   // Primary row: fixed badges (~110px) + tactic icons inline, wrapping as needed
   const primaryRows = Math.ceil((110 + (tactics?.length ?? 0) * 29) / BADGE_AVAIL);
-  const chipCount   = (flagPairs?.length ?? 0) + (nonSequitur ? 1 : 0);
+  const chipCount   = (flagPairs?.length ?? 0) + (nonSequitur ? 1 : 0) + (possibleConcession ? 1 : 0);
   const chipRows    = chipCount ? Math.ceil(chipCount * 104 / BADGE_AVAIL) : 0;
   return primaryRows + chipRows;
 }
@@ -351,7 +351,13 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         return `<span title="${title}" style="${cs("#dc2626")}">${label}</span>`;
       }).join("");
       const nonSeqHtml = data.non_sequitur ? `<span title="This statement doesn't logically connect to the argument" style="${cs("#dc2626")}">⚡ non-sequitur</span>` : "";
-      const chipRow = (chipHtml || nonSeqHtml) ? `<div style="${rowStyle}">${chipHtml}${nonSeqHtml}</div>` : "";
+      const pc = data.possible_concession;
+      const pcHtml = pc
+        ? `<span title="${pc.type === "self"
+              ? "This may be a retraction of their own point — nobody has confirmed it"
+              : "This may be an acknowledgement of the other speaker's point — nobody has confirmed it"}" style="${cs("#0d9488")}">🤝? possible concession</span>`
+        : "";
+      const chipRow = (chipHtml || nonSeqHtml || pcHtml) ? `<div style="${rowStyle}">${chipHtml}${nonSeqHtml}${pcHtml}</div>` : "";
 
       return `<div data-node-id="${data.id}" style="position:absolute;top:${BADGE_BASE_TOP}px;left:${BADGE_BASE_TOP}px;display:flex;flex-direction:column;gap:${GAP}px;pointer-events:none;width:${BADGE_AVAIL}px;opacity:${data.faded ? 0.25 : 1};">
         ${primaryRow}${chipRow}
@@ -646,7 +652,8 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const tactics      = node.metadata?.tactics || [];
       const flagPairs    = flagPairsMap.get(node.id) || [];
       const non_sequitur = node.metadata?.non_sequitur || false;
-      const badgeRows    = estimateBadgeRows(tactics, flagPairs, non_sequitur);
+      const possible_concession = node.metadata?.possible_concession || null;
+      const badgeRows    = estimateBadgeRows(tactics, flagPairs, non_sequitur, possible_concession);
       // Summary placement rule: gap(badge_bottom → text_top) = gap(text_bottom → node_bottom)
       //   Both gaps = BADGE_BASE_TOP (matches left/top badge inset for visual unity).
       //   text_centre = (badge_bottom + nodeHeight) / 2
@@ -667,6 +674,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
         tactics,
         flagPairs,
         non_sequitur,
+        possible_concession,
         badgeRows,
         nodeHeight,
         textMarginY,

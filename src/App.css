@@ -485,6 +485,7 @@
 .node-flag-chip--contradiction  { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--goalposts      { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--non-sequitur   { background: rgba(185, 28, 28, 0.9); }
+.node-flag-chip--possible-concession { background: rgba(13, 148, 136, 0.9); }
 .node-flag-chip--despite        { background: rgba(14, 116, 144, 0.9); }
 
 .map-tree-crosslink {
@@ -824,6 +825,19 @@
 .flag-chip--non-sequitur {
   background: #dc2626;
   color: #fff;
+}
+/* Teal, not the red the conflict chips use. A possible concession is a question
+   about the argument, not a fault in it, and dressing it as a warning would tell
+   the reader the wrong thing before they had read a word. No cursor:pointer
+   either -- unlike the others it points at no second node, so there is nowhere
+   to go. */
+.flag-chip--possible-concession {
+  background: #0d9488;
+  color: #fff;
+}
+.flag-chip-sub--quote {
+  font-style: italic;
+  opacity: 0.9;
 }
 .flag-chip--despite {
   background: #0e7490;
@@ -2148,6 +2162,7 @@
 [data-dark="true"] .flag-chip--contradiction  { background: #b91c1c; }
 [data-dark="true"] .flag-chip--goalposts     { background: #b91c1c; }
 [data-dark="true"] .flag-chip--non-sequitur  { background: #b91c1c; }
+[data-dark="true"] .flag-chip--possible-concession { background: #0f766e; }
 [data-dark="true"] .flag-chip--despite       { background: #0e7490; }
 
 [data-dark="true"] .inactive-banner {
