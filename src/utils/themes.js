@@ -27,20 +27,20 @@ export const THEMES = {
   ocean: {
     label: "Ocean",
     panelBg: "#e6f2f5",
-    a: { name: "Teal",   bg: "#5a7898", border: "#3c5872" },  // deep ocean slate
+    a: { name: "Teal",   bg: "#6483a3", border: "#3c5872" },  // deep ocean slate
     b: { name: "Coral",  bg: "#b87c68", border: "#8a5444" },  // warm sand coral
   },
   sunset: {
     label: "Sunset",
     panelBg: "#fdf0e0",
-    a: { name: "Amber",  bg: "#c49a6c", border: "#927244" },  // warm caramel
+    a: { name: "Amber",  bg: "#c49a6c", border: "#917144" },  // warm caramel
     b: { name: "Violet", bg: "#9478a8", border: "#6c5280" },  // dusty mauve
   },
   forest: {
     label: "Forest",
     panelBg: "#e8f2e8",
-    a: { name: "Sage",   bg: "#5a8460", border: "#3a6040" },  // deep moss
-    b: { name: "Rust",   bg: "#9c6450", border: "#724030" },  // muted terracotta
+    a: { name: "Sage",   bg: "#5e8a64", border: "#3a6040" },  // deep moss
+    b: { name: "Rust",   bg: "#ac725d", border: "#724030" },  // muted terracotta
   },
   dusk: {
     label: "Dusk",
@@ -59,15 +59,15 @@ export const THEMES = {
     label: "Midnight",
     dark: true,
     panelBg: "#1a1830",
-    a: { name: "Violet", bg: "#7868a0", border: "#564878" },  // dusty iris
-    b: { name: "Plum",   bg: "#9c6878", border: "#744858" },  // dusty plum
+    a: { name: "Violet", bg: "#8778aa", border: "#564878" },  // dusty iris
+    b: { name: "Plum",   bg: "#a37382", border: "#744858" },  // dusty plum
   },
   ember: {
     label: "Ember",
     dark: true,
     panelBg: "#1e1508",
     a: { name: "Amber",          bg: "#b87040", border: "#7a4820" },
-    b: { name: "Teal",           bg: "#3d8c7a", border: "#255c50" },
+    b: { name: "Teal",           bg: "#3d8d7b", border: "#255c50" },
   },
   // lcars: {
   //   label: "LCARS",

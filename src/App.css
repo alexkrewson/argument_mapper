@@ -485,7 +485,7 @@
 .node-flag-chip--contradiction  { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--goalposts      { background: rgba(185, 28, 28, 0.9); }
 .node-flag-chip--non-sequitur   { background: rgba(185, 28, 28, 0.9); }
-.node-flag-chip--possible-concession { background: rgba(13, 148, 136, 0.9); }
+.node-flag-chip--possible-concession { background: #0c857b; }
 
 .map-tree-crosslink {
   font-size: 0.6rem;
@@ -831,7 +831,7 @@
    either -- unlike the others it points at no second node, so there is nowhere
    to go. */
 .flag-chip--possible-concession {
-  background: #0d9488;
+  background: #0c857b;
   color: #fff;
 }
 .flag-chip-sub--quote {
@@ -1125,7 +1125,7 @@
 .ctrl-label {
   font-size: 10px;
   font-weight: 500;
-  color: #94a3b8;
+  color: #5b6675;
   /* .ctrl-btn is flex:1 with min-width:0, so a button is ALLOWED to be narrower
      than its own label -- and with nowrap and no overflow rule the text simply
      spilled over its neighbours. Measured at 360px: "Add Node" and "Combined"
@@ -3603,7 +3603,7 @@ button {
 [data-dark="true"] .chevron-btn:hover { background: #334155; }
 [data-dark="true"] .ctrl-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
 [data-dark="true"] .ctrl-btn:hover:not(.ctrl-btn--dormant) { background: #334155; }
-[data-dark="true"] .ctrl-label { color: #64748b; }
+[data-dark="true"] .ctrl-label { color: #8b98ab; }
 [data-dark="true"] .save-debate-btn { color: #92a1b5; border-color: #334155; }
 [data-dark="true"] .save-debate-btn:hover { color: #f1f5f9; border-color: #64748b; }
 [data-dark="true"] .history-row { background: #1e293b; border-color: #334155; }

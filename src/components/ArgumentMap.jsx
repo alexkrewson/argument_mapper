@@ -330,7 +330,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const tacticHtml = (data.tactics || [])
         .filter((key) => TACTICS[key])
         .map((key) => {
-          const tbc = TACTICS[key].type === "fallacy" ? "#dc2626" : TACTICS[key].type === "technique" ? "#16a34a" : "#d97706";
+          const tbc = TACTICS[key].type === "fallacy" ? "#dc2626" : TACTICS[key].type === "technique" ? "#12883e" : "#b36205";
           return `<span title="${TACTICS[key].name}" style="cursor:help;pointer-events:auto;background:rgba(0,0,0,0.45);border:2px solid ${tbc};border-radius:3px;padding:0 4px;font-size:10px;display:inline-flex;align-items:center;height:16px;box-sizing:border-box;">${TACTICS[key].symbol}</span>`;
         })
         .join("");
@@ -355,7 +355,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const pcHtml = pc
         ? `<span title="${pc.type === "self"
               ? "This may be a retraction of their own point — nobody has confirmed it"
-              : "This may be an acknowledgement of the other speaker's point — nobody has confirmed it"}" style="${cs("#0d9488")}">🤝? possible concession</span>`
+              : "This may be an acknowledgement of the other speaker's point — nobody has confirmed it"}" style="${cs("#0c857b")}">🤝? possible concession</span>`
         : "";
       const chipRow = (chipHtml || nonSeqHtml || pcHtml) ? `<div style="${rowStyle}">${chipHtml}${nonSeqHtml}${pcHtml}</div>` : "";
 
