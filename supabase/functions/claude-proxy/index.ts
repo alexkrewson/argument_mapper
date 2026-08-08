@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
     let lastResponse: Response | null = null;
     let timedOut = false;
     for (let i = 0; i < maxRetries; i++) {
+      attemptsUsed = i + 1;
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
       try {
@@ -93,8 +94,9 @@ Deno.serve(async (req) => {
       } catch (err) {
         // Only a timeout is worth another go, and only once: a second 70s wait
         // would put the total past the wall-clock limit this exists to avoid.
-        if ((err as Error).name !== "AbortError") throw err;
+        if ((err as Error).name !== "AbortError") { outcome = "exception"; throw err; }
         timedOut = true;
+        outcome = "timeout";
         if (i >= 1) break;
       } finally {
         clearTimeout(timer);
@@ -110,6 +112,10 @@ Deno.serve(async (req) => {
     return lastResponse!;
   }
 
+  const callStarted = Date.now();
+  let attemptsUsed = 0;
+  let outcome = "ok";
+
   const anthropicResponse = await fetchWithRetry(ANTHROPIC_API_URL, {
     method: "POST",
     headers: {
@@ -121,12 +127,40 @@ Deno.serve(async (req) => {
   });
 
   const responseText = await anthropicResponse.text();
+  const durationMs = Date.now() - callStarted;
+  if (outcome === "ok" && !anthropicResponse.ok) outcome = "http_error";
+
+  // Record how the call behaved. Metadata only -- never the prompt, never the
+  // reply. The ratelimit block is the point: Anthropic reports its quota state
+  // on every response, which is exactly what was missing when this stalled.
+  const logCall = async (usage?: { input_tokens?: number; output_tokens?: number }) => {
+    try {
+      const rl: Record<string, string> = {};
+      for (const [k, v] of anthropicResponse.headers) {
+        if (k.startsWith("anthropic-ratelimit") || k === "retry-after") rl[k] = v;
+      }
+      await supabaseAdmin.from("ai_call_log").insert({
+        user_id: user.id,
+        status: outcome === "timeout" ? null : anthropicResponse.status,
+        duration_ms: durationMs,
+        attempts: attemptsUsed,
+        outcome,
+        input_tokens: usage?.input_tokens ?? null,
+        output_tokens: usage?.output_tokens ?? null,
+        ratelimit: Object.keys(rl).length ? rl : null,
+      });
+    } catch {
+      // Diagnostics must never break the call they are describing.
+    }
+  };
 
   // Deduct actual token cost
   let creditsRemaining = profile.credits_cents;
+  let loggedUsage: { input_tokens?: number; output_tokens?: number } | undefined;
   if (anthropicResponse.ok) {
     try {
       const responseData = JSON.parse(responseText);
+      loggedUsage = responseData.usage;
       if (responseData.usage) {
         const cost =
           responseData.usage.input_tokens  * INPUT_CENTS_PER_TOKEN +
@@ -141,6 +175,8 @@ Deno.serve(async (req) => {
       // Don't fail the response if deduction bookkeeping errors
     }
   }
+
+  await logCall(loggedUsage);
 
   return new Response(responseText, {
     status: anthropicResponse.status,
