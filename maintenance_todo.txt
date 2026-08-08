@@ -149,6 +149,37 @@ supply compliant testers. Steps needed before submitting:
   true on 08-03 and still is. What is new is that the app is materially better
   than the one that was going to be submitted.
 
+  READY TO SUBMIT — artifacts cut 2026-08-07 20:36/20:39 from cbbe4d8, clean tree.
+
+    UPLOAD THIS:  android/app/build/outputs/bundle/release/app-release.aab
+                  gdrive: app-release-v2-20260807-2036-cbbe4d8.aab
+    SIDELOAD:     app-release-v2-20260807-2039-cbbe4d8.apk   (59/59 on device)
+
+  READ BACK FROM INSIDE THE AAB, not assumed -- this is the check that would have
+  caught the stale bundle on 08-03:
+        hdhqpeevtofevymayvie x5, the keeper x0      right backend
+        "Confirm your email" x1                     sign-up by code, not a link
+        "Press back again" x1                       hardware back button
+        "possible concession" x2                    concessions as suggestions
+        despite_concession_of x0                    the "yeah but" marker is gone
+        #8b98ab / #5b6675 / #0c857b in the CSS      the contrast fixes
+        signed, Sentry DSN present
+  versionCode is still 2 and nothing has ever been uploaded, so NO BUMP for this
+  first one. Every upload after it goes through `npm run release:aab`.
+
+  THEN, IN PLAY CONSOLE (all of it Alex's):
+    1. Create the closed testing track and upload the AAB above.
+    2. Data Safety -- must now declare crash logs / diagnostics (Sentry, 08-05).
+    3. App content: privacy https://idisagree.trolleysolution.com/privacy  and
+       data deletion .../privacy#delete. STILL UNVERIFIED whether Play accepts an
+       email-based deletion route or insists on a self-serve form -- find out at
+       the form, don't assume the anchor satisfies it.
+    4. Twelve testers, fourteen consecutive days.
+
+  WORTH DOING BEFORE THE TESTERS ARRIVE, neither blocking: warm the Resend
+  sending domain so twelve signups at once don't land in spam, and clear the 79
+  test debates sitting on the .env.test account.
+
   EVERYTHING IS PUSHED AND LIVE, confirmed by bundle hash rather than assumed.
   Latest APK: app-release-v2-20260807-1601-d1354d4.apk.
   WHAT REMAINS IS THE PLAY CONSOLE WORK from the 08-03 block, unchanged: upload,
