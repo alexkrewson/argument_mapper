@@ -96,6 +96,43 @@ function renderTest(suiteId, test) {
   </article>`;
 }
 
+// Each suite writes its own half of this report, so the two halves can be days
+// apart with nothing on screen to say so. A four-day-old Android run sat beside
+// a fresh web one and was read as current -- reasonably, since the date was a
+// grey line of metadata and the screenshots in it showed a bug that had since
+// been fixed. Staleness is now loud: a badge, muted styling, and collapsed by
+// default, so the only thing open when the report loads is the run you just did.
+const STALE_AFTER_MS = 60 * 60 * 1000;
+
+function stampMs(meta) {
+  const m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})/.exec(String(meta || ""));
+  if (!m) return null;
+  const [, y, mo, d, h, mi, sec] = m.map(Number);
+  return new Date(y, mo - 1, d, h, mi, sec).getTime();
+}
+
+function ageLabel(ms, now) {
+  const diff = Math.max(0, now - ms);
+  const mins = Math.round(diff / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins} minutes ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+/** Marks every suite older than the newest one, so "current" is relative to the run just finished. */
+function withFreshness(suites) {
+  const times = suites.map((s) => stampMs(s.meta));
+  const newest = Math.max(...times.filter((t) => t != null), 0) || null;
+  return suites.map((suite, i) => {
+    const ms = times[i];
+    const stale = !!(newest && ms && newest - ms > STALE_AFTER_MS);
+    return { ...suite, ms, stale, age: ms && newest ? ageLabel(ms, newest) : "" };
+  });
+}
+
 function renderSidebar(suites) {
   return suites.map((suite) => {
     const c = countStatuses(suite.tests);
@@ -120,11 +157,13 @@ function renderSidebar(suites) {
     }).join("");
 
     return `
-    <details class="nav-suite" open>
+    <details class="nav-suite${suite.stale ? " is-stale" : ""}" ${suite.stale ? "" : "open"}>
       <summary>
         <span class="nav-suite-name">${escapeHtml(suite.label)}</span>
+        ${suite.stale ? `<span class="stale-tag" title="Not from the latest run">OLD</span>` : ""}
         <span class="nav-suite-stat">${c.passed}/${suite.tests.length}</span>
       </summary>
+      ${suite.age ? `<p class="nav-suite-meta">${escapeHtml(suite.age)}</p>` : ""}
       ${suite.meta ? `<p class="nav-suite-meta">${escapeHtml(suite.meta)}</p>` : ""}
       ${files || `<p class="nav-suite-meta">No tests recorded.</p>`}
     </details>`;
@@ -132,15 +171,17 @@ function renderSidebar(suites) {
 }
 
 export function buildReportHtml({ title = "Test report", stamp = "", suites = [] } = {}) {
+  suites = withFreshness(suites);
   const all = suites.flatMap((s) => s.tests);
   const total = countStatuses(all);
 
   const main = suites.map((suite) => {
     const c = countStatuses(suite.tests);
     return `
-  <section class="suite" id="suite-${escapeHtml(suite.id)}">
-    <div class="suite-head">
-      <h2>${escapeHtml(suite.label)}</h2>
+  <details class="suite${suite.stale ? " is-stale" : ""}" id="suite-${escapeHtml(suite.id)}" ${suite.stale ? "" : "open"}>
+    <summary class="suite-head">
+      <h2>${escapeHtml(suite.label)}${suite.stale ? ` <span class="stale-tag">NOT THIS RUN</span>` : ""}</h2>
+      ${suite.stale ? `<p class="stale-note">Captured ${escapeHtml(suite.age)}, before the run above. These screenshots may show bugs that have since been fixed — re-run this suite before trusting them.</p>` : ""}
       <p class="suite-meta">${escapeHtml(suite.meta || "")}</p>
       <div class="suite-stats">
         <span class="stat stat--passed"><b>${c.passed}</b> passed</span>
@@ -148,13 +189,13 @@ export function buildReportHtml({ title = "Test report", stamp = "", suites = []
         <span class="stat${c.skipped ? " stat--skipped" : ""}"><b>${c.skipped}</b> skipped</span>
         <span class="stat"><b>${c.steps}</b> screenshots</span>
       </div>
-    </div>
+    </summary>
     ${byFile(suite.tests).map(([file, tests]) => `
     <div class="file-group">
       <h3 class="file-name">${escapeHtml(file)}</h3>
       ${tests.map((t) => renderTest(suite.id, t)).join("")}
     </div>`).join("")}
-  </section>`;
+  </details>`;
   }).join("");
 
   return `<!doctype html>
@@ -334,6 +375,28 @@ export function buildReportHtml({ title = "Test report", stamp = "", suites = []
     .sidebar { position:static; height:auto; border-right:none; border-bottom:1px solid var(--line); }
     .content { padding:20px 16px 60px; }
   }
+
+  /* ── Staleness ──────────────────────────────────────────── */
+  .stale-tag {
+    display:inline-block; margin-left:.5rem; padding:.08rem .45rem;
+    border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.06em;
+    background:var(--warn); color:#1b1300; vertical-align:middle;
+  }
+  .stale-note {
+    margin:.45rem 0 0; padding:.55rem .75rem; border-radius:8px;
+    border:1px solid var(--warn); background:transparent;
+    color:var(--fg); font-size:13px; line-height:1.45; max-width:70ch;
+  }
+  .suite.is-stale { opacity:.7; }
+  .suite.is-stale > .suite-head { border-left:4px solid var(--warn); padding-left:.75rem; }
+  .nav-suite.is-stale > summary .nav-suite-name { opacity:.65; }
+  /* The suite head is a <summary> now, so it must look and behave like one. */
+  .suite > summary.suite-head { cursor:pointer; list-style:none; }
+  .suite > summary.suite-head::-webkit-details-marker { display:none; }
+  .suite > summary.suite-head::after {
+    content:"▾"; float:right; color:var(--dim); font-size:13px;
+  }
+  .suite:not([open]) > summary.suite-head::after { content:"▸"; }
 </style>
 </head>
 <body>
@@ -358,6 +421,21 @@ export function buildReportHtml({ title = "Test report", stamp = "", suites = []
 <dialog id="lb"><img id="lbimg" alt="" /></dialog>
 
 <script>
+// A collapsed suite still has to be reachable from the sidebar: clicking a test
+// in a stale, closed suite must open it rather than silently doing nothing.
+(function () {
+  function openAncestors(el) {
+    for (let p = el && el.parentElement; p; p = p.parentElement) {
+      if (p.tagName === "DETAILS") p.open = true;
+    }
+  }
+  document.addEventListener("click", function (e) {
+    const a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a) return;
+    openAncestors(document.getElementById(decodeURIComponent(a.getAttribute("href").slice(1))));
+  });
+  if (location.hash) openAncestors(document.getElementById(decodeURIComponent(location.hash.slice(1))));
+})();
 (function () {
   // Lightbox
   var lb = document.getElementById('lb'), lbimg = document.getElementById('lbimg');

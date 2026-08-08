@@ -10,7 +10,7 @@
 
 import { test, describe, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { connectedDevices, findAdb, sleep } from "./support/android.mjs";
+import { connectedDevices, findAdb, sleep, waitFor } from "./support/android.mjs";
 import { connect, loadTestEnv, screenshotter } from "./support/app.mjs";
 
 const env = loadTestEnv();
@@ -51,8 +51,19 @@ describe("APK settings menu (free)", { skip }, () => {
     assert.equal(await app.exists("settings-dropdown"), false, "dropdown did not close");
   });
 
+  // The credit balance arrives from an async profiles query, so it is not there
+  // the instant the ACCOUNT section opens. Both tests below used to read it once
+  // and pass by luck: they failed only in the FULL suite, where the emulator is
+  // busy enough for the query to lose the race, and passed on their own every
+  // time. That is the fifth instance of this file's oldest mistake -- asserting
+  // on state that is still settling -- so it waits on the thing it asserts.
+  const waitForCredits = () =>
+    waitFor(() => app.exists("settings-credits-amount"),
+      { what: "the credit balance to load from profiles", timeout: 15_000 });
+
   test("ACCOUNT section reveals credits, email, sign-out and delete-data", async () => {
     await app.ensureSection("settings-account-toggle", "settings-user-email");
+    await waitForCredits();
     shot("account-section");
     for (const id of [
       "settings-credits-amount",
@@ -73,6 +84,7 @@ describe("APK settings menu (free)", { skip }, () => {
 
   test("account shows the signed-in email and a credit balance", async () => {
     await app.ensureSection("settings-account-toggle", "settings-user-email");
+    await waitForCredits();
     const email = await app.eval(`document.querySelector('[data-testid="settings-user-email"]')?.innerText?.trim()`);
     const credits = await app.eval(`document.querySelector('[data-testid="settings-credits-amount"]')?.innerText?.trim()`);
     assert.ok(email && email.includes("@"), `email looks wrong: ${email}`);
