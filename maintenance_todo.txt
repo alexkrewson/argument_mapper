@@ -3,6 +3,33 @@
 Top Priority Ideas (below)
 ================================================================================
 
+--- FIXED 2026-08-08: the shared-Stripe cross-crediting bug, and a real payment ---
+create-checkout-session now stamps metadata.app = "argument_mapper"; stripe-webhook
+ignores any completion without it, returning 200 rather than 400 (a sibling app's
+event is correctly delivered and correctly ignored -- a 400 buys retries and a red
+error rate on a healthy endpoint). Both deployed to hdhqpeevtofevymayvie.
+Deploy order was checkout first, webhook second, so no session was ever in flight
+without a marker the webhook already required.
+
+AND A TRAP FOUND ON THE WAY: supabase/config.toml still said project_id =
+ycuuxnscbxiibsnefgef, left from before the 08-02 split. A bare `supabase functions
+deploy` would have pushed these to the KEEPER, silently and successfully.
+Repointed. Deploy with --project-ref anyway.
+
+THE STRIPE ENDPOINT NAMES ARE BACKWARDS and nearly caused the wrong one to be
+disabled:
+      exquisite-legacy         -> hdhqpeevtofevymayvie   LIVE, keep
+      Idisagree Mapper Webhook -> ycuuxnscbxiibsnefgef   keeper, stale, disabled
+Match on the URL, never the name. Disabling the live one would silently break
+every real purchase.
+
+A REAL PAYMENT HAS NOW RUN END TO END on the new project -- 50c, balance $19.87 ->
+$20.37. That closes the 08-03 item that had been waiting for exactly this. It was
+also the precondition for disabling the old endpoint, which is now done.
+STILL WORTH ONE LOOK if it matters: $19.37 + $1.00 also reaches $20.37, so the
+balance alone cannot prove a single credit. The event's delivery list in Stripe
+can -- one endpoint, one 200.
+
 --- BUG (money): a purchase in ANY app on this Stripe account credits this one ---
 Found 2026-08-08 from the reddit-comment-cluster (Analyzer) side, while working
 out why a top-up there errored. Not yet fixed on this side. Worth doing before
