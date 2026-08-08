@@ -176,6 +176,23 @@ supply compliant testers. Steps needed before submitting:
        the form, don't assume the anchor satisfies it.
     4. Twelve testers, fourteen consecutive days.
 
+  AFTER THE TEST ROUND — RECOVERABLE PAID RESULTS. Agreed 2026-08-08, parked
+  deliberately rather than forgotten.
+  Credits are already safe against a FAILED call: the deduction in claude-proxy
+  sits inside `if (anthropicResponse.ok)` and only fires on a real usage report,
+  so a timeout or a 500 costs nothing. And the client now writes a paid turn to
+  the database in ~277ms instead of 1.5s, which closes the window where a
+  charged, arrived turn sat unsaved while the phone could still kill the app.
+  WHAT REMAINS is the sliver where Anthropic answered and charged but the client
+  never received or never persisted it. Do NOT try to fix that by holding the
+  charge until the client confirms: a client that never confirms would get free
+  inference, so any such scheme needs a timeout that charges anyway, which lands
+  back where it started. The fix is to make a paid result RECOVERABLE --
+  claude-proxy stores the response against a request id, and the client collects
+  anything unclaimed on next launch. A table, an endpoint and a resume path.
+  It touches the payment path, so it wants its own session and a full re-test,
+  which is exactly why it was not done on submission day.
+
   WORTH DOING BEFORE THE TESTERS ARRIVE, neither blocking: warm the Resend
   sending domain so twelve signups at once don't land in spam, and clear the 79
   test debates sitting on the .env.test account.
