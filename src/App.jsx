@@ -582,6 +582,10 @@ export default function App() {
       setCurrentSpeaker((prev) =>
         prev === "Blue" ? "Green" : "Blue"
       );
+      // The map is the point; the chrome is how you got there. Once a turn lands,
+      // get out of the way and show the whole thing. Tapping the map -- or the
+      // thin strips at the top and bottom -- brings it all back.
+      setUiVisible(false);
     } catch (err) {
       console.error("Error calling Claude:", err);
       if (!handleAiError(err)) setError(err.message);
@@ -1115,6 +1119,7 @@ export default function App() {
       setHasSubmitted({ a: true, b: true });
       setInputMode("turns");
       setActiveTab("map");
+      setUiVisible(false);   // same as a single turn: reveal the finished map
     } catch (err) {
       if (!handleAiError(err)) setError(err.message);
     } finally {
