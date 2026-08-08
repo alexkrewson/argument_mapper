@@ -270,6 +270,11 @@ export default function App() {
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
   const currentDebateIdRef = useRef(null); // Supabase row id of current debate (ref avoids stale closure)
   const skipNextSaveRef = useRef(false);   // Set true after loading a debate to skip the immediate re-save
+  // Set true when a PAID turn lands. The 1.5s debounce exists to stop rapid
+  // manual edits hammering the database; an AI turn is neither rapid nor free,
+  // and until it is written down the user has been charged for something they
+  // could still lose. Nothing else in the app is worth money to redo.
+  const saveNowRef = useRef(false);
 
   const chatLogRef = useRef(null);
   useEffect(() => {
@@ -350,10 +355,12 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [user, inner.nodes.length]);
 
-  // Auto-save: fires 1.5s after any map change, if user is logged in and map has nodes
+  // Auto-save: 1.5s after any map change, or immediately after a paid AI turn.
   useEffect(() => {
     if (!user || inner.nodes.length === 0) return;
     if (skipNextSaveRef.current) { skipNextSaveRef.current = false; return; }
+    const delay = saveNowRef.current ? 0 : 1500;
+    saveNowRef.current = false;
     const entry = histEntries[histIndex];
     const autoTitle = inner.title ||
       inner.nodes.find((n) => n.type === "claim")?.content?.slice(0, 60) ||
@@ -376,7 +383,7 @@ export default function App() {
         console.error("Auto-save failed:", err);
         setSaveStatus(null);
       }
-    }, 1500);
+    }, delay);
     return () => clearTimeout(timer);
   }, [histEntries, histIndex, user]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -569,6 +576,7 @@ export default function App() {
         }
       }
 
+      saveNowRef.current = true;   // paid for: persist without waiting out the debounce
       pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
       triggerGameFeedback(nodesBefore, cleanMap.argument_map.nodes, submittingSpeaker);
 
@@ -1098,6 +1106,7 @@ export default function App() {
 
         const cleanMap = sanitizeNodeContent(updatedMap, resolvedTheme);
         lastAnalysis = sanitizeAnalysis(updatedMap.moderator_analysis || null);
+        saveNowRef.current = true;   // every combined turn is paid for individually
         pushHistory(cleanMap, lastAnalysis);
         workingMap = cleanMap;
         workingSpeaker = workingSpeaker === "Blue" ? "Green" : "Blue";
