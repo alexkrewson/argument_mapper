@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14?target=deno";
 
+const APP_ID = "argument_mapper";
+
 Deno.serve(async (req) => {
   const sig    = req.headers.get("stripe-signature");
   const secret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
@@ -21,6 +23,23 @@ Deno.serve(async (req) => {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
+
+    // Ignore anything this app didn't sell. Stripe delivers every completion to
+    // every enabled endpoint on the account, and this account is shared with
+    // Analyzer -- whose users live in the same auth.users, so an unmarked
+    // sibling event would credit argument_mapper.profiles without erroring.
+    //
+    // 200, not 400: a sibling app's event is correctly delivered and correctly
+    // ignored. Reporting failure would buy retries and a red error rate on a
+    // perfectly healthy endpoint.
+    //
+    // A session created before this deploy carries no marker and is ignored too.
+    // Deploy create-checkout-session FIRST so nothing legitimate is in flight
+    // without one.
+    if (session.metadata?.app !== APP_ID) {
+      return new Response(`Ignoring session from ${session.metadata?.app ?? "an unmarked app"}`, { status: 200 });
+    }
+
     const userId       = session.client_reference_id;
     const creditsCents = parseFloat(session.metadata?.credits_cents ?? "0");
 

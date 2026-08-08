@@ -1,4 +1,8 @@
-project_id = "ycuuxnscbxiibsnefgef"
+# hdhqpeevtofevymayvie is iDisagree's own project. This said ycuuxnscbxiibsnefgef
+# -- the KEEPER -- until 2026-08-08: left over from before the 08-02 split, and a
+# live trap, because `supabase functions deploy` with no --project-ref would have
+# pushed these functions to the wrong project entirely.
+project_id = "hdhqpeevtofevymayvie"
 
 [functions.claude-proxy]
 verify_jwt = false

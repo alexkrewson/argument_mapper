@@ -1,6 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import Stripe from "https://esm.sh/stripe@14?target=deno";
 
+const APP_ID = "argument_mapper";
+
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Headers": "authorization, content-type",
@@ -56,7 +58,15 @@ Deno.serve(async (req) => {
     cancel_url:  cancel_url  || "https://idisagree.trolleysolution.com/?payment=cancelled",
     client_reference_id: user.id,
     metadata: {
-      user_id:      user.id,
+      // Stripe fans every checkout.session.completed out to EVERY enabled
+      // endpoint on the account, not just the one belonging to the app that
+      // created the session -- and this account is shared with Analyzer. Both
+      // apps' schemas hang off the same auth.users, so an unmarked sibling
+      // event resolves fine here and credits the wrong app SILENTLY: no error,
+      // no failed delivery, nothing to notice. This marker is what lets the
+      // webhook tell its own sessions apart.
+      app:           APP_ID,
+      user_id:       user.id,
       credits_cents: String(amount_cents),
     },
   });
