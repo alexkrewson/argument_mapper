@@ -101,10 +101,11 @@ round, by id.
 - [ ] B4. Sign in with the wrong password — clear rejection, fast, no hang.
 - [ ] B5. Forgot password → code by email → type it in the app → set a new
       password → signed in. Entirely in-app, no link.
-      **This project sends 8-digit codes** — confirmed on 2026-08-07. The screen
-      accepts 6–8 rather than pinning the literal, so changing Email OTP Length
-      in the dashboard can't strand anyone on a Verify button that never enables.
-      If what arrives is outside 6–8, that setting is the thing to look at.
+      **Count the digits and check they match the dashboard.** The screen accepts
+      6–8 rather than pinning a literal, precisely so Email OTP Length can be
+      changed without stranding anyone on a Verify button that never enables. It
+      sent 8 on 2026-08-07 and was moved to 6 on 08-08. Anything outside 6–8 and
+      that setting is the thing to look at.
 - [ ] B6. Sign in with the new password after a force-stop.
 - [ ] B7. Change password from settings → ACCOUNT: wrong current password must be
       refused, then the right one works.
