@@ -3,6 +3,74 @@
 Top Priority Ideas (below)
 ================================================================================
 
+--- BUG (money): a purchase in ANY app on this Stripe account credits this one ---
+Found 2026-08-08 from the reddit-comment-cluster (Analyzer) side, while working
+out why a top-up there errored. Not yet fixed on this side. Worth doing before
+Play Console, because this app is the one already taking real money.
+
+The problem: Stripe account acct_1FHXJdBOSVZFOip0 is shared between this app and
+Analyzer, and Stripe fans every `checkout.session.completed` out to EVERY enabled
+endpoint on the account — not just the one belonging to the app that created the
+session. Neither app tagged its sessions, so each webhook credited on any
+completion it received.
+
+Why it isn't caught by anything: both apps' schemas hang off the same shared
+`auth.users` in the keeper project (ycuuxnscbxiibsnefgef), so a user id from an
+Analyzer checkout resolves fine in `argument_mapper.profiles`. The wrong-app
+`add_credits` SUCCEEDS silently. No error, no failed delivery, nothing to notice
+— just free credits.
+
+The two files here:
+  - supabase/functions/create-checkout-session/index.ts:57-61 — sets
+    client_reference_id and metadata.credits_cents, no app marker.
+  - supabase/functions/stripe-webhook/index.ts:22-40 — credits on any
+    checkout.session.completed, no check of who created the session.
+
+The fix, mirroring what's already landed on the Analyzer side
+(reddit-comment-cluster/reddit-proxy-worker.js, `APP_ID` const):
+  1. Stamp `app: "argument_mapper"` into the session metadata on creation.
+  2. In the webhook, return 200 early for any session whose metadata.app isn't
+     that value. 200 rather than 400 on purpose — a sibling app's event is
+     correctly delivered and correctly ignored, so reporting failure just buys
+     retries and a red error rate on a healthy endpoint.
+  3. Deploy the Edge Functions. Note the ordering hazard: once the webhook
+     starts requiring the marker, a checkout session created BEFORE the deploy
+     has no marker and would be ignored. Deploy create-checkout-session first,
+     or accept the small in-flight window.
+The exact string doesn't have to match anything on the Analyzer side — it only
+checks for its own 'analyzer'. What matters is that this app stamps something
+and checks for it.
+
+Current exposure, both directions:
+  - Analyzer purchase -> credits this app. LIVE ONCE ANALYZER BILLING WORKS.
+    Analyzer's Stripe secrets are currently missing so it can't create a session
+    at all, which is the only reason this hasn't fired yet. That's being fixed.
+  - This app's purchase -> credits Analyzer. Already blocked, from the Analyzer
+    side: it now ignores any session without its own marker, and this app's
+    sessions have none.
+
+--- Stale Stripe webhook endpoint, probably double-crediting this app ---
+Same 2026-08-08 look at the Stripe dashboard. The account has TWO Active
+endpoints, both subscribed to checkout.session.completed:
+
+  exquisite-legacy        -> hdhqpeevtofevymayvie.supabase.co/functions/v1/stripe-webhook
+  iDisagree Mapper Webhook -> ycuuxnscbxiibsnefgef.supabase.co/functions/v1/stripe-webhook
+
+The second points at the KEEPER project; the first at what looks like this app's
+newer dedicated project. Delivery history: the keeper endpoint has all five
+events the account has ever sent (Jul 24 x4, Jul 26 x1, all 200 OK).
+`exquisite-legacy` has never received one — consistent with it having been
+created after Jul 26.
+
+Reads like this app moved Supabase projects and the old endpoint was left
+enabled. If the keeper project still has a stripe-webhook function deployed,
+the next real purchase credits BOTH projects. Whoever knows the current state of
+the migration should confirm which project this app actually reads
+`argument_mapper.profiles` from, then disable (don't delete, until confirmed)
+the endpoint pointing at the other one.
+
+Not actioned from the Analyzer side deliberately — this is this app's call.
+
 --- Pre-launch checklist: Android closed testing (14-day / 12-tester rule) ---
 Google Play requires 12 opt-in testers to run a closed test for 14 consecutive
 days before a personal app can be promoted to production. Services like
@@ -251,6 +319,17 @@ supply compliant testers. Steps needed before submitting:
   and closed (relationship "unrelated" now exists, enforced in
   sanitizeNodeContent). The CLASSIFICATION is a prompt change and only a real
   Combined run can show whether it took. Watch for it.
+
+  A MONEY BUG CAME IN FROM OUTSIDE ON 2026-08-08, found from the Analyzer
+  (reddit-comment-cluster) side and NOT yet fixed here. The Stripe account is
+  shared, and Stripe delivers each checkout.session.completed to every enabled
+  endpoint on it — so a purchase in either app credits both. It fails silently
+  rather than erroring, because both schemas share auth.users and the wrong-app
+  add_credits succeeds. Two files, four lines, plus an Edge Function deploy.
+  There is also a stale webhook endpoint still pointing at the keeper project
+  that may be double-crediting this app on its own. Full write-up in the two
+  sections at the TOP of this file, above "Pre-launch checklist". Worth clearing
+  before Play Console, since this is the app already taking real money.
 
   TWO TRAPS THAT COST TIME, both worth knowing before the next device session:
     - EVERY LOCAL BUILD IS versionCode 2 / versionName 1.0, so Android's App
