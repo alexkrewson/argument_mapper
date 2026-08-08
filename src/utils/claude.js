@@ -80,6 +80,12 @@ function handleProxyError(status, body) {
     err.code = "out_of_credits";
     throw err;
   }
+  if (status === 504) {
+    // The proxy gave up on a hung upstream call rather than being killed at the
+    // platform's wall-clock limit with nothing logged. Say something a person
+    // can act on instead of printing the raw body.
+    throw new Error("The AI didn't respond in time. Nothing was charged — please try again.");
+  }
   throw new Error(`Claude API error (${status}): ${body}`);
 }
 

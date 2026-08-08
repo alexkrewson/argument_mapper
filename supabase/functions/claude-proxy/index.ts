@@ -65,14 +65,47 @@ Deno.serve(async (req) => {
 
   const body = await req.text();
 
+  // A call to Anthropic that never returns used to hang here forever. There was
+  // no timeout, so the platform killed the whole invocation at its wall-clock
+  // limit -- 200.0s, to within 20ms, over dozens of invocations on 2026-08-08 --
+  // having logged nothing at all between boot and shutdown. The client saw a
+  // stall it could only report as "no response"; nothing was charged, because
+  // the deduction only runs on a response that arrived; and 22 costly tests died
+  // that way while Anthropic reported no incident.
+  //
+  // Budgets are chosen against that 200s ceiling: two attempts of 70s plus a 2s
+  // backoff is 142s worst case, so a hung upstream now fails cleanly INSIDE the
+  // function instead of being killed outside it. A healthy turn measures 20-45s,
+  // so 70s does not cut off legitimate work.
+  const ATTEMPT_TIMEOUT_MS = 70_000;
+
   async function fetchWithRetry(url: string, options: RequestInit, maxRetries = 3): Promise<Response> {
     const delays = [1000, 2000, 4000];
     let lastResponse: Response | null = null;
+    let timedOut = false;
     for (let i = 0; i < maxRetries; i++) {
-      const response = await fetch(url, options);
-      if (response.status !== 529) return response;
-      lastResponse = response;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
+      try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        if (response.status !== 529) return response;
+        lastResponse = response;
+      } catch (err) {
+        // Only a timeout is worth another go, and only once: a second 70s wait
+        // would put the total past the wall-clock limit this exists to avoid.
+        if ((err as Error).name !== "AbortError") throw err;
+        timedOut = true;
+        if (i >= 1) break;
+      } finally {
+        clearTimeout(timer);
+      }
       if (i < maxRetries - 1) await new Promise(r => setTimeout(r, delays[i]));
+    }
+    if (!lastResponse && timedOut) {
+      return new Response(
+        JSON.stringify({ error: "upstream_timeout", message: "The AI did not respond in time. Please try again." }),
+        { status: 504, headers: { "Content-Type": "application/json" } },
+      );
     }
     return lastResponse!;
   }
