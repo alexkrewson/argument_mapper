@@ -3,6 +3,41 @@
 Top Priority Ideas (below)
 ================================================================================
 
+--- TODO (raised from art_app, 2026-08-08): adopt the shared upload-apk.mjs ---
+NOTHING IS BROKEN HERE. This repo's scripts/upload-apk.mjs works, and it is the
+version everything else was copied from. This note exists only so the duplicate
+doesn't quietly drift.
+
+What happened: art_app had the OLD, pre-fix uploader -- the one whose gradle hook
+iterates task.outputs.files. assemble* are aggregation tasks that declare no
+outputs, so the loop body never ran, the upload never happened, and the build
+still printed BUILD SUCCESSFUL. That is exactly the bug this repo found and fixed,
+and it is even commented here as "Do NOT go back to iterating t.outputs.files" --
+but the knowledge lived only in this project's build.gradle, so art_app had no way
+to inherit it and rediscovered the bug the hard way weeks later, via a green build
+over an empty Drive folder.
+
+So the script has been promoted to apps-shared/scripts/upload-apk.mjs, and
+best-practices.md gained a "Shipping an Android build" section carrying the
+canonical gradle snippet plus the three details that matter (scan the output
+DIRECTORY, node not bash, keep the version+timestamp+sha filenames).
+
+The shared copy is this one, generalised: it locates the repo root by walking up
+from the artifact path rather than from its own location (it no longer sits inside
+the project), defaults the Drive folder to the repo's own directory name, and
+accepts --dest for projects whose folder predates that convention.
+
+WHAT TO DO, when this repo is quiet -- deliberately NOT done on 2026-08-08 because
+a Play Store submission was mid-flight and repointing the build during an upload
+would have been actively unhelpful:
+  1. In android/app/build.gradle, change the commandLine path to
+       "${rootProject.projectDir}/../../apps-shared/scripts/upload-apk.mjs"
+     No --dest argument needed: this repo's folder name already matches its Drive
+     folder (AndroidBuilds/argument_mapper/), which is what the default produces.
+  2. Delete scripts/upload-apk.mjs from this repo.
+  3. Confirm with one real assembleDebug that the upload still fires -- do not
+     assume, since silence is this bug's entire signature.
+
 --- FIXED 2026-08-08: the shared-Stripe cross-crediting bug, and a real payment ---
 create-checkout-session now stamps metadata.app = "argument_mapper"; stripe-webhook
 ignores any completion without it, returning 200 rather than 400 (a sibling app's
