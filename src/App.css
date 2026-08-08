@@ -615,11 +615,11 @@
   box-sizing: border-box;
 }
 
-.type-claim { background-color: #6366f1; }
+.type-claim { background-color: #6265f1; }
 .type-premise { background-color: #64748b; }
-.type-evidence { background-color: #0891b2; }
+.type-evidence { background-color: #07819f; }
 .type-objection { background-color: #dc2626; }
-.type-rebuttal { background-color: #ea580c; }
+.type-rebuttal { background-color: #cd4d0b; }
 .type-clarification { background-color: #0284c7; }
 
 .confidence-badge {
@@ -3295,10 +3295,10 @@ button {
 .changelog-icon--added            { color: #16a34a; }
 .changelog-icon--modified         { color: #d97706; }
 .changelog-icon--removed          { color: #dc2626; }
-.changelog-icon--edge             { color: #6366f1; }
+.changelog-icon--edge             { color: #6265f1; }
 .changelog-icon--contradiction    { color: #dc2626; }
-.changelog-icon--goalposts        { color: #ea580c; }
-.changelog-icon--concession-other { color: #0891b2; }
+.changelog-icon--goalposts        { color: #cd4d0b; }
+.changelog-icon--concession-other { color: #07819f; }
 .changelog-icon--concession-self  { color: #9333ea; }
 
 .changelog-content {

@@ -60,6 +60,11 @@ const FIXED = [
   { name: "ctrl label · dark",       fg: "#8b98ab", bg: "#1e293b", where: "src/App.css" },
   { name: "ctrl icon · light",       fg: "#475569", bg: "#f8fafc", where: "src/App.css" },
   { name: "ctrl icon · dark",        fg: "#94a3b8", bg: "#1e293b", where: "src/App.css" },
+  { name: "type badge · claim",      fg: "#ffffff", bg: "#6265f1", where: "src/App.css" },
+  { name: "type badge · premise",    fg: "#ffffff", bg: "#64748b", where: "src/App.css" },
+  { name: "type badge · evidence",   fg: "#ffffff", bg: "#07819f", where: "src/App.css" },
+  { name: "type badge · objection",  fg: "#ffffff", bg: "#dc2626", where: "src/App.css" },
+  { name: "type badge · rebuttal",   fg: "#ffffff", bg: "#cd4d0b", where: "src/App.css" },
   { name: "node text · light",       fg: "#0f172a", bg: "#f8fafc", where: "src/components/ArgumentMap.jsx" },
   { name: "node text · dark",        fg: "#e2e8f0", bg: "#1e293b", where: "src/components/ArgumentMap.jsx" },
 ];
