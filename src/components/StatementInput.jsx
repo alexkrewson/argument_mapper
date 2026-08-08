@@ -111,7 +111,7 @@ export default function StatementInput({
   loading, loadingSpeaker, directMode, onSkipTurn,
   onUndo, onRedo, canUndo, canRedo,
   onAddNode, onReviewChanges, changeLogCount,
-  theme, nameEditable, currentName, onNameChange, onRefreshName,
+  theme, nameEditable, currentName, onNameChange, onRefreshName, uiVisible = true,
   inputMode, onModeChange, onCombinedSubmit, combiningProgress,
   estimatedCost,
 }) {
@@ -123,9 +123,15 @@ export default function StatementInput({
   const chevronRef   = useRef(null);
   const fileInputRef = useRef(null);
 
+  // Focus follows the chrome. On the web a focused off-screen textarea is
+  // invisible, so this never mattered; on Android a focused textarea IS the
+  // keyboard, and it sat over the map the auto-hide had just revealed. Blurring
+  // is what actually dismisses it -- hiding the footer does not, because the
+  // element is still in the DOM and still holds focus.
   useEffect(() => {
+    if (!uiVisible) { textareaRef.current?.blur(); return; }
     if (!loading) textareaRef.current?.focus();
-  }, [loading]);
+  }, [loading, uiVisible]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -137,7 +143,8 @@ export default function StatementInput({
         await onSubmit(text.trim());
       }
       setText("");
-      textareaRef.current?.focus();
+      // No refocus here: the effect above decides, and after a successful turn
+      // the chrome is on its way out.
     } catch {
       // keep text so user doesn't retype
     }

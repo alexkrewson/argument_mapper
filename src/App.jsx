@@ -1620,6 +1620,7 @@ export default function App() {
               const key = currentSpeaker === "Blue" ? "a" : "b";
               setPlayerNames((prev) => ({ ...prev, [key]: randomName(prev[key]) }));
             }}
+            uiVisible={uiVisible}
             inputMode={inputMode}
             onModeChange={setInputMode}
             onCombinedSubmit={handleCombinedSubmit}
