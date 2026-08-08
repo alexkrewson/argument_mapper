@@ -33,7 +33,7 @@ export const THEMES = {
   sunset: {
     label: "Sunset",
     panelBg: "#fdf0e0",
-    a: { name: "Amber",  bg: "#c49a6c", border: "#917144" },  // warm caramel
+    a: { name: "Amber",  bg: "#c49a6c", border: "#87683e" },  // warm caramel
     b: { name: "Violet", bg: "#9478a8", border: "#6c5280" },  // dusty mauve
   },
   forest: {

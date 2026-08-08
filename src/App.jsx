@@ -1400,7 +1400,7 @@ export default function App() {
               {/* Top half: side-by-side speaker breakdowns */}
               <div className="moderator-speakers">
                 <div className="moderator-speaker" style={{ borderRight: `2px solid ${theme.a.bg}33` }}>
-                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.a.bg }}>
+                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.dark ? resolvedTheme.a.bg : resolvedTheme.a.border }}>
                     {resolvedTheme.a.name}
                     {scoreLeader === "Blue" && <span className="score-crown">👑</span>}
                   </div>
@@ -1428,7 +1428,7 @@ export default function App() {
                   )}
                 </div>
                 <div className="moderator-speaker">
-                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.b.bg }}>
+                  <div className="moderator-speaker-name" style={{ color: resolvedTheme.dark ? resolvedTheme.b.bg : resolvedTheme.b.border }}>
                     {resolvedTheme.b.name}
                     {scoreLeader === "Green" && <span className="score-crown">👑</span>}
                   </div>

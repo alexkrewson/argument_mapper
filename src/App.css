@@ -332,7 +332,7 @@
 
 .moderator-speaker-empty {
   font-size: 0.85rem;
-  color: #64748b;
+  color: #5b6675;
   margin: 0;
 }
 
@@ -1614,7 +1614,7 @@
   background: none;
   border: none;
   font-size: 1.5rem;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   padding: 0 0.25rem;
   line-height: 1;
@@ -2129,13 +2129,13 @@
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 [data-dark="true"] .popup-close {
-  color: #475569;
+  color: #94a3b8;
 }
 [data-dark="true"] .popup-close:hover {
   color: #f1f5f9;
 }
 [data-dark="true"] .popup-section h4 {
-  color: #475569;
+  color: #94a3b8;
 }
 [data-dark="true"] .popup-quote {
   background: #0f172a;
@@ -2450,13 +2450,13 @@ button {
   font-weight: 500;
   cursor: pointer;
   border: 2px solid transparent;
-  opacity: 0.4;
-  transition: opacity 0.12s;
+  opacity: 0.8;
+  transition: opacity 0.12s, font-weight 0.12s;
   white-space: nowrap;
   font-family: inherit;
 }
 .tactic-toggle:hover { opacity: 0.75; }
-.tactic-toggle--on   { opacity: 1; }
+.tactic-toggle--on   { opacity: 1; font-weight: 700; }
 
 .tactic-toggle.tactic-fallacy   { border-color: #dc2626; }
 .tactic-toggle.tactic-technique { border-color: #16a34a; }
@@ -2475,12 +2475,12 @@ button {
   gap: 0.3rem;
   padding: 0.3rem 0.75rem;
   border-radius: 999px;
-  border: 1.5px solid #cbd5e1;
+  border: 1.5px solid #8b98ab;
   background: none;
   font-size: 0.72rem;
   cursor: pointer;
-  color: #64748b;
-  opacity: 0.55;
+  color: #475569;
+  opacity: 0.85;
   transition: opacity 0.15s, border-color 0.15s, color 0.15s, background 0.15s;
   width: fit-content;
 }
@@ -2595,8 +2595,9 @@ button {
 }
 
 [data-dark="true"] .flag-toggle {
-  border-color: #334155;
-  color: #92a1b5;
+  /* #92a1b5 composited at 0.85 opacity landed on 4.45:1 — just under. */
+  border-color: #5a6b80;
+  color: #a6b3c4;
 }
 [data-dark="true"] .flag-toggle--contradiction.flag-toggle--on {
   border-color: #ef4444;
@@ -4300,3 +4301,7 @@ button {
   min-height: 0;
   box-sizing: border-box;
 }
+
+/* The moderator empty state sits on the dark canvas, where the light-theme grey
+   managed 3.75:1. */
+[data-dark="true"] .moderator-speaker-empty { color: #94a3b8; }

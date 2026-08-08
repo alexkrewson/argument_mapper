@@ -622,7 +622,7 @@ export default function NodeDetailPopup({
         {originalText && (
           <div className="popup-section">
             <h4>Original Statement</h4>
-            <blockquote className="popup-quote" style={{ borderLeftColor: speakerColor, background: speakerBg }}>{originalText}</blockquote>
+            <blockquote className="popup-quote" style={{ borderLeftColor: speakerColor, background: speakerBg, color: "#0f172a" }}>{originalText}</blockquote>
           </div>
         )}
 
