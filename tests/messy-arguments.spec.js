@@ -36,7 +36,8 @@ async function submitCombinedWithStepShots(page, testInfo, conversation) {
     reportShot(page, testInfo, `after node ${count}`),
   );
 
-  await expect(page.getByTestId("statement-textarea")).toBeVisible();
+  // Back in Turns mode. Not toBeVisible(): a finished run hides the chrome.
+      await expect(page.getByTestId("statement-textarea")).toBeAttached();
   await expect(page.locator(".type-badge").first()).toBeVisible();
 
   // Give the map a moment to finish its auto-fit layout animation before

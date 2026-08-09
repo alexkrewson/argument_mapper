@@ -45,6 +45,7 @@ export function combinedBudgetMs(conversation) {
 export async function waitForCombinedRun(page, conversation, onNode) {
   const nodeBadges = page.locator(".type-badge");
   const statementTextarea = page.getByTestId("statement-textarea");
+  const combinedTextarea = page.getByTestId("combined-textarea");
 
   const cap = Date.now() + combinedBudgetMs(conversation);
   let lastCount = 0;
@@ -59,7 +60,20 @@ export async function waitForCombinedRun(page, conversation, onNode) {
       if (onNode) await onNode(count);
     }
 
-    if (count > 0 && (await statementTextarea.isVisible().catch(() => false))) return count;
+    // Completion is "the app went back to Turns mode", which is the combined
+    // textarea being gone and the statement one being in the DOM.
+    //
+    // This used to check that the statement textarea was VISIBLE, and that
+    // stopped being true on 2026-08-08: a finished run now hides the whole
+    // chrome to reveal the map, so the element exists and is deliberately not
+    // visible. Every combined test then waited out its cap — four minutes of
+    // dead time after thirty-eight seconds of real work — and reported a stall
+    // while the AI call log showed nothing but 200s.
+    if (
+      count > 0 &&
+      (await combinedTextarea.count()) === 0 &&
+      (await statementTextarea.count()) > 0
+    ) return count;
 
     if (Date.now() - lastProgress > IDLE_MS) {
       throw new Error(

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "./support/fixtures.js";
+import { revealChrome } from "./support/chrome.js";
 import { combinedBudgetMs, waitForCombinedRun } from "./support/waitForCombined.js";
 import { TACTIC_KEYS } from "../src/utils/tactics.js";
 
@@ -293,12 +294,14 @@ test.describe("AI judgement — does the model reach the right conclusion", () =
       await page.getByTestId("combined-textarea").fill(conversation);
       await page.getByTestId("statement-submit").click();
       await waitForCombinedRun(page, conversation);
-      await expect(page.getByTestId("statement-textarea")).toBeVisible();
+      // Back in Turns mode. Not toBeVisible(): a finished run hides the chrome.
+      await expect(page.getByTestId("statement-textarea")).toBeAttached();
 
       // Copy map JSON is the only route to the full metadata — cytoscape's node
       // data carries a rendering subset, not agreed_by, tactic_reasons and the
       // rest of what needs judging here.
-      await page.getByTestId("settings-btn").click();
+      await revealChrome(page);   // a finished turn hides the header the button lives in
+  await page.getByTestId("settings-btn").click();
       await page.getByTestId("settings-advanced-toggle").click();
       await page.getByTestId("settings-copy-json").click();
       const raw = await page.evaluate(() => navigator.clipboard.readText());

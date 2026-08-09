@@ -1,6 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect, shot } from "./support/fixtures.js";
+import { revealChrome } from "./support/chrome.js";
 
 try {
   process.loadEnvFile(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env"));
@@ -24,6 +25,7 @@ const CONCEDING = "You're right, I'll grant that the bun is bread. But structure
 
 /** Reads the full map, metadata and all, the way the app's own Copy button does. */
 async function readMap(page) {
+  await revealChrome(page);   // a finished turn hides the header the button lives in
   await page.getByTestId("settings-btn").click();
   await page.getByTestId("settings-advanced-toggle").click();
   await page.getByTestId("settings-copy-json").click();
@@ -33,6 +35,9 @@ async function readMap(page) {
 }
 
 async function submit(page, text) {
+  // The first turn hides the chrome, so the second submit reaches for an input
+  // that is deliberately off-viewport.
+  await revealChrome(page);
   await page.getByTestId("statement-textarea").fill(text);
   await page.getByTestId("statement-submit").click();
 }

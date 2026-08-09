@@ -30,7 +30,8 @@ test.describe("New argument — combined input mode", () => {
     // genuinely stalled one report differently instead of both surfacing as
     // "element not visible after 220s".
     await waitForCombinedRun(page, conversation);
-    await expect(page.getByTestId("statement-textarea")).toBeVisible();
+    // Back in Turns mode. Not toBeVisible(): a finished run hides the chrome.
+      await expect(page.getByTestId("statement-textarea")).toBeAttached();
 
     // The AI may decompose a single statement into more than one node (e.g. a
     // rebuttal split into premise + conclusion), so assert a floor, not an

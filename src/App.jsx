@@ -1280,8 +1280,8 @@ export default function App() {
       {/* Invisible hit zones — restore UI when header/footer are hidden */}
       {!uiVisible && (
         <>
-          <div onClick={toggleUI} style={{position:"fixed",top:0,left:0,right:0,height:90,zIndex:55,cursor:"pointer"}} />
-          <div onClick={toggleUI} style={{position:"fixed",bottom:0,left:0,right:0,height:80,zIndex:55,cursor:"pointer"}} />
+          <div data-testid="reveal-chrome-top" onClick={toggleUI} style={{position:"fixed",top:0,left:0,right:0,height:90,zIndex:55,cursor:"pointer"}} />
+          <div data-testid="reveal-chrome-bottom" onClick={toggleUI} style={{position:"fixed",bottom:0,left:0,right:0,height:80,zIndex:55,cursor:"pointer"}} />
         </>
       )}
 
