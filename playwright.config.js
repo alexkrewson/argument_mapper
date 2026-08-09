@@ -9,6 +9,17 @@ try {
 } catch {
   // .env.test not present (e.g. CI sets real env vars directly) — ignore.
 }
+try {
+  // .env carries VITE_SUPABASE_URL and the anon key. The fixture needs both to
+  // mint a fresh session per test; several specs used to load this themselves.
+  // Both values are inlined into the public bundle at build time, so neither is
+  // a secret. Loaded second so .env.test wins on any overlap.
+  const before = { ...process.env };
+  process.loadEnvFile(path.join(__dirname, ".env"));
+  for (const k of Object.keys(before)) if (before[k] !== undefined) process.env[k] = before[k];
+} catch {
+  // a clean clone has no .env — tests that need it assert on its absence
+}
 
 export default defineConfig({
   testDir: "./tests",

@@ -83,12 +83,58 @@ function patchLocatorPrototype(page) {
   patched = true;
 }
 
+// ── Every test gets its OWN session ──────────────────────────────────────────
+//
+// storageState alone does not work here, and the way it fails is silent.
+// Supabase ROTATES refresh tokens on use: the suite saves one session at setup
+// and hands the same refresh token to every test context, so the first context
+// to refresh invalidates it for all the others. They get 400 from
+// /auth/v1/token, their session is cleared, and they run SIGNED OUT — looking
+// perfectly normal until an AI call returns 401 and the app opens the sign-in
+// modal instead of building a map.
+//
+// That is what 17 "combined run stalled: no new node for 90s after 0 node(s)"
+// failures were on 2026-08-08. It looked like an API stall for most of a day:
+// nothing was charged, single calls always worked, and claude-proxy logged
+// nothing, because it rejects on auth BEFORE it ever calls Anthropic.
+//
+// A fresh password grant per test costs one request and shares no refresh
+// token, so there is nothing to rotate out from under anyone.
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL;
+const STORAGE_KEY = SUPABASE_URL ? `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-token` : null;
+
+async function freshSession() {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: { apikey: process.env.VITE_SUPABASE_ANON_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: process.env.TEST_USER_EMAIL,
+      password: process.env.TEST_USER_PASSWORD,
+    }),
+  });
+  if (!res.ok) throw new Error(`could not mint a test session: ${res.status} ${await res.text()}`);
+  return res.json();
+}
+
 export const test = base.extend({
   // Playwright calls this second argument `use` by convention. It is named
   // runTest here because eslint-plugin-react-hooks matches React's use() hook
   // on the name alone and flags `await use(page)` inside a try block. Renaming
   // is free — Playwright passes it positionally — and beats two suppressions.
   page: async ({ page }, runTest, testInfo) => {
+    // Only for tests that expect to be signed in. A spec that opts out with an
+    // empty storageState (tests/map-styling.spec.js) must stay signed out.
+    if (STORAGE_KEY && process.env.TEST_USER_EMAIL) {
+      const { origins } = await page.context().storageState();
+      const wantsAuth = origins.some((o) => o.localStorage?.some((e) => e.name === STORAGE_KEY));
+      if (wantsAuth) {
+        const session = await freshSession();
+        await page.addInitScript(
+          ([key, value]) => window.localStorage.setItem(key, value),
+          [STORAGE_KEY, JSON.stringify(session)],
+        );
+      }
+    }
     if (CAPTURE) {
       patchLocatorPrototype(page);
       current = { page, testInfo, n: 0 };
