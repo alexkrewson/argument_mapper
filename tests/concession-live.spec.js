@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect, shot } from "./support/fixtures.js";
 import { revealChrome } from "./support/chrome.js";
+import { preflight } from "./support/preflight.js";
 
 try {
   process.loadEnvFile(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", ".env"));
@@ -54,6 +55,7 @@ async function cleanup(page, id) {
 
 /** Opens with A, then has B concede. Returns the debate id and the modal locator. */
 async function runToConcession(page) {
+  await preflight(page);
   await page.goto("/");
   await page.getByTestId("tab-history").click();
   await page.getByTestId("history-new-argument").click();

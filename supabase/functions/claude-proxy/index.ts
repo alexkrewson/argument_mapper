@@ -54,6 +54,17 @@ Deno.serve(async (req) => {
   }
 
   if (!profile || profile.credits_cents <= 0) {
+    // Logged, because a rejection here is invisible everywhere else. This
+    // function returns before it ever calls Anthropic, so nothing is charged and
+    // ai_call_log stayed empty -- which reads exactly like "the API never
+    // answered". On 2026-08-08 that cost hours twice: once as an expired session
+    // returning 401, once as this. A refusal is a fact worth recording.
+    try {
+      await supabaseAdmin.from("ai_call_log").insert({
+        user_id: user.id, status: 402, duration_ms: 0, attempts: 0,
+        outcome: "out_of_credits",
+      });
+    } catch { /* diagnostics must never break the call they describe */ }
     return new Response(JSON.stringify({ error: "out_of_credits", credits: profile?.credits_cents ?? 0 }), {
       status: 402, headers: { "Content-Type": "application/json", ...CORS },
     });

@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "./support/fixtures.js";
 import { revealChrome } from "./support/chrome.js";
+import { preflight } from "./support/preflight.js";
 import { combinedBudgetMs, waitForCombinedRun } from "./support/waitForCombined.js";
 import { TACTIC_KEYS } from "../src/utils/tactics.js";
 
@@ -281,6 +282,7 @@ test.describe("AI judgement — does the model reach the right conclusion", () =
       const conversation = s.turns.join("\n");
       test.setTimeout(combinedBudgetMs(conversation) + 60_000);
 
+      await preflight(page);
       await page.goto("/");
       await page.getByTestId("tab-history").click();
       await page.getByTestId("history-new-argument").click();
