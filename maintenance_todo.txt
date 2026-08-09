@@ -279,6 +279,82 @@ supply compliant testers. Steps needed before submitting:
   true on 08-03 and still is. What is new is that the app is materially better
   than the one that was going to be submitted.
 
+  ============================================================================
+  START HERE — end of 2026-08-08. The 08-07 block below is still accurate
+  history; this is what changed since.
+  ============================================================================
+
+  BLOCKED ON GOOGLE, NOTHING ELSE. Play Console will not let you CREATE an app
+  until identity verification clears -- "Complete account verifications to
+  create new apps", Create app greyed out. Not just publishing: creating. The
+  first licence upload was rejected, most likely because its address did not
+  match the account; that was corrected and the address step now passes, and
+  the identity review says "a few days". Phone verification is gated behind it
+  too. There is nothing to do in Play Console until the email arrives.
+
+  ARTIFACTS, cut 2026-08-08 21:05/21:07 from 02a10d5, clean tree:
+      UPLOAD:    app-release-v2-20260808-2105-02a10d5.aab
+      SIDELOAD:  app-release-v2-20260808-2107-02a10d5.apk
+  Read back from inside the AAB: hdhqpeevtofevymayvie x5, keeper x0, sign-up by
+  code, back button, concession badge, despite_concession_of x0, reveal strips,
+  the 504 message, signed. versionCode still 2, never uploaded, no bump needed.
+  IGNORE EVERY EARLIER BUILD in that Drive folder -- there are now sixteen and
+  they all look alike.
+
+  WHAT SHIPPED 2026-08-08 (all pushed, web deployed and verified by hash):
+    - 6-digit sign-up codes. App side needed nothing: the screen already took
+      6-8. It is a Supabase setting, Auth > Sign In / Providers > Email.
+    - A finished turn hides the header, tabs and input to reveal the whole map,
+      and BLURS the input -- on Android a focused textarea IS the keyboard, so
+      hiding the footer alone left it sitting over the map. The emulator cannot
+      catch that class of bug: it runs with a hardware keyboard, so mInputShown
+      is false whatever has focus. Only a real phone finds it.
+    - A paid turn is written to the database in ~277ms instead of 1.5s. The
+      debounce is for rapid manual edits; an AI turn is neither rapid nor free.
+    - Stripe cross-crediting fixed and DEPLOYED, and a real 50c payment proven
+      end to end on the new project -- which also closed the 08-03 item that had
+      been waiting for exactly that, and was the precondition for disabling the
+      old endpoint. Done.
+    - supabase/config.toml pointed at the KEEPER. A bare `supabase functions
+      deploy` would have shipped to the wrong project, silently and
+      successfully. Repointed; deploy with --project-ref regardless.
+    - claude-proxy: a 70s timeout per attempt on the Anthropic call, and
+      ai_call_log recording status, duration, attempts, outcome and the
+      anthropic-ratelimit headers. Metadata only, never content.
+
+  THE DAY'S REAL LESSON, and it is worth reading before trusting a red suite
+  here. Twenty-two costly tests failed looking exactly like an API stall. It was
+  never Anthropic: 70 logged calls, every one 200 in under 14 seconds, rate
+  limits never within two orders of magnitude. THREE different causes wore the
+  same costume, and two were invisible because claude-proxy rejects BEFORE it
+  calls Anthropic, so nothing is charged and nothing reaches the log:
+      1. Supabase ROTATES refresh tokens. The suite handed one saved session to
+         every context, so all but the first ran SIGNED OUT and got 401.
+         Fixed: a fresh password grant per test, shared with nobody.
+      2. The auto-hide broke the harness in three places -- the completion
+         signal waited on a textarea that is now deliberately hidden; readMap
+         clicked a settings button off-viewport; the second submit reached for a
+         hidden input. Fixed, and the reveal strips now carry testids so a test
+         taps what a person taps.
+      3. The test account ran out of credits. 402, again before Anthropic.
+  preflight() now checks credits and signed-in state before any AI test and
+  fails in five seconds naming the cause, instead of ninety with a lie.
+
+  DO THIS FIRST TOMORROW: top up the test account, then finish the judgement
+  suite. It has never completed cleanly -- best so far is 6/17, and every
+  failure has been one of the three above rather than the model being wrong.
+      update argument_mapper.profiles set credits_cents = 500 where id =
+        'b8d3c162-27dc-42f0-8fe1-f1cc709d6d06';   -- the .env.test account
+      npm run test:web:judgement     ~63p, 17 scenarios, ~10 min when healthy
+  Free tiers are green and cover today's app changes: web 29/29, Android 59/59.
+
+  STILL WORTH DOING, none blocking: warm the Resend domain before twelve
+  signups land at once; clear the ~79 test debates on the .env.test account;
+  and the store listing, which is required before rollout and can be built
+  while Google deliberates -- 512x512 icon (the largest source is 192, so it
+  needs re-exporting), a 1024x500 feature graphic, 2-8 phone screenshots, a
+  short description under 80 characters and a full one under 4000.
+
   READY TO SUBMIT — artifacts cut 2026-08-07 20:36/20:39 from cbbe4d8, clean tree.
 
     UPLOAD THIS:  android/app/build/outputs/bundle/release/app-release.aab
