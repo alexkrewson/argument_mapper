@@ -80,7 +80,7 @@ Built for people who'd rather disagree well than loudly.
 | asset | spec | status |
 |---|---|---|
 | App icon | 512×512 PNG | **done** — `store-screenshots/icon-512-{square,disc}.png`, pick one |
-| Feature graphic | 1024×500 | **Alex** — needs designing |
+| Feature graphic | 1024×500 | **drafted** — `store-screenshots/feature-graphic-1024x500.png`, Alex to approve |
 | Phone screenshots | 2–8, ≥320px | **done** — 5 at 1080×2400 in `store-screenshots/` |
 | Category | Education, or Tools | Alex's call — Education fits the framing above |
 | Contact email | shown publicly | `support@trolleysolution.com` already forwards |
@@ -112,6 +112,23 @@ Both files are the existing launcher art (`mipmap-xxxhdpi/ic_launcher_foreground
 432×432) resampled to 512. `-square` fills the corners with the art's own navy
 `#1a2233` so it fills Play's rounded-square mask; `-disc` leaves them
 transparent, so the circle floats. **`-square` is the safer pick.**
+
+### The feature graphic
+
+Drawn, not photographed — `scripts` for it is throwaway, the PNG is the
+artifact. Three rules shaped the layout, and they're the reason it looks
+lopsided rather than centred:
+
+- **Fully opaque.** Play rejects alpha on this asset, so it is RGB, not RGBA.
+- **Nothing under the centre.** If a promo video is ever added, Play draws a
+  play button over (512, 250). The gap between the map and the wordmark is
+  that hole, deliberately empty.
+- **70px of nothing at every edge.** Some surfaces crop it. The furthest-right
+  glyph lands at x=891, well inside.
+
+Colours come from the app: the icon's navy `#1a2233`, and Classic's two
+speaker fills. The mini-map is the same claim/premise/objection shape a real
+first turn produces, so it isn't promising a UI that doesn't exist.
 
 ## Content rating questionnaire
 
