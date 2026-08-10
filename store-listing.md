@@ -126,9 +126,16 @@ lopsided rather than centred:
 - **70px of nothing at every edge.** Some surfaces crop it. The furthest-right
   glyph lands at x=891, well inside.
 
-Colours come from the app: the icon's navy `#1a2233`, and Classic's two
-speaker fills. The mini-map is the same claim/premise/objection shape a real
-first turn produces, so it isn't promising a UI that doesn't exist.
+Colours are Ember's, the app's default theme: `panelBg #1e1508` behind, and
+the two speaker fills `#b87040` / `#3d8d7b` on the nodes. The connector rails
+are `#94a3b8` because that is what the app draws edges in for every non-LCARS
+theme — a cool grey on warm ground, but faithful. The mini-map is the same
+claim/premise/objection shape a real first turn produces, so it isn't
+promising a UI that doesn't exist.
+
+Note this deliberately does **not** match the launcher icon, which is navy.
+Ember is what a new install actually opens in, so the banner matches the app
+rather than the icon.
 
 ## Content rating questionnaire
 
