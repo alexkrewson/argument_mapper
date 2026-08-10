@@ -108,16 +108,70 @@ it. Say the word and it goes back in; it's one line in the capture script.
 
 ### The icon
 
-Both files are the existing launcher art (`mipmap-xxxhdpi/ic_launcher_foreground.png`,
-432×432) resampled to 512. `-square` fills the corners with the art's own navy
-`#1a2233` so it fills Play's rounded-square mask; `-disc` leaves them
-transparent, so the circle floats. **`-square` is the safer pick.**
+The launcher art was recoloured to Ember and re-exported at every density, so
+the icon on the phone, the icon on Play and the banner are one palette. The
+art needed less changing than expected: its claim node was already an amber
+and its children a teal, both within a few points of `#b87040` / `#3d8d7b`.
+The disc was the real change.
+
+**The disc is `#0f172a`, not Ember's `panelBg #1e1508`.** `panelBg` is only
+the swatch colour in the settings list — sampled off a running Ember build,
+the map canvas is `#0f172a` and the chrome is `#1e293b`, and every dark theme
+shares them. Matching `panelBg` would have matched a colour the app never
+actually paints.
+
+Recolouring flat art can't be done by exact-match replacement: the antialiased
+boundary pixels are blends of two fills, and swapping only the exact matches
+leaves a halo of the old palette one pixel wide around every shape. Each pixel
+is instead projected onto the segment between its two nearest source colours
+and the same blend rebuilt from the destinations.
+
+`-square` fills the corners with the disc's own colour so it fills Play's
+rounded-square mask; `-disc` leaves them transparent, so the circle floats.
+**`-square` is the safer pick.**
+
+#### The launcher icon was cropping itself
+
+Found while checking the icon actually shipped. On API 26+ the launcher does
+not use `ic_launcher.png` at all — it composites the adaptive icon's
+`<background>` and `<foreground>` at 108dp and masks to the middle 72dp. The
+foreground was the full-bleed disc, so the outer third was being masked away:
+the claim node clipped off at the top, both children clipped at the sides.
+This was true before the recolour too — it just clipped in navy, which is why
+nobody spotted it.
+
+Two things were wrong and both are fixed:
+
+- **`ic_launcher_background` was `#FFFFFF`**, an Android Studio default nobody
+  had revisited. Now `#0F172A`, so it coincides with the disc and the seam
+  disappears.
+- **The foreground is now inset**, and not to the obvious 72/108 either. The
+  tree fills the disc nearly edge to edge, and a *circular* mask — the
+  tightest of the shapes launchers pick from — still took the corners off the
+  two lower cards at that size. So the tree's own bounding box is measured
+  (388×258 of 432, diagonal 466) and the art sized so that diagonal fits the
+  66/108 circle Android guarantees is visible: an inset of 0.567.
+
+Verified by compositing background + foreground and masking at both 66dp and
+72dp before rebuilding. Both show the whole tree.
 
 ### The feature graphic
 
-Drawn, not photographed — `scripts` for it is throwaway, the PNG is the
-artifact. Three rules shaped the layout, and they're the reason it looks
-lopsided rather than centred:
+**The map half is a real screen capture, not a drawing.** The first draft
+redrew the nodes by hand and they read as almost-right — lowercase where the
+app capitalises, badge pills sized by guesswork, corner radii slightly off.
+The cards here are lifted out of the emulator in Ember, from the same argument
+the screenshots use, so nothing about a node's rendering is reconstructed.
+
+Getting a clean crop took one non-obvious step. Cytoscape's
+`renderedBoundingBox()` is not the ink: it runs above the top node, far enough
+to catch the stub of the edge descending from a parent that isn't in frame —
+which reads as a line going nowhere — and it stops short of the bottom nodes,
+cutting their labels off. So the crop is taken generously and then trimmed to
+the **speaker fill colours** specifically. Trimming to "anything that isn't
+background" would keep the orphan stub, because a grey line is ink too.
+
+Three rules shaped the layout, and they're why it reads lopsided:
 
 - **Fully opaque.** Play rejects alpha on this asset, so it is RGB, not RGBA.
 - **Nothing under the centre.** If a promo video is ever added, Play draws a
@@ -126,16 +180,14 @@ lopsided rather than centred:
 - **70px of nothing at every edge.** Some surfaces crop it. The furthest-right
   glyph lands at x=891, well inside.
 
-Colours are Ember's, the app's default theme: `panelBg #1e1508` behind, and
-the two speaker fills `#b87040` / `#3d8d7b` on the nodes. The connector rails
-are `#94a3b8` because that is what the app draws edges in for every non-LCARS
-theme — a cool grey on warm ground, but faithful. The mini-map is the same
-claim/premise/objection shape a real first turn produces, so it isn't
-promising a UI that doesn't exist.
+The ground is sampled from the capture rather than declared, so the crop's
+edges disappear into it — which is also how the banner and the icon ended up
+provably the same colour instead of approximately.
 
-Note this deliberately does **not** match the launcher icon, which is navy.
-Ember is what a new install actually opens in, so the banner matches the app
-rather than the icon.
+Two node pairings were built and compared. The claim-plus-two-premises shape
+matched the icon but is wide and short, so the node text came out half the
+size — and all three nodes belong to one speaker, so it shows one colour. The
+premise-and-its-objection pair won: taller crop, bigger text, both speakers.
 
 ## Content rating questionnaire
 
