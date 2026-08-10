@@ -79,12 +79,39 @@ Built for people who'd rather disagree well than loudly.
 
 | asset | spec | status |
 |---|---|---|
-| App icon | 512×512 PNG | **Alex** — largest source is 192px, needs re-exporting |
+| App icon | 512×512 PNG | **done** — `store-screenshots/icon-512-{square,disc}.png`, pick one |
 | Feature graphic | 1024×500 | **Alex** — needs designing |
-| Phone screenshots | 2–8, ≥320px | **Claude can generate** from the emulator at 1080×2400 |
+| Phone screenshots | 2–8, ≥320px | **done** — 5 at 1080×2400 in `store-screenshots/` |
 | Category | Education, or Tools | Alex's call — Education fits the framing above |
 | Contact email | shown publicly | `support@trolleysolution.com` already forwards |
 | Privacy policy URL | | `https://idisagree.trolleysolution.com/privacy` (no `.html`) |
+
+### The screenshots
+
+Captured 2026-08-09 from the emulator at 1080×2400, on a debug build of
+`992f65d` — the same bundle as the release APK, so what they show is what
+ships. All five are one real argument (the hot-dog-is-a-sandwich exchange),
+replayed from History, so nothing in them is mocked up.
+
+1. `01-the-map` — the finished map, Classic theme
+2. `02-node-detail` — a node opened: tactic named, quote it was read from, tags
+3. `03-moderator` — the moderator's read on both speakers
+4. `04-midnight-theme` — the same map in Midnight, showing the dark themes
+5. `05-paste-a-conversation` — Combined mode with a pasted exchange ready to run
+
+**One edit was made for the capture:** `.cost-estimate` — the "~9.4¢" under the
+Submit button — is hidden via injected CSS. It is real UI and a signed-in user
+does see it, but on a store page it reads as "this app bills you per message",
+which on Android it does not: the purchase path is hidden there by Play's
+Payments policy, so a reviewer would be looking at a price with no way to pay
+it. Say the word and it goes back in; it's one line in the capture script.
+
+### The icon
+
+Both files are the existing launcher art (`mipmap-xxxhdpi/ic_launcher_foreground.png`,
+432×432) resampled to 512. `-square` fills the corners with the art's own navy
+`#1a2233` so it fills Play's rounded-square mask; `-disc` leaves them
+transparent, so the circle floats. **`-square` is the safer pick.**
 
 ## Content rating questionnaire
 
