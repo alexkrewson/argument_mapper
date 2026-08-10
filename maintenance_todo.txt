@@ -403,6 +403,98 @@ supply compliant testers. Steps needed before submitting:
   sending domain so twelve signups at once don't land in spam, and clear the 79
   test debates sitting on the .env.test account.
 
+  ============================================================================
+  START HERE — end of 2026-08-09. The 08-08 block above it is accurate history.
+  ============================================================================
+
+  STILL BLOCKED ON GOOGLE, and only on Google. Play Console has said nothing
+  new all day -- "Google is verifying the documents". Create app is still
+  greyed out. Nothing in the console can be touched until that clears, so
+  everything below is work that was done AROUND the block, not through it.
+
+  THE STORE LISTING IS FINISHED. store-listing.md carries the copy; every
+  asset now sits in store-screenshots/ and is committed:
+      short description   77/80 chars     full description  2,175/4,000
+      01..05 .png         5 phone shots, 1080x2400, one real argument replayed
+                          from History -- nothing in them is mocked up
+      icon-512-square     the Play icon. -disc is the same art with the corners
+                          left transparent; square is the safer pick
+      feature-graphic-1024x500.png
+  ONE DELIBERATE EDIT in the screenshots: .cost-estimate, the "~9.4c" under
+  Submit, is hidden by injected CSS. It is real UI, but Android has no purchase
+  path -- Play's Payments policy -- so a reviewer would be reading a per-turn
+  price with no way to pay it. Reversible in one line of the capture script.
+
+  ARTIFACTS, cut 2026-08-09 18:21/18:44 from 13cdfe6, clean tree:
+      UPLOAD:    app-release-v2-20260809-1844-13cdfe6.aab
+      SIDELOAD:  app-release-v2-20260809-1821-13cdfe6.apk
+  Read back from inside the AAB, not assumed: hdhqpeevtofevymayvie x5, keeper
+  x0, "Confirm your email" x1, "Press back again" x1, "possible concession" x2,
+  despite_concession_of x0, reveal-chrome-top x1, and the icon resources in the
+  new palette. versionCode still 2, nothing ever uploaded, no bump.
+  *** DO NOT UPLOAD THE 08-08 AAB. *** It is otherwise identical but carries
+  the OLD launcher icon, and the old one is broken -- see below.
+
+  THE LAUNCHER ICON WAS CROPPING ITSELF, and had been for as long as the icon
+  has existed. On API 26+ the launcher ignores ic_launcher.png entirely: it
+  composites the ADAPTIVE icon's <background> and <foreground> at 108dp and
+  masks to the middle 72dp. The foreground was the full-bleed disc, so the
+  outer third was masked away -- the claim node clipped off at the top, both
+  children clipped at the sides. It looked deliberate because it clipped in
+  navy. Two things were wrong and both are fixed in 13cdfe6:
+      ic_launcher_background was still Android Studio's #FFFFFF.
+      Insetting to 72/108 alone does NOT fix it: the tree fills the disc edge
+      to edge, and a circular mask -- the tightest launchers use -- still takes
+      the corners off the lower cards. The tree's own bounding box is measured
+      (388x258 of 432, diagonal 466) and sized so that diagonal fits the 66/108
+      circle Android guarantees. Inset 0.567.
+  Verified by compositing and masking at 66dp AND 72dp before building, then on
+  the emulator's own app drawer after. If the icon art is ever redrawn, redo
+  that check -- nothing in any suite catches this.
+
+  A COLOUR FACT THAT COST AN HOUR: THEMES[*].panelBg is ONLY the swatch in the
+  settings list. It is not what the app paints. Sampled off a running build,
+  every dark theme paints canvas #0f172a and chrome #1e293b. Ember's panelBg is
+  #1e1508 and appears nowhere on screen. The icon, the feature graphic and the
+  map canvas are now all #0f172a on purpose.
+
+  THE STALE-APK TRAP, and it wasted three capture runs. connect({relaunch:true})
+  REINSTALLS android/app/build/outputs/apk/debug/app-debug.apk every time, and
+  nothing rebuilds that file for you. It had not been rebuilt since 08-05, so
+  three screenshot runs today photographed a four-day-old build. Worse, the
+  OVAL BUG reproduced on it -- first theme switch from a cold launch collapsed
+  the map to grey ellipses and stayed collapsed -- which looked exactly like a
+  regression of the 08-07 fix. It is not: on a build from current master the
+  same probe ran 24 consecutive switches across all eight themes, three times
+  round, clean every time. ALWAYS `npm run build:apk` before a device session
+  whose result you intend to believe. Every build is versionCode 2, so the
+  phone cannot tell you which one it is running either.
+
+  ALSO NEW TODAY: adb grew a second device when the phone was plugged in, and
+  every harness call started failing with "more than one device/emulator".
+  ANDROID_SERIAL=emulator-5554 in front of the command fixes it and does not
+  need the harness changed.
+
+  SUITES, all green on the current build: web 29/29, Android 59/59, and the
+  judgement suite 17/17 -- its FIRST clean run, zero structural problems, every
+  tag verified on the correct node including the non-sequitur false-positive
+  regression case. The test account was topped up and the 133 test debates were
+  purged BY ID (never by position -- see the non-negotiables in CLAUDE.md).
+
+  WHAT IS LEFT, all of it Alex's and all of it behind the verification email:
+    1. Create the closed testing track, upload the 08-09 AAB.
+    2. Category (Education) and the content rating questionnaire. The one that
+       needs care: two people exchange free text, so user-generated content is
+       a YES even though nothing is public and there is no feed.
+    3. Data Safety -- must declare crash logs / diagnostics (Sentry, 08-05).
+    4. Privacy https://idisagree.trolleysolution.com/privacy and deletion at
+       .../privacy#delete. STILL UNVERIFIED whether Play accepts an email-based
+       deletion route or insists on a self-serve form. Find out at the form.
+    5. Twelve testers, fourteen consecutive days. TesterBee needs the opt-in
+       link, which does not exist until the track does.
+  NON-BLOCKING, unchanged: warm the Resend sending domain before twelve signups
+  land at once.
+
   EVERYTHING IS PUSHED AND LIVE, confirmed by bundle hash rather than assumed.
   Latest APK: app-release-v2-20260807-1601-d1354d4.apk.
   WHAT REMAINS IS THE PLAY CONSOLE WORK from the 08-03 block, unchanged: upload,
