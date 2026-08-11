@@ -269,6 +269,32 @@ export default function App() {
   const gameToastTimerRef = useRef(null);
   const [saveStatus, setSaveStatus] = useState(null); // null | "saving" | "saved"
   const currentDebateIdRef = useRef(null); // Supabase row id of current debate (ref avoids stale closure)
+
+  // The footer is `position: fixed`, so the map runs full height underneath it
+  // on purpose — the graph gets the whole canvas to pan around in. Anything that
+  // wants to centre itself in the part of the map you can actually SEE therefore
+  // has to subtract the footer, and the footer's height is not a constant: it
+  // grows when the controls expand and differs between portrait and landscape.
+  //
+  // So publish it. `--app-footer-h` is read by the map's empty state, which was
+  // centring behind the footer and vanishing in landscape on a Pixel 6
+  // (2026-08-11). Fails safe: if this never runs, the variable is absent and the
+  // fallback is the old behaviour rather than a broken layout.
+  const footerRef = useRef(null);
+  useEffect(() => {
+    const el = footerRef.current;
+    const root = document.documentElement;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    const publish = () => {
+      // Hidden footer occupies no visible space, so it must not reserve any.
+      const h = uiVisible ? el.getBoundingClientRect().height : 0;
+      root.style.setProperty("--app-footer-h", `${Math.round(h)}px`);
+    };
+    publish();
+    const ro = new ResizeObserver(publish);
+    ro.observe(el);
+    return () => { ro.disconnect(); root.style.removeProperty("--app-footer-h"); };
+  }, [uiVisible, activeTab]);
   const skipNextSaveRef = useRef(false);   // Set true after loading a debate to skip the immediate re-save
   // Set true when a PAID turn lands. The 1.5s debounce exists to stop rapid
   // manual edits hammering the database; an AI turn is neither rapid nor free,
@@ -1590,7 +1616,8 @@ export default function App() {
 
       {/* Statement input at the bottom — hidden on arguments and about tabs */}
       {activeTab !== "arguments" && activeTab !== "about" && (
-        <footer className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
+        <footer ref={footerRef}
+                className={`app-footer${uiVisible ? "" : " app-footer--hidden"}`}>
           {theme.lcars && <div className="lcars-rail lcars-rail--footer" />}
           <StatementInput
             currentSpeaker={currentSpeaker}

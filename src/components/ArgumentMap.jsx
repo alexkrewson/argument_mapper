@@ -825,9 +825,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   return (
     <div className="argument-map">
       {nodes.length === 0 && (
-        <p style={{
-          position: "absolute", top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
+        <p className="empty-state" style={{
           color: theme.lcars ? "#FF9900" : theme.dark ? "#f1f5f9" : "#0f172a",
         }}>
           No statements yet.

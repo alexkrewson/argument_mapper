@@ -111,6 +111,19 @@ export function initMonitoring() {
       // which platform a crash came from, which is what actually helps.
       sendDefaultPii: false,
 
+      // Session Replay off, said out loud. The Android SDK registers
+      // ReplayIntegration whether or not it is wanted — confirmed in logcat on a
+      // Pixel 6, 2026-08-11 — and it captures nothing only because both sample
+      // rates default to zero. That is a default, and defaults change.
+      //
+      // Everything else here exists to keep the user's own words out of Sentry:
+      // console, dom and ui.* breadcrumbs are dropped for exactly that reason,
+      // and privacy.html promises it. A replay is a recording of the screen those
+      // words are typed on, so an accidental enable would undo the whole policy
+      // in one line. Pin it, and let the diff be the thing that argues.
+      replaysSessionSampleRate: 0,
+      replaysOnErrorSampleRate: 0,
+
       beforeBreadcrumb: scrubBreadcrumb,
       beforeSend: scrubEvent,
     },
