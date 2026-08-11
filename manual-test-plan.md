@@ -83,11 +83,51 @@ it passed on and every build so far has looked identical from the phone.
 | A1–A5 | release `1000`, 2026-08-11, Pixel 6 / Android 16 | installs clean; cold start 263 ms to activity and under 3 s to a mounted map, *faster* than the emulator's 5–7 s; icon and name right in both launcher and recents; force-stop and reboot both relaunch clean; rotates both ways without loss |
 | A3 (icon) | same | **the adaptive-icon fix confirmed on real launcher art.** Photographed the 08-08 build first: claim node sliced flat at the top, both children cut off at the sides. Same shot after: whole tree inside the mask with margin |
 | C1–C5 | same | name/shuffle drive both the turn label and the placeholder; manual add attributes to the active speaker with no AI call; a Turns submit lands typed `Objection` with a tactic badge and an edge to its parent rather than floating; submit hands A→B, Skip hands B→A, colours follow |
-| C6 | same | 5-line A/B conversation → 7 correctly-typed, correctly-attributed nodes. It caught a planted appeal-to-popularity and typed it `Objection`, summarised as a bandwagon fallacy. **Wall clock ~4–4.5 min on wifi**, at or above the 1.7–4.0 desktop range — the case most likely to feel broken on mobile data |
+| C6 | same | 5-line A/B conversation → 7 correctly-typed, correctly-attributed nodes. It caught a planted appeal-to-popularity and typed it `Objection`, summarised as a bandwagon fallacy. Timing: see the note below — the first figure recorded here was wrong |
+| C7 | same | Moderator reports on **both** speakers with node citations — User A "engaging at the argumentative level rather than attacking the person… but remain defensive", flagged `Contradicted own position: Node 1 ⚠ Node 2`; User B "shift from specific evidence to sweeping universal claims", tagged `Evidence Based (Node 4)`. Plus a moderator chat box |
+| C9 | same | concede-your-own = retract. Banner `↩ Retracted — User B retracted this argument via concession`, the button locks to a green tick, and the node **plus every descendant** fades while untouched branches stay at full opacity |
+| C10 | same | Undo restored a deleted subtree *with its edits intact* and lit Redo; Redo re-applied the delete and went dim again; Undo restored it once more |
+| C12, C13 | same | statement edit persists and leaves ORIGINAL STATEMENT untouched; type Evidence → Clarification persists on the node header |
+| C14 | same | the other speaker's node offers **only close** — no pencil, no delete. Your own offers both |
+| C15 | same | inline `Delete Node 4?` with Cancel/Delete; Cancel is non-destructive; confirming a node with children raises a **second** guard — "This node has 1 direct child. Their descendants will also be deleted" — before Delete all |
 | C8, C11 | same | detail popup carries the verbatim original *and* the AI summary — `(manually added)` for a hand-added node — plus tactics with rationale and a contradiction banner. Concession wording differs as intended: an opponent's node offers "Suggest X conceded this" with "a suggestion only — nothing is scored", your own says "X concedes that this statement of theirs is incorrect" |
 
-**Still unrun on any build: C7, C9, C10, C12–C15**, plus all of D–I. The 08-11
-pass stopped there rather than thinning out; what is above was watched properly.
+### Timing a Combined run, and how not to
+
+**Correction.** The first version of this table said a 5-line Combined run took
+"~4–4.5 min, at or above the desktop range". That was an **upper bound reported
+as a measurement** — the submit was at 11:00:38 and nobody looked until 11:05.
+Four attempts later, here is what is actually known:
+
+- **3 lines, mid-sized map: ~45 s**, confirmed by watching the screen rather
+  than a detector.
+- **5 lines, ~15-node map: still on "Processing turn 3 of 5" at ~220 s.** So the
+  full run is minutes, not seconds, and the earlier magnitude was about right by
+  luck rather than method.
+- Which suggests the variance is **not only per-call latency**, as this file
+  assumed: a bigger map means a bigger context on every call, so the same number
+  of lines costs more on a long argument than a fresh one.
+
+**Combined mode answers the "does it look hung" question well.** The footer reads
+`Processing turn 3 of 5...` and the button says `Processing...`, so you can see
+both that it is alive and how far through it is. A single Turns submit shows
+`Considering User A's statement···` / `Thinking...`.
+
+Three ways of detecting completion that all lied, so nobody repeats them:
+
+1. **Button-colour or footer-brightness sampling** — `adb exec-out screencap`
+   returns a **stale frame** on a display that has dozed, and it keeps returning
+   it. Forty samples of byte-identical brightness is the signature. `input
+   keyevent KEYCODE_WAKEUP` before each grab did *not* reliably fix it.
+2. **Hashing the `Last turn:` cost line** — it updates after **every sub-turn**,
+   not at the end, so it changes within seconds of submitting.
+3. **The footer growing** when processing starts also moves that line, which
+   fires any naive region hash immediately.
+
+What does work: watch for the chrome to disappear — `setUiVisible(false)` runs
+when a turn lands — and confirm by eye before believing a number.
+
+**Still unrun on any build: all of D–I.** Section C is complete as of 2026-08-11.
 
 **Current build: `app-release-v2-20260811-1000-44b3c47-dirty.apk`** — the tree
 that became `a53487e`, so the `-dirty` suffix is the commit lagging the build,
