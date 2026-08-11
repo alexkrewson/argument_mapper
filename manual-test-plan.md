@@ -34,6 +34,28 @@ server-side, so a new-style email arrived into an old-style app and the symptom
 pointed at the code. If a build behaves like the one before it, rule this out
 first.
 
+**But uninstalling does NOT give you a clean slate, and this file used to imply
+it did.** `android:allowBackup` is unset in the manifest, so it defaults to
+`true` and Android Auto Backup restores the app's data the moment it is
+reinstalled — **including the Supabase session**. Found on 2026-08-11: an
+uninstall/reinstall cycle came back still signed in as `+test7`, and the Backup
+Manager confirmed our package registered with a backup timestamp.
+
+So the rule above buys you the right *code*. It does not buy you first-run state,
+an empty History, or a signed-out app. When a case actually needs those, clear
+the data explicitly:
+
+```
+adb shell pm clear com.alexkrewson.argumentmapper     # data, no restore
+adb shell bmgr enabled                                # is backup even on?
+```
+
+Worth knowing beyond testing: that backup carries an auth token off the device to
+Google Drive, restorable onto another phone on the same Google account. Left as
+the platform default for the first submission, deliberately — turning it off is a
+one-line manifest change but it is user-visible, since people would stop staying
+signed in across a reinstall or a new phone. Revisit with the system-bar work.
+
 ## Three things to know before you start
 
 - **Sentry fires from a real phone.** The emulator is dropped in `beforeSend` by
@@ -58,8 +80,20 @@ it passed on and every build so far has looked identical from the phone.
 | B1, B2 | release `0938`, 2026-08-07 | sign-up shows the code screen; the email carries a code and no link; the code confirms the account in-app |
 | D6 | release `1136`, 2026-08-07 | back closes settings, returns to the map from a tab, and takes two presses to exit — asserted on the focused window |
 | I1, I2 | release `1316`, 2026-08-07 | a concession implied in Combined mode badges the node and applies nothing |
+| A1–A5 | release `1000`, 2026-08-11, Pixel 6 / Android 16 | installs clean; cold start 263 ms to activity and under 3 s to a mounted map, *faster* than the emulator's 5–7 s; icon and name right in both launcher and recents; force-stop and reboot both relaunch clean; rotates both ways without loss |
+| A3 (icon) | same | **the adaptive-icon fix confirmed on real launcher art.** Photographed the 08-08 build first: claim node sliced flat at the top, both children cut off at the sides. Same shot after: whole tree inside the mask with margin |
+| C1–C5 | same | name/shuffle drive both the turn label and the placeholder; manual add attributes to the active speaker with no AI call; a Turns submit lands typed `Objection` with a tactic badge and an edge to its parent rather than floating; submit hands A→B, Skip hands B→A, colours follow |
+| C6 | same | 5-line A/B conversation → 7 correctly-typed, correctly-attributed nodes. It caught a planted appeal-to-popularity and typed it `Objection`, summarised as a bandwagon fallacy. **Wall clock ~4–4.5 min on wifi**, at or above the 1.7–4.0 desktop range — the case most likely to feel broken on mobile data |
+| C8, C11 | same | detail popup carries the verbatim original *and* the AI summary — `(manually added)` for a hand-added node — plus tactics with rationale and a contradiction banner. Concession wording differs as intended: an opponent's node offers "Suggest X conceded this" with "a suggestion only — nothing is scored", your own says "X concedes that this statement of theirs is incorrect" |
 
-**Current build: `app-release-v2-20260807-1336-aafbe97.apk`.** Seven fixes went
+**Still unrun on any build: C7, C9, C10, C12–C15**, plus all of D–I. The 08-11
+pass stopped there rather than thinning out; what is above was watched properly.
+
+**Current build: `app-release-v2-20260811-1000-44b3c47-dirty.apk`** — the tree
+that became `a53487e`, so the `-dirty` suffix is the commit lagging the build,
+not untracked work. Supersedes everything below.
+
+**Previous build: `app-release-v2-20260807-1336-aafbe97.apk`.** Seven fixes went
 in during the 08-07 pass — sign-up by code, the ovals, control labels, the back
 button, sign-out clearing the map, concessions as suggestions, and the
 non-sequitur edge. Anything ticked against an earlier build was ticked against
