@@ -90,7 +90,58 @@ it passed on and every build so far has looked identical from the phone.
 | C12, C13 | same | statement edit persists and leaves ORIGINAL STATEMENT untouched; type Evidence → Clarification persists on the node header |
 | C14 | same | the other speaker's node offers **only close** — no pencil, no delete. Your own offers both |
 | C15 | same | inline `Delete Node 4?` with Cancel/Delete; Cancel is non-destructive; confirming a node with children raises a **second** guard — "This node has 1 direct child. Their descendants will also be deleted" — before Delete all |
+| D1 | release `1000`, 2026-08-12, Pixel 6 | pinch-zoom and pan with two real fingers — Alex's check, not automatable: `adb input` is single-touch and a faked gesture would prove nothing |
+| D2 | same | hit targets are fine for a finger. Every miss this session was adb tapping a stale coordinate after the layout moved — worth separating from a real usability verdict |
+| D3 | same | **the oval bug does not reproduce.** Map → Moderator → History → Map and the nodes are still rounded rectangles in speaker colours with badges intact. Note the case's premise is wrong, though: `autoungrabify: true`, so nodes are deliberately NOT draggable and re-parenting is the edit dialog's PARENT NODE dropdown, not a drag |
+| D4 | same | a 19-node argument does **not** fit with the chrome showing — the chain runs off the bottom behind the composer. Nothing is unrecoverable (pan works, hiding the chrome reclaims the space, auto-fit shows everything) but you get the shape or the text, never both |
+| D5 | same | keyboard covers neither the input nor Submit — the composer floats above it — and the layout recovers when it closes |
+| D6 | same | back returns from another tab to Map, closes settings, closes the node popup. The two-press exit was **not** re-run today |
+| F1 | same | 19-node argument saved under an AI-generated title, reloaded complete with its faded retraction states preserved. Loading warns first: "This will replace your current one" |
+| F2 | same | History with saved arguments lists them; no sign-in prompt |
+| F3 | same | offline submit gives a **real named error** — `Failed to fetch (hdhqpeevtofevymayvie.supabase.co)` with Dismiss — not a hang or an endless spinner, and the identical submit succeeds on retry once the network returns, with no restart. **Two problems with the banner, see below** |
+| F4 | — | **BLOCKED, not passed.** There is no cellular data at the test location, so there is nothing to hand over *to*: with wifi off, 25 s of `Active default network: none` and `Network is unreachable`, despite `mobile_data=1` and `SIM state: LOADED` (`gsm.network.type=IWLAN`, i.e. wifi calling). Needs a tester with a working data plan. **Twelve testers on mobile data will be exercising a path nothing here has covered** |
+| F4a | release `1000`, 2026-08-12, Pixel 6 | the sibling case that *is* testable — connection lost **mid-call** (wifi dropped from adb 5 s after submit). **The turn is lost silently.** No node, `Last turn` unchanged, no error banner, statement preserved in the composer. Compare F3, where submitting *while already offline* gives a clear persistent banner. So the app explains itself when it cannot start a call and says nothing when one dies underneath it |
+| F5 | same | a call backgrounded 30 s mid-flight still lands. Returning shows it *still running* — "Considering User B's statement···" — and the node arrives normally |
+| F6 | same | 11 minutes backgrounded, then relaunched: all four nodes back with types, colours, badges and the non-sequitur flag intact, same `Last turn`. Android either did not kill the WebView or restored it indistinguishably |
 | C8, C11 | same | detail popup carries the verbatim original *and* the AI summary — `(manually added)` for a hand-added node — plus tactics with rationale and a contradiction banner. Concession wording differs as intended: an opponent's node offers "Suggest X conceded this" with "a suggestion only — nothing is scored", your own says "X concedes that this statement of theirs is incorrect" |
+
+### A dropped connection is quieter than no connection
+
+Worth stating on its own, because the two look identical to a user and behave
+completely differently:
+
+- **No connection when you submit** → `Failed to fetch (…)`, persistent, with a
+  Dismiss. Correct, if ugly. (F3)
+- **Connection dies while the call is in flight** → *nothing at all*. The turn
+  vanishes, `Last turn` does not move, no banner appears. The statement is
+  preserved in the composer, which is the one merciful part. (F4a)
+
+That second case is the ordinary one — walking out of wifi range mid-turn — and
+it is the one with no feedback. A tester will report it as "it just stopped
+working", which is exactly the class of bug this document exists to catch.
+
+Caveat on the evidence: the keyboard reopens by itself after a submit and covers
+the banner region, so a flash cannot be ruled out. But F3's banner persisted for
+minutes and needed an explicit Dismiss, and none is present once the keyboard is
+cleared.
+
+### The offline banner is correct and invisible
+
+F3's error is well built — it names the host and offers Dismiss. It is also
+rendered **behind the on-screen keyboard**, and the realistic flow is type →
+submit with the keyboard still up. So the user sees nothing happen, which is
+indistinguishable from the silent hang F3 exists to rule out. Found by Alex
+noticing it after dismissing the keyboard by hand; the automated pass had read
+the same screens as "no error shown" twice.
+
+Two changes, agreed 2026-08-12, both after the closed track is live:
+
+- move the banner **above** the composer so the keyboard cannot cover it;
+- rewrite the copy for a person. `Failed to fetch
+  (hdhqpeevtofevymayvie.supabase.co)` tells a tester nothing about being offline
+  and puts the Supabase project ref in front of them. Not a secret — it is in the
+  bundle — but "You're offline. Check your connection and try again" is what
+  somebody on a train needs.
 
 ### Timing a Combined run, and how not to
 
