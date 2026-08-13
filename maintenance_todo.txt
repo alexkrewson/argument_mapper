@@ -404,7 +404,95 @@ supply compliant testers. Steps needed before submitting:
   test debates sitting on the .env.test account.
 
   ============================================================================
-  START HERE — end of 2026-08-09. The 08-08 block above it is accurate history.
+  START HERE — end of 2026-08-12. Everything below is accurate history; the
+  08-09 block is superseded on every point that mattered.
+  ============================================================================
+
+  THE APP IS SUBMITTED. Identity verification cleared on 08-11, and the closed
+  testing release went to Google on 08-12. Nothing is blocked on us.
+
+  WHAT EXISTS ON PLAY NOW:
+      app         iDisagree, com.alexkrewson.argumentmapper, Personal account
+                  "Trolley Solution", account 7768275341125201242
+      pricing     PAID, USD 2.00, priced in all countries, tax category
+                  "Digital app sales". Merchant account cleared same-day —
+                  the delay I braced for never happened
+      track       Closed testing - Alpha, 172 countries, tester group
+                  idisagree-testers@googlegroups.com, feedback to
+                  support@trolleysolution.com
+      release     the 08-09 AAB, versionCode 2, deliberately NOT rebuilt.
+                  Re-verified by readback immediately before upload:
+                  hdhqpeevtofevymayvie x5, keeper x0
+
+  THE PRICING DECISION AND WHY IT IS SAFE. Free-to-paid is blocked once
+  published; paid-to-free is allowed once. Choosing Paid therefore keeps every
+  door open, and publishing cannot trap us. I spent a long time treating this as
+  a blocker before realising the direction we picked makes it moot.
+
+  ONE THING STILL UNPROVEN, and it is the tester round. Licence testing exists
+  (Settings > License testing, URL /license-tester) and alex.krewson@gmail.com
+  is on the list. Whether it grants a free install of a PAID app, as opposed to
+  only free in-app purchases, is NOT established. So: RECRUIT ONE TESTER FIRST,
+  put them in BOTH the Google Group and the licence list, and check whether Play
+  asks them for $2. Finding that out at tester one is free; finding it out at
+  tester twelve costs the fourteen-day clock, which only runs while twelve are
+  opted in continuously.
+
+  TWO REQUIREMENTS AMBUSHED THE SUBMISSION, neither on the 13-item setup
+  checklist: prices for EVERY country, and an Advertising ID declaration. Both
+  surfaced only when the send was attempted. Expect a third next time.
+
+  FIVE FIXES DEFERRED ON PURPOSE, all polish, none blocking:
+    1. The offline error banner renders BEHIND the on-screen keyboard, and the
+       realistic flow is type-submit-keyboard-still-up. Alex found it by hand
+       after the automated pass had read the same screens as "no error shown"
+       twice. Agreed: move it above the composer.
+    2. That banner's copy is developer-facing — "Failed to fetch
+       (hdhqpeevtofevymayvie.supabase.co)" tells a tester nothing about being
+       offline and shows them the project ref.
+    3. The white system-bar bands. NOT the one-line colour change it looks
+       like: targetSdk 36 deprecates statusBarColor, so it needs edge-to-edge
+       plus safe-area insets plus per-theme icon polarity, across 5 light and
+       3 dark themes.
+    4. allowBackup is unset, so it defaults true and Auto Backup restores the
+       Supabase session on reinstall. An auth token therefore travels to Google
+       Drive. Left alone because turning it off is user-visible.
+    5. Cost and latency both scale with MAP SIZE, not just input length — 13.8c
+       per turn on a 19-node map against 6.4c on a 2-node one. Worth looking at
+       what gets sent per call before twelve testers build long arguments.
+
+  TWO THINGS THAT ARE QUIETLY BROKEN AND ARE NOT ABOUT PLAY:
+    - .env.test's credentials DO NOT SIGN IN. No error; the app just stays
+      signed out. The web suite is green because its auth specs assert the form
+      RENDERS rather than completing a login. Anything relying on that account
+      is not testing what it claims to.
+    - Clicking history-row does nothing; you must click history-row-title. The
+      row matches, accepts the click, and silently declines to load.
+
+  SCREENSHOTS ARE REPRODUCIBLE FOR THE FIRST TIME.
+  scripts/capture-store-screenshots.mjs drives the real app at phone, 7-inch and
+  10-inch sizes. The phone set from August was ad hoc and its script was never
+  kept, which is why the deferred system-bar fix would have meant recreating
+  them from nothing. Tablet shots are committed but MISMATCHED with the phone
+  set — dark theme, 3-node argument, against light theme and 8 nodes — because
+  the hot-dog argument the phone set used exists on no account we can reach.
+  Regenerating all three form factors from one argument is the fix.
+
+  ON-DEVICE TESTING, Pixel 6 / Android 16, against the shipping build:
+  sections A, C, D and F are done and recorded in manual-test-plan.md. The
+  launcher-icon fix is confirmed on real launcher art, photographed before and
+  after. The oval bug does not reproduce. F4a is the one real finding: losing
+  the connection MID-CALL loses the turn silently — no node, no banner, no
+  explanation — while submitting with no connection at all gives a clean error.
+  E, G and I remain unrun, and all three are free.
+
+  WHAT HAPPENS NEXT, in order: review (usually well inside the 7-day ceiling),
+  then the opt-in link appears on the Testers tab, then recruit ONE tester and
+  check the $2 question, then twelve for fourteen continuous days, then apply
+  for production access.
+
+  ============================================================================
+  START HERE — end of 2026-08-09. Superseded by the 08-12 block above.
   ============================================================================
 
   STILL BLOCKED ON GOOGLE, and only on Google. Play Console has said nothing
