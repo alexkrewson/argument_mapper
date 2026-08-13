@@ -8,6 +8,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import { speakerName } from "../utils/speakers.js";
 
 const TOOLTIPS = {
@@ -113,7 +114,7 @@ export default function StatementInput({
   onAddNode, onReviewChanges, changeLogCount,
   theme, nameEditable, currentName, onNameChange, onRefreshName, uiVisible = true,
   inputMode, onModeChange, onCombinedSubmit, combiningProgress,
-  estimatedCost,
+  estimatedCost, popupOpen = false,
 }) {
   const [text, setText] = useState("");
   const [combinedText, setCombinedText] = useState("");
@@ -123,15 +124,28 @@ export default function StatementInput({
   const chevronRef   = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Focus follows the chrome. On the web a focused off-screen textarea is
-  // invisible, so this never mattered; on Android a focused textarea IS the
-  // keyboard, and it sat over the map the auto-hide had just revealed. Blurring
-  // is what actually dismisses it -- hiding the footer does not, because the
-  // element is still in the DOM and still holds focus.
+  // Focus follows the chrome — but only where focus is cheap.
+  //
+  // On the web a focused off-screen textarea is invisible, so claiming focus
+  // whenever the chrome appears is a free convenience: you can start typing.
+  // On Android a focused textarea IS the keyboard, and claiming it means the
+  // keyboard is permanently trying to be up. Pressing back dismisses it
+  // visually without removing DOM focus, so the next tap anywhere — including
+  // on a node, which should just open a popup — summons it straight back. In
+  // landscape it swallows most of the screen and takes the composer with it.
+  //
+  // So: blur on both platforms when the chrome goes, because a focused element
+  // still holds the keyboard and hiding the footer does not dismiss it. Only
+  // take focus back on the web, where nobody pays for it.
   useEffect(() => {
     if (!uiVisible) { textareaRef.current?.blur(); return; }
-    if (!loading) textareaRef.current?.focus();
+    if (!loading && !Capacitor.isNativePlatform()) textareaRef.current?.focus();
   }, [loading, uiVisible]);
+
+  // Opening a node popup must not leave the composer holding focus behind it.
+  useEffect(() => {
+    if (popupOpen) textareaRef.current?.blur();
+  }, [popupOpen]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

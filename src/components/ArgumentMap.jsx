@@ -822,6 +822,26 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     // styleKey, not theme — a rename must not re-pulse nodes that are no longer new.
   }, [newNodeIds, styleKey]);
 
+  // Cytoscape caches its container's size and will happily keep drawing to the
+  // old one. Three things resize it and none of them is a window resize event:
+  // the chrome auto-hiding (the top spacer collapses), the soft keyboard opening
+  // now that the activity is adjustResize, and rotation. Without this the map
+  // keeps a blank strip where the header used to be, and nodes stay clipped at
+  // a boundary that no longer exists.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return undefined;
+    let frame = 0;
+    const ro = new ResizeObserver(() => {
+      // Coalesce: a chrome transition fires this on every animation frame, and
+      // cy.resize() is not cheap enough to run 15 times for one 250ms slide.
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => cyRef.current?.resize());
+    });
+    ro.observe(el);
+    return () => { cancelAnimationFrame(frame); ro.disconnect(); };
+  }, []);
+
   return (
     <div className="argument-map">
       {nodes.length === 0 && (

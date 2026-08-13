@@ -9,12 +9,19 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- adjustResize, not the default pan. Panning slides the whole window up
+             to keep the caret visible, which on a phone in landscape pushes the
+             composer and Submit clean off the top of the screen — the keyboard
+             takes most of a 400dp-tall viewport and the app never learns it got
+             smaller. Resizing shrinks the WebView instead, so the layout can lay
+             itself out in what is left. -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
             android:name=".MainActivity"
             android:label="@string/title_activity_main"
             android:theme="@style/AppTheme.NoActionBarLaunch"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:exported="true">
 
             <intent-filter>

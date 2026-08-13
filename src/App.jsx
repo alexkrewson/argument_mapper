@@ -1365,7 +1365,12 @@ export default function App() {
         </div>{/* app-top-body */}
       </div>
       {/* In-flow spacer keeps content below the fixed top bar */}
-      <div className="app-top-spacer" aria-hidden="true" />
+      {/* Collapses with the chrome. The header is position:fixed and slides away
+          on translateY, so it stops painting but never stops occupying — this
+          spacer is what actually holds the map down, and leaving it at 90px meant
+          the map kept a blank strip it could have used. */}
+      <div className={`app-top-spacer${uiVisible ? "" : " app-top-spacer--hidden"}`}
+           aria-hidden="true" />
 
       {/* Main content: one tab at a time */}
       <main className="app-main">
@@ -1623,6 +1628,7 @@ export default function App() {
             currentSpeaker={currentSpeaker}
             speakerSummary={speakerSummary}
             estimatedCost={user ? formatCostCents(estimateNextTurnCents(argumentMap)) : null}
+            popupOpen={!!selectedNode || addNodeOpen}
             onSubmit={handleSubmit}
             onChatMessage={handleChatMessage}
             loading={loading}

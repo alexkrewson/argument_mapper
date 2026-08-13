@@ -165,6 +165,11 @@
 .app-top-spacer {
   flex-shrink: 0;
   height: 90px;
+  transition: height 0.25s ease;   /* matches .app-top's slide */
+}
+
+.app-top-spacer--hidden {
+  height: 0;
 }
 
 /* --- Header row (inside app-top) --- */
@@ -1039,6 +1044,7 @@
 .statement-input {
   padding: 0.75rem 1.5rem;
 }
+
 
 .node-id-badge {
   font-size: 9px;
@@ -4317,3 +4323,36 @@ button {
 /* The moderator empty state sits on the dark canvas, where the light-theme grey
    managed 3.75:1. */
 [data-dark="true"] .moderator-speaker-empty { color: #94a3b8; }
+
+/* ── Short viewports ───────────────────────────────────────────────────────
+   These live at the END of the file on purpose. An earlier attempt put them
+   near .statement-input, where `.cost-estimate { display: block }` at line
+   ~3700 simply overrode `display: none` — same specificity, later rule wins.
+   Media queries do not add specificity, so position is the whole fight.
+
+   Two breakpoints, and the second one is only reachable because the activity
+   is now android:windowSoftInputMode="adjustResize": the WebView genuinely
+   shrinks when the keyboard opens, so viewport height is a usable proxy for
+   "the keyboard is up" without listening for anything.                       */
+
+/* A phone in landscape, keyboard down (~411 CSS px tall). Trim what you do
+   not read while typing. */
+@media (max-height: 420px) {
+  .statement-input { padding: 0.35rem 0.75rem; }
+  .statement-input textarea { min-height: 0; max-height: 4.5rem; }
+  .cost-estimate,
+  .speaker-label { display: none; }
+}
+
+/* Keyboard up on a landscape phone: roughly 80 CSS px of app left, and a
+   split keyboard can take even more. The header and tab bar are position:
+   fixed, so at this size they would cover most of what remains — and you
+   cannot read them while typing anyway. Give every pixel to the composer. */
+@media (max-height: 260px) {
+  .app-top { display: none; }
+  .app-top-spacer { height: 0; }
+  .statement-input { padding: 0.2rem 0.5rem; }
+  .statement-input textarea { max-height: 2.6rem; }
+  .controls-row,
+  .mode-toggle { display: none; }
+}
