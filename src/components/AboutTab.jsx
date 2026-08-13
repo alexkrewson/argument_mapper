@@ -261,7 +261,7 @@ export default function AboutTab({ isActive }) {
         <ul>
           <li><strong>⚠ Contradiction:</strong> A speaker's new node directly contradicts one of their own earlier nodes. Both get a red border and background. Supporting nodes by the same speaker are also flagged as undermined. Clicking the chip in the popup navigates to the related node.</li>
           <li><strong>⤳ Goalpost Moving:</strong> A speaker quietly shifts the scope of their own earlier claim to dodge a challenge. Both affected nodes get an orange border.</li>
-          <li><strong>⚡ Non-sequitur:</strong> A statement with no logical connection to any existing node. It appears <em>beside</em> the tree with a bright red border instead of connecting to it.</li>
+          <li><strong>⚡ Non-sequitur:</strong> A statement with no logical connection to any existing node — a genuine change of subject, not merely a weak argument. It gets a bright red border, and it still joins the tree: every node has exactly one parent, so it attaches to whichever node came immediately before it, on an edge marked <em>unrelated</em>. That relationship exists for this case alone, because every other one claims the statement bears on its parent, which is the one thing a non-sequitur does not do.</li>
         </ul>
         <p>These flags only apply within a single speaker's own nodes — they can never occur across speakers, since arguing against the other person is just normal disagreement.</p>
 
