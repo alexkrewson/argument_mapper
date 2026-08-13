@@ -390,29 +390,23 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       tpl: (data) => tplRef.current(data),
     }]);
 
-    // ── Touch gesture state machine ────────────────────────────────────────
-    // States: idle | first-down | awaiting-second | second-down | drag-zoom
-    // Gestures:
-    //   single tap on background  → toggle header/footer (UI)
-    //   1-finger quick double-tap → zoom in ×2.5 centred on tap point
-    //   1-finger double-tap+hold → drag down=zoom-in, up=zoom-out
-    //   2-finger double-tap      → zoom out ×0.4
-    const DOUBLE_TAP_MS  = 300;  // window between two taps
-    const HOLD_MS        = 180;  // hold duration before drag-zoom activates
-    const ZOOM_SENS      = 0.015; // zoom factor per pixel dragged
+    // ── Touch gestures ─────────────────────────────────────────────────────
+    // One gesture: a tap toggles the header and footer. Pinch is cytoscape's
+    // own and needs nothing from us.
+    //
+    // Removed 2026-08-13 — double-tap zoom-in, double-tap-and-hold drag-zoom,
+    // and two-finger double-tap zoom-out. They fired on taps meant as single
+    // taps, so the map zoomed unpredictably while you were just trying to show
+    // the chrome, and nothing announced they existed. Pinch already zooms, in
+    // the way everyone already knows.
+    //
+    // Deleting them also made the tap immediate. It used to wait out a 300ms
+    // window to learn whether a second tap was coming; with nothing to wait for,
+    // the chrome now responds on lift.
+    const TAP_MS   = 300;  // longer than this is a press, not a tap
+    const TAP_SLOP = 8;    // px of movement still counted as a tap, not a pan
 
-    const g = {
-      state: "idle",
-      tapDownTime: 0, lastLiftTime: 0,
-      tapClientX: 0,  tapClientY: 0,
-      holdTimer: null, singleTapTimer: null,
-      dragStartY: 0,  dragStartZoom: 1,
-    };
-
-    function rendPos(clientX, clientY) {
-      const r = containerRef.current.getBoundingClientRect();
-      return { x: clientX - r.left, y: clientY - r.top };
-    }
+    const g = { downTime: 0, x: 0, y: 0, moved: false, fingers: 0 };
 
     function zoomToPoint(newZoom, rx, ry) {
       const z0 = cy.zoom(), p0 = cy.pan();
@@ -425,84 +419,27 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     }
 
     function onTouchStart(e) {
-      const now = Date.now();
-      const nf  = e.touches.length;
-      const dt  = now - g.lastLiftTime;
-
-      if (g.state === "awaiting-second" && dt < DOUBLE_TAP_MS) {
-        // ── Second tap detected ──
-        clearTimeout(g.singleTapTimer);
-        e.preventDefault();
-        e.stopImmediatePropagation();
-
-        if (nf === 1) {
-          g.state      = "second-down";
-          g.tapClientX = e.touches[0].clientX;
-          g.tapClientY = e.touches[0].clientY;
-          g.dragStartY = e.touches[0].clientY;
-          g.dragStartZoom = cy.zoom();
-          g.tapDownTime   = now;
-          g.holdTimer = setTimeout(() => { g.state = "drag-zoom"; }, HOLD_MS);
-        } else if (nf === 2) {
-          // Two-finger double-tap → zoom out
-          g.state = "idle";
-          cy.animate({ zoom: Math.max(cy.minZoom(), cy.zoom() * 0.4), duration: 300, easing: "ease-in-out" });
-        }
-      } else {
-        // ── First tap (or stale gap) ──
-        clearTimeout(g.singleTapTimer);
-        clearTimeout(g.holdTimer);
-        g.state       = "first-down";
-        g.tapDownTime = now;
-        if (nf === 1) {
-          g.tapClientX = e.touches[0].clientX;
-          g.tapClientY = e.touches[0].clientY;
-        }
-      }
+      g.fingers = e.touches.length;
+      if (g.fingers !== 1) { g.downTime = 0; return; }   // pinch — cytoscape's
+      g.downTime = Date.now();
+      g.x = e.touches[0].clientX;
+      g.y = e.touches[0].clientY;
+      g.moved = false;
     }
 
     function onTouchMove(e) {
-      if (g.state === "second-down") {
-        const dx = Math.abs(e.touches[0].clientX - g.tapClientX);
-        const dy = Math.abs(e.touches[0].clientY - g.tapClientY);
-        if (dx > 8 || dy > 8) { clearTimeout(g.holdTimer); g.state = "idle"; }
-      } else if (g.state === "drag-zoom") {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        const delta   = e.touches[0].clientY - g.dragStartY; // +down = zoom in
-        const newZoom = Math.max(cy.minZoom(), Math.min(cy.maxZoom(),
-          g.dragStartZoom * Math.exp(delta * ZOOM_SENS)));
-        const { x, y } = rendPos(g.tapClientX, g.tapClientY);
-        cy.zoom({ level: newZoom, renderedPosition: { x, y } });
+      if (!g.downTime || e.touches.length !== 1) { g.downTime = 0; return; }
+      if (Math.abs(e.touches[0].clientX - g.x) > TAP_SLOP ||
+          Math.abs(e.touches[0].clientY - g.y) > TAP_SLOP) {
+        g.moved = true;   // a pan, not a tap
       }
     }
 
-    function onTouchEnd(e) {
-      const now = Date.now();
-      if (g.state === "first-down") {
-        if (now - g.tapDownTime < DOUBLE_TAP_MS) {
-          // Quick lift — start window for second tap
-          g.state        = "awaiting-second";
-          g.lastLiftTime = now;
-          g.singleTapTimer = setTimeout(() => {
-            g.state = "idle";
-            // Single tap confirmed — toggle UI (touch path)
-            onToggleUIRef.current?.();
-          }, DOUBLE_TAP_MS);
-        } else {
-          g.state = "idle";
-        }
-      } else if (g.state === "second-down") {
-        clearTimeout(g.holdTimer);
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        g.state = "idle";
-        // Quick second tap — zoom in
-        const { x, y } = rendPos(g.tapClientX, g.tapClientY);
-        zoomToPoint(Math.min(cy.maxZoom(), cy.zoom() * 2.5), x, y);
-      } else if (g.state === "drag-zoom") {
-        g.state = "idle";
-      }
+    function onTouchEnd() {
+      const held = Date.now() - g.downTime;
+      const wasTap = g.downTime && !g.moved && g.fingers === 1 && held < TAP_MS;
+      g.downTime = 0;
+      if (wasTap) onToggleUIRef.current?.();
     }
 
     const el = containerRef.current;
@@ -831,15 +768,51 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   useEffect(() => {
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return undefined;
-    let frame = 0;
-    const ro = new ResizeObserver(() => {
-      // Coalesce: a chrome transition fires this on every animation frame, and
-      // cy.resize() is not cheap enough to run 15 times for one 250ms slide.
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => cyRef.current?.resize());
+
+    // Two guards, both learned the hard way. cy.resize() clears and repaints the
+    // canvas, and the node bodies live on that canvas while the badges are HTML
+    // on top — so a spurious resize looks like every node blinking out and back
+    // while its badge hangs in mid-air.
+    //
+    // 1. Only act when the box ACTUALLY changed. The observer fires for reasons
+    //    that leave the size alone, and re-rendering for those is pure flicker.
+    //    Rounded, because sub-pixel jitter is not a resize.
+    // 2. Settle before acting, rather than once per frame. The chrome slide is a
+    //    250ms height transition — per-frame coalescing still meant ~15 repaints
+    //    for one slide. One repaint, after it stops moving, is what is wanted.
+    let last = { w: 0, h: 0 };
+    let timer = 0;
+    let fromTop = null;   // container's screen y before the current burst began
+    const ro = new ResizeObserver((entries) => {
+      const box = entries[0]?.contentRect;
+      if (!box) return;
+      const w = Math.round(box.width);
+      const h = Math.round(box.height);
+      if (w === last.w && h === last.h) return;
+      // Only at the START of a burst. Sampling every frame would measure one
+      // frame's worth of movement instead of the whole slide.
+      if (fromTop === null) fromTop = Math.round(el.getBoundingClientRect().top);
+      last = { w, h };
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const cy = cyRef.current;
+        const before = fromTop;
+        fromTop = null;
+        if (!cy) return;
+        const after = Math.round(el.getBoundingClientRect().top);
+        cy.resize();
+        // Cytoscape anchors content to the container's top-left, so when the
+        // chrome slides away and that corner rises 90px, the whole map rises
+        // with it — which reads as the app panning for you. Push the content
+        // back down by exactly what the corner moved, and the map stays where
+        // you left it while the space appears around it.
+        if (before !== null && after !== before) {
+          cy.panBy({ x: 0, y: before - after });
+        }
+      }, 120);
     });
     ro.observe(el);
-    return () => { cancelAnimationFrame(frame); ro.disconnect(); };
+    return () => { clearTimeout(timer); ro.disconnect(); };
   }, []);
 
   return (
