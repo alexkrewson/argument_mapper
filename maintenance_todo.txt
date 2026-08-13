@@ -478,6 +478,48 @@ supply compliant testers. Steps needed before submitting:
   the hot-dog argument the phone set used exists on no account we can reach.
   Regenerating all three form factors from one argument is the fix.
 
+  THE SCREENSHOT JOB, WRITTEN OUT, because the order matters and doing it
+  backwards means capturing twice. Store listing changes are independent of
+  releases: you can update screenshots any time, they get a quick review, and no
+  new build is needed. So this is not urgent — but it is cheap now and was not
+  before, since the original capture script was never kept.
+
+  Do it in this order:
+    1. Fix the system bars first (deferred item 3 above). It changes how every
+       screen looks, so any screenshot taken before it is wasted work.
+    2. Build a deliberate argument and KEEP it. The phone set's hot-dog map is
+       the right shape — eight nodes, well branched, legible at fit zoom — and
+       it exists on no account we can reach any more. The current tablet set
+       uses "Effectiveness of an Update", three nodes, which is legible but
+       thin. Save the new one under an account whose credentials work, and note
+       which account here.
+    3. Pick ONE theme for all eleven shots. Phone is currently light, tablet is
+       dark; on the same listing that reads as two different apps.
+    4. node scripts/capture-store-screenshots.mjs   — all three form factors,
+       CAPTURE_EMAIL / CAPTURE_PASSWORD for the account, CAPTURE_ARGUMENT for
+       the title. It hides .cost-estimate the same way the phone set does and
+       refuses to photograph an empty map.
+    5. Upload to the listing. Play wants 2 phone minimum; sizes are phone
+       1080x2400, 7-inch 1080x1920, 10-inch 1440x2560, the tablets strictly
+       16:9 or 9:16.
+
+  A THING TO CHECK BEFORE PLAY BILLING, and it may be nothing. The proxy
+  deducts at 2x Anthropic rates — claude-proxy/index.ts says so in a comment,
+  INPUT_CENTS_PER_TOKEN 0.0006 against $3/MTok. But the figure the app DISPLAYS
+  after a turn matched the 1x rate exactly: 5,023 in + 1,556 out showed
+  $0.038409, which is $3/$15 per MTok, not double. If the UI shows raw cost
+  while the balance is charged double, AboutTab's "actual token usage billed by
+  Anthropic at Claude Sonnet rates" is a promise the app does not keep, and
+  "the price shown is not the price charged" is what refund requests are made
+  of. Worth an hour before any of it goes behind Play Billing.
+
+  THE ECONOMICS, since the 2x markup is the thing that makes the plan work:
+  $2 of credits sold through Play nets $1.70 after the 15% small-business rate,
+  and buys $1.00 of real Anthropic usage — 70c margin. The $2 app price nets
+  $1.70 against a 50c starter grant costing 25c of real API, so every install
+  starts ~$1.45 up before anyone buys a credit. Covering API costs is
+  structural rather than aspirational; the risk is whether anyone buys at all.
+
   ON-DEVICE TESTING, Pixel 6 / Android 16, against the shipping build:
   sections A, C, D and F are done and recorded in manual-test-plan.md. The
   launcher-icon fix is confirmed on real launcher art, photographed before and
