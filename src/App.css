@@ -73,7 +73,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #94a3b8;
+  color: #556074;   /* 6.34:1 on #fff; #94a3b8 was 2.56:1 */
   padding: 0.25rem 0.5rem 0.4rem;
 }
 
@@ -133,7 +133,7 @@
 
 .theme-names {
   font-size: 0.7rem;
-  color: #94a3b8;
+  color: #556074;   /* 6.34:1 on #fff; was 2.56:1 */
   flex: 1;
   text-align: right;
 }
@@ -2094,7 +2094,7 @@
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
 }
 [data-dark="true"] .settings-section-label {
-  color: #475569;
+  color: #9fadc0;   /* 6.42:1 on #1e293b; #475569 was 1.93:1 */
 }
 [data-dark="true"] .settings-dropdown > div + div > .settings-section-label {
   border-top-color: #334155;
@@ -2109,7 +2109,7 @@
   color: #f1f5f9;
 }
 [data-dark="true"] .theme-names {
-  color: #475569;
+  color: #9fadc0;   /* 6.42:1 on #1e293b; was 1.93:1 */
 }
 [data-dark="true"] .theme-active-check { color: #f1f5f9; }
 
@@ -3774,7 +3774,7 @@ button {
   align-items: center;
 }
 .settings-section-toggle:hover { color: #64748b; }
-.settings-section-chevron { font-size: 0.55rem; opacity: 0.7; }
+.settings-section-chevron { font-size: 0.55rem; }   /* no opacity: it dropped the glyph to 1.57:1 */
 [data-dark="true"] .settings-section-toggle:hover { color: #92a1b5; }
 
 
