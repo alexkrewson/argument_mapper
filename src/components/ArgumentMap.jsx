@@ -282,6 +282,7 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
   const themeRef = useRef(theme);
   useEffect(() => { themeRef.current = theme; }, [theme]);
 
+
   // buildStylesheet reads exactly four things off the theme: the two speaker
   // backgrounds and the dark/lcars flags. Never a name. But the `theme` prop is
   // App's resolvedTheme, which is rebuilt whenever playerNames changes -- so it
@@ -769,50 +770,84 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
     const el = containerRef.current;
     if (!el || typeof ResizeObserver === "undefined") return undefined;
 
-    // Two guards, both learned the hard way. cy.resize() clears and repaints the
-    // canvas, and the node bodies live on that canvas while the badges are HTML
-    // on top — so a spurious resize looks like every node blinking out and back
-    // while its badge hangs in mid-air.
+    // Two different jobs on the same observer, deliberately on two different
+    // schedules — which is the whole trick here:
     //
-    // 1. Only act when the box ACTUALLY changed. The observer fires for reasons
-    //    that leave the size alone, and re-rendering for those is pure flicker.
-    //    Rounded, because sub-pixel jitter is not a resize.
-    // 2. Settle before acting, rather than once per frame. The chrome slide is a
-    //    250ms height transition — per-frame coalescing still meant ~15 repaints
-    //    for one slide. One repaint, after it stops moving, is what is wanted.
+    //  - Pan compensation runs EVERY frame, because it is fixing motion, and
+    //    motion you correct only at the end is motion the user still watched.
+    //  - cy.resize() stays debounced, because it clears and repaints the
+    //    canvas. Node bodies live on that canvas while the badges are HTML on
+    //    top, so a resize per frame looks like every node blinking out and back
+    //    with its badge hanging in mid-air. The chrome slide is a 250ms
+    //    transition; one repaint after it stops is what is wanted.
+    //
+    // The size guard below is for the same flicker reason: the observer fires
+    // for reasons that leave the box alone, and resizing for those is pure
+    // flicker. Rounded, because sub-pixel jitter is not a resize.
     let last = { w: 0, h: 0 };
     let timer = 0;
-    let fromTop = null;   // container's screen y before the current burst began
+    // Where the container's top edge sat when we last looked. Deliberately kept
+    // across bursts: at the first frame of a new slide this still holds the
+    // settled position from before it started, so nothing is lost to the gap
+    // between the transition beginning and the observer first firing.
+    let lastTop = null;
+    let raf = 0;
+    let steady = 0;
+
+    // Cytoscape pins its content to the container's top-left, so when the
+    // chrome slides away and that corner rises 90px, the map rises with it —
+    // the app pans on your behalf. Undo it by exactly what the corner moved.
+    //
+    // panBy is safe to run per frame; it repaints but does not clear. It is
+    // cy.resize() that blanks the canvas, which is why that one stays debounced.
+    const compensate = () => {
+      const cy = cyRef.current;
+      if (!cy) return false;
+      const top = el.getBoundingClientRect().top;
+      const moved = lastTop !== null && top !== lastTop;
+      if (moved) cy.panBy({ x: 0, y: lastTop - top });
+      lastTop = top;
+      return moved;
+    };
+
+    // Why a rAF loop and not just the observer: ResizeObserver delivers AFTER
+    // layout, so every frame it reports is a frame the user has already been
+    // shown with the map out of place. Correcting only in the callback left
+    // 19-53px of visible travel on a Pixel 6, the spread widening whenever the
+    // device was busy. rAF runs before paint, so the correction lands in the
+    // same frame as the movement it cancels.
+    //
+    // Runs only while something is actually moving, then stops — a permanent
+    // rAF loop on a phone is a battery leak.
+    const follow = () => {
+      steady = compensate() ? 0 : steady + 1;
+      raf = steady < 6 ? requestAnimationFrame(follow) : 0;
+    };
+
+
     const ro = new ResizeObserver((entries) => {
       const box = entries[0]?.contentRect;
       if (!box) return;
+
+      compensate();               // this frame, immediately
+      if (!raf) {                 // and every frame after, until it settles
+        steady = 0;
+        raf = requestAnimationFrame(follow);
+      }
+
       const w = Math.round(box.width);
       const h = Math.round(box.height);
       if (w === last.w && h === last.h) return;
-      // Only at the START of a burst. Sampling every frame would measure one
-      // frame's worth of movement instead of the whole slide.
-      if (fromTop === null) fromTop = Math.round(el.getBoundingClientRect().top);
       last = { w, h };
       clearTimeout(timer);
-      timer = setTimeout(() => {
-        const cy = cyRef.current;
-        const before = fromTop;
-        fromTop = null;
-        if (!cy) return;
-        const after = Math.round(el.getBoundingClientRect().top);
-        cy.resize();
-        // Cytoscape anchors content to the container's top-left, so when the
-        // chrome slides away and that corner rises 90px, the whole map rises
-        // with it — which reads as the app panning for you. Push the content
-        // back down by exactly what the corner moved, and the map stays where
-        // you left it while the space appears around it.
-        if (before !== null && after !== before) {
-          cy.panBy({ x: 0, y: before - after });
-        }
-      }, 120);
+      timer = setTimeout(() => cyRef.current?.resize(), 120);
     });
     ro.observe(el);
-    return () => { clearTimeout(timer); ro.disconnect(); };
+    return () => {
+      clearTimeout(timer);
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
   }, []);
 
   return (
