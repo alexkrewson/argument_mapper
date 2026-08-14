@@ -47,7 +47,7 @@
     "@sentry/capacitor": "^4.2.0",
     "@sentry/react": "10.60.0",
     "@supabase/supabase-js": "^2.99.1",
-    "cytoscape": "^3.33.1",
+    "cytoscape": "^3.34.1",
     "cytoscape-dagre": "^2.5.0",
     "cytoscape-node-html-label": "^1.2.2",
     "react": "^19.2.0",
