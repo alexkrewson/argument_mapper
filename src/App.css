@@ -164,8 +164,16 @@
    Height = app-header (~54px) + tab-bar (~36px) ≈ 90px */
 .app-top-spacer {
   flex-shrink: 0;
+  /* Deliberately NOT transitioned, though it was until 2026-08-14.
+     Animating this height moved the map container's top edge across ~15 layout
+     frames, and ArgumentMap then spent those frames panning the map back to
+     cancel it — a chase that can never quite win, because the compositor gets
+     the last word after JS has run. The nodes visibly wiggled while the badges,
+     which are DOM and not painted through cytoscape's canvas, sat still.
+     Changing in one step gives the compensation a single edge to cancel, in the
+     same frame, exactly. .app-top still slides; it uses transform, which is
+     composited and costs no layout, so the header animation is unaffected. */
   height: 90px;
-  transition: height 0.25s ease;   /* matches .app-top's slide */
 }
 
 .app-top-spacer--hidden {

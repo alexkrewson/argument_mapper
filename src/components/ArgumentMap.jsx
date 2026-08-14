@@ -853,6 +853,19 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       const w = Math.round(box.width);
       const h = Math.round(box.height);
       if (w === last.w && h === last.h) return;
+
+      // Leading edge: resize at once on the first change of a burst, then let
+      // the trailing debounce catch the end. The chrome toggle is now a single
+      // 90px step rather than an animation, so waiting 120ms to resize left the
+      // canvas 90px short of its container for that whole time — a strip at the
+      // bottom with no map in it. One resize for a one-step change is not the
+      // per-frame resizing that caused the node flicker; that was ~15 of them.
+      if (!last.w && !last.h) {
+        cyRef.current?.resize();          // first observation, size it now
+      } else if (!timer) {
+        cyRef.current?.resize();          // start of a burst
+      }
+
       last = { w, h };
       clearTimeout(timer);
       timer = setTimeout(() => cyRef.current?.resize(), 120);
