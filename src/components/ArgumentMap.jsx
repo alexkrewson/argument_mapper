@@ -810,29 +810,44 @@ export default function ArgumentMap({ nodes, edges, onNodeClick, fadedNodeIds, c
       return moved;
     };
 
-    // Why a rAF loop and not just the observer: ResizeObserver delivers AFTER
-    // layout, so every frame it reports is a frame the user has already been
-    // shown with the map out of place. Correcting only in the callback left
-    // 19-53px of visible travel on a Pixel 6, the spread widening whenever the
-    // device was busy. rAF runs before paint, so the correction lands in the
-    // same frame as the movement it cancels.
+    // WHERE this runs is the whole thing, and it took three goes to get right.
     //
-    // Runs only while something is actually moving, then stops — a permanent
-    // rAF loop on a phone is a battery leak.
+    // Cytoscape drives its canvas from its own permanent rAF loop, so panBy()
+    // does not draw — it flags a frame as wanted and the loop paints it whenever
+    // it next runs. Our own rAF callback and cytoscape's are two independent
+    // callbacks in the same frame, and if theirs runs first, the canvas paints
+    // with the pan we are about to fix. The badges do not go through that loop,
+    // so they tracked perfectly while the node bodies lagged a frame behind —
+    // which is precisely the "badges stable, nodes wiggle" that got reported.
+    //
+    // beforeRender fires inside cytoscape's loop, immediately before the draw,
+    // so the correction is already applied to the pan the canvas is about to be
+    // painted with. Same frame, by construction, instead of by luck of ordering.
+    // Priority 500 puts it above animations (400) and element calcs (300): the
+    // viewport should be settled before anything reads positions from it.
+    const renderer = cyRef.current?.renderer?.();
+    const hooked = typeof renderer?.beforeRender === "function";
+    if (hooked) renderer.beforeRender(compensate, 500);
+
+    // Fallback for a cytoscape without that hook. Same idea, one frame less
+    // reliable: rAF at least runs before paint, unlike the ResizeObserver.
+    // Stops once things settle — a permanent rAF loop on a phone is a battery
+    // leak, and cytoscape's loop is already paying that cost for us above.
     const follow = () => {
       steady = compensate() ? 0 : steady + 1;
       raf = steady < 6 ? requestAnimationFrame(follow) : 0;
     };
 
-
     const ro = new ResizeObserver((entries) => {
       const box = entries[0]?.contentRect;
       if (!box) return;
 
-      compensate();               // this frame, immediately
-      if (!raf) {                 // and every frame after, until it settles
-        steady = 0;
-        raf = requestAnimationFrame(follow);
+      if (!hooked) {
+        compensate();             // this frame, immediately
+        if (!raf) {               // and every frame after, until it settles
+          steady = 0;
+          raf = requestAnimationFrame(follow);
+        }
       }
 
       const w = Math.round(box.width);
