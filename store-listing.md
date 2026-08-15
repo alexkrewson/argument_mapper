@@ -14,22 +14,28 @@ teeth, so this stays quiet about it.
 
 ---
 
-## Short description — 74 / 80 characters
+## Short description, 59 / 80 characters
 
 ```
-Map an argument as you have it. See the claims, the tactics, the concessions.
+Map a disagreement you've had, or one you're about to have.
 ```
 
-## Full description — 2,180 / 4,000 characters
+## Full description, 2,731 / 4,000 characters
 
 ```
 Most arguments go badly for the same reason: nobody can see the shape of them.
 Points get repeated, answered points get re-answered, and the thing actually in
-dispute drifts out of view. iDisagree draws the argument while you have it.
+dispute drifts out of view. iDisagree draws that shape, so you can both look at
+the same thing.
 
-Two people take turns. You type what you'd say anyway, and an AI reads each
-statement and places it on a live map — what it claims, what it supports, what
-it objects to, and how it connects to everything said so far.
+Paste in a conversation that already happened, a thread, a message history, an
+argument you are still turning over, and the whole exchange is mapped at once.
+
+Or sit down with the person you disagree with and take turns, a statement each,
+with the app as moderator. That asks something of both of you: a few seconds
+while it reads each statement, and the willingness to have your own argument
+drawn as plainly as theirs. It suits people who would rather be understood than
+win.
 
 WHAT IT SHOWS YOU
 
@@ -37,7 +43,7 @@ WHAT IT SHOWS YOU
   so you can see which point rests on which.
 
 • Rhetorical tactics, named as they happen. Straw men, ad hominems, false
-  dilemmas, slippery slopes, moving goalposts, circular reasoning — and the good
+  dilemmas, slippery slopes, moving goalposts, circular reasoning, and the good
   ones too: steel-manning, citing sources, addressing the counterargument
   properly. Every tag quotes the words it was read from, so you can judge the
   call rather than take it on trust.
@@ -45,23 +51,28 @@ WHAT IT SHOWS YOU
 • Contradictions, when someone argues against something they said earlier.
 
 • Possible concessions. When a statement reads like accepting the other side's
-  point, the app says so — and stops there. It never decides for you. You confirm
+  point, the app says so, and stops there. It never decides for you. You confirm
   it, or you don't, and either way the map records what happened.
 
 • A moderator's read on how each person is arguing, if you want a second opinion
   on the exchange itself.
 
-TWO WAYS TO USE IT
+THE GOAL
 
-Take turns live, one statement at a time — or paste in a conversation that
-already happened, from anywhere, and watch the whole thing get mapped at once.
+You are finished when nothing is left hanging. Every point either has a reply
+underneath it, or it has been conceded and faded out.
+
+A point with no reply and no concession is a point that got dropped. Those are
+what make an argument feel circular, because whatever nobody answered comes back
+later wearing different words. On the map you can see them sitting there, which
+of your points went unanswered and which of theirs you never got to.
 
 WHAT IT WON'T DO
 
 It won't tell you who won. There's no verdict, no score for being right. Game
 Mode adds points if you want the nudge, but the app's job is to show you the
 argument clearly enough that you can both see what's actually being disagreed
-about — which is usually smaller and more specific than it felt.
+about, which is usually smaller and more specific than it felt.
 
 PRIVACY
 
