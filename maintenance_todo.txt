@@ -3,6 +3,69 @@
 Top Priority Ideas (below)
 ================================================================================
 
+  ============================================================================
+  START HERE — end of 2026-08-14. The 08-12 block further down is still
+  accurate history; this supersedes it on the tester round only.
+  ============================================================================
+
+  THE UNPROVEN THING IS NOW PROVEN, and the answer was no. The 08-12 block
+  below says licence testing "whether it grants a free install of a PAID app
+  is NOT established". It does not. alex.krewson@gmail.com is on the licence
+  testing list, uninstalled the sideloaded debug build, and Play offered the
+  app at $1.99 like any stranger. Licence testing covers in-app purchases,
+  not the app's own price.
+
+  THE ROUTE AROUND IT IS PROMO CODES, which sidestep the question entirely
+  rather than answering it. Created 2026-08-14 under Monetize with Play >
+  Promo codes (inside the app, NOT the account-level console):
+        name    Closed testing alpha testers, Aug 2026
+        type    Paid app   <- not One-time product, we have no Play IAP
+        count   20 of the 500-per-quarter allowance
+        window  Aug 16 to Dec 31 2026
+        file    C:\Users\Alex\Downloads\promotion_codes.csv, 20 codes,
+                23 chars each, one column, no duplicates. NOT in the repo,
+                and it must not be: each is a free copy of a paid app.
+  Codes will not redeem while Status reads Scheduled. Watch that field, not
+  the clock: the create form validates in a timezone AHEAD of Eastern, which
+  is why "today" was rejected as being in the past.
+  NEXT: redeem one yourself once Active. You cannot buy your own app but you
+  CAN redeem a code for it, so this is the one part of the tester flow that
+  can be verified alone, before anyone else is involved.
+
+  DO NOT SWITCH THE APP TO FREE to dodge this. Paid to free is the one-way
+  door; it would solve a week and cost the price permanently.
+
+  SHIPPED TODAY, all three already on the closed track as 3 (1.0.1):
+      ab0a498  cytoscape 3.34.1. Pinching with a finger resting on a node
+               crashed the map EVERY time, not intermittently, because
+               autoungrabify leaves dragData.touchDragEles undefined. Pinch
+               became the only zoom gesture when afa7d96 removed the
+               tap-zooms, so every tester would have met it.
+      66ebb79  the chrome slide no longer drags the map. The cause was one
+               CSS line: .app-top-spacer animated its height, walking the
+               container through ~16 layout positions that JS then chased and
+               the compositor lagged behind. Measured 0px of composited
+               movement afterwards on a Pixel 6.
+      78118f5  settings panel text to WCAG AA in all eight themes. It was as
+               low as 1.57:1. tests/settings-contrast.spec.js now renders the
+               panel in every theme and measures it, because contrast.spec.js
+               reads themes.js and these were hardcoded greys in App.css that
+               no token-level check could ever see.
+      47e03c5  store listing reframed. "draws the argument while you have it"
+               oversold a few-seconds API call as realtime. Now leads with
+               mapping a conversation that already happened. Added THE GOAL
+               (every node either has a reply under it or is conceded and
+               faded), and removed every em dash at Alex's request.
+
+  STILL WAITING ON GOOGLE as of 2026-08-14 23:30: release 3 (1.0.1) and both
+  store listing text changes. Managed publishing is OFF, so both publish
+  automatically once approved. Nothing to press.
+
+  THE REAL BLOCKER IS STILL RECRUITMENT: 0 testers opted in. Twelve must be
+  opted in CONTINUOUSLY for fourteen days, so aim for fifteen, tell them not
+  to uninstall, and check they are on Android. An iPhone friend can test the
+  web app usefully but cannot count toward the twelve.
+
 --- IDEA (2026-08-14): mark a CIRCULAR CONVERSATION on the map ---
 Raised by Alex while waiting on the build-3 review. Distinct from the
 circular_reasoning fallacy we already score (-8), which is LOCAL: one node
