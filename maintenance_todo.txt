@@ -3,6 +3,52 @@
 Top Priority Ideas (below)
 ================================================================================
 
+--- IDEA (2026-08-14): mark a CIRCULAR CONVERSATION on the map ---
+Raised by Alex while waiting on the build-3 review. Distinct from the
+circular_reasoning fallacy we already score (-8), which is LOCAL: one node
+whose premise assumes its own conclusion. This is GLOBAL: two people
+re-treading the same ground over many turns.
+
+It cannot render as a loop. claude.js:203 requires every node to have exactly
+one outgoing edge and never be left disconnected, so the graph is a tree by
+construction and a cycle is impossible. Circularity therefore shows up as a
+long thin spine that gets deeper without getting newer -- node 11 is node 4
+wearing a hat. Nothing currently compares a new node to its ancestors, so it
+is invisible.
+
+The mechanism already exists and does NOT need the one-parent rule broken:
+`contradicts_set` and `goalposts_set` (App.jsx ~60-70) already store a
+targetId ON a node, pointing at a non-parent, carried without an edge. Dagre
+never sees those, so the layout stays a tree. An "echoes node 4" pointer is
+the same move, surfaced as a badge.
+
+Why it is worth doing: it turns "we're going in circles" from an accusation
+somebody has to make into a property of the drawing that both people can look
+at -- which is the thing this app exists to do.
+
+Open question, not yet decided: detection. Semantic similarity against
+ancestors is the obvious route, but it is a per-node cost on every turn.
+Cheaper option is to let the existing analysis pass flag it, since it already
+reads the whole map.
+
+--- QUESTION (2026-08-14): should a messy dump map EVERY statement? ---
+Also from Alex, same conversation, not yet actioned. Today the prompt has no
+filter of any kind: no skip/ignore/omit instruction exists, every node type is
+argumentative (no "aside" or "noise" type), and non-sequiturs are explicitly
+required to be mapped rather than dropped -- "must never be left
+disconnected", claude.js:203. So pasting a long hostile thread maps all of it.
+
+Two costs: the reader wades through many nodes to find the two that mattered,
+and every atomic idea is billed. tests/messy-arguments.spec.js already probes
+this deliberately (personal-attacks-over-chores,
+sarcastic-non-sequitur-pizza-fight) and leaves the debates in History to be
+looked at -- start there before changing the prompt, the evidence exists.
+
+One consequence that is arguably a feature, not a bug: because a non-sequitur
+attaches to whichever node came immediately before it, a RUN of digressions
+chains into a long tail of `unrelated` edges. A derailed conversation already
+has a distinctive shape on the map, for free.
+
 --- TODO (raised from art_app, 2026-08-08): adopt the shared upload-apk.mjs ---
 NOTHING IS BROKEN HERE. This repo's scripts/upload-apk.mjs works, and it is the
 version everything else was copied from. This note exists only so the duplicate
