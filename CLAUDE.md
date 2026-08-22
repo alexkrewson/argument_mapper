@@ -7,11 +7,10 @@ Read the shared conventions first: `CHANGELOG.md`, then `best-practices.md`,
 to this project.
 
 **Start at the `START HERE` block in `maintenance_todo.txt`** — the one dated
-2026-08-12, near the top. It carries the current state: the app is submitted to
-Play closed testing, what is deferred and why, and the one thing about the
-tester round that is still unproven. The 08-07, 08-08 and 08-09 blocks below it
-are accurate history; everything under them is superseded, including the 08-03
-one that used to be the entry point.
+2026-08-21, at the top. It carries the current state: the app is on the Play
+closed track, how testers get it free, and who the bought testers are. Every
+block below it is accurate history for its own date, and each says what later
+work superseded it — read down only as far as you need.
 
 `manual-test-plan.md` is the on-device pass: ~50 cases weighted towards what the
 automated suites can't reach (touch, the back button, a real inbox, a real

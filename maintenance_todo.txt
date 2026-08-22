@@ -4,8 +4,50 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
-  START HERE — end of 2026-08-14. The 08-12 block further down is still
-  accurate history; this supersedes it on the tester round only.
+  START HERE — end of 2026-08-21. The 08-14 block below is accurate history
+  except on price: promo codes are no longer the route.
+  ============================================================================
+
+  THE ROUTE IS AN APP-LEVEL DISCOUNT, not promo codes. Set in the Play
+  Console against the app's own price, it applies to everyone Play offers
+  the app to, for a fixed window — currently two weeks. Friends have
+  installed free under it, which is the thing 08-14 could not get promo
+  codes to prove without a stranger.
+
+  IT IS NOT THE ONE-WAY DOOR the 08-14 block warns about. The price itself
+  is unchanged and comes back by itself when the window closes. Paid to free
+  is still permanent; a discount is not, and is what to reach for instead.
+
+  THE 20 PROMO CODES REMAIN VALID to Dec 31 2026, still only in
+  C:\Users\Alex\Downloads\promotion_codes.csv. Keep them as the fallback for
+  a one-off tester outside a discount window. They were never wrong, just
+  more work than the price sheet.
+
+  THE ONE EDGE A DISCOUNT HAS AND A CODE DOES NOT: it expires on a date
+  rather than on redemption. An install already made survives that expiry,
+  so a tester who joined on day one is safe either way. A REPLACEMENT tester
+  matched on day ten is not, if the discount started before the tester round
+  did. Check the end date outlasts the round rather than merely spanning
+  fourteen days.
+
+  TESTERS ARE BOUGHT. TesterBee campaign live 2026-08-21: $14.99 for 12
+  testers x 14 days, auto approval. Their group testerbee@googlegroups.com
+  sits on the closed track beside the friends' group, and the two cannot see
+  each other's members, which is why it is a second group and not one list.
+        support     their email is BROKEN. hello@testerbee.com bounces with
+                    a server misconfiguration, and is not the published
+                    address anyway. Use testerbee.com/contact or WhatsApp
+                    +880 1888 576622. Do not lose a day to a bounce.
+        dashboard   "Failed to load app" over a raw Firestore index error is
+                    transient. That same error means "index still building",
+                    not only "index missing", and it cleared in minutes.
+  Google expects genuine testers, so a bought round is a grey area. Known
+  and accepted, not overlooked.
+
+  ============================================================================
+  End of 2026-08-14. Superseded on price by the 08-21 block above; the
+  rest of it, and the 08-12 block further down, are still accurate
+  history.
   ============================================================================
 
   THE UNPROVEN THING IS NOW PROVEN, and the answer was no. The 08-12 block
