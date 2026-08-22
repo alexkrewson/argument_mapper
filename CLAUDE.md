@@ -76,13 +76,33 @@ Start-Process "$env:LOCALAPPDATA\Android\Sdk\emulator\emulator.exe" `
 ## Crash reporting
 
 Sentry, wired in `src/utils/monitoring.js`, live since 2026-08-05 — project
-`idisagree`. **No-ops without `VITE_SENTRY_DSN`**, which is still true of a
-fresh clone but **no longer true of this machine**: `.env` now holds the DSN, so
-`npm run dev` and the APK suites report to the *production* project. Only
-errors are sent, so a green run is silent, but a failing test can file an issue
-that looks like a real user's crash. Unresolved on purpose — the fix is a
-separate `environment` or a flag in `beforeSend`, not deleting the DSN from test
-builds, because the suite is supposed to test the build that ships.
+`idisagree`, org `alexs-entropy-reducing-devices`. **No-ops without
+`VITE_SENTRY_DSN`**, which is still true of a fresh clone but **no longer true
+of this machine**: `.env` holds the DSN, so anything built here carries it.
+
+Two of the three ways a test run could report itself as a real user are closed:
+
+- **the dev server never reports** — `initMonitoring` returns early on
+  `import.meta.env.DEV`, so `npm run dev` and anything driving it are silent;
+- **the emulator never reports** — `scrubEvent` returns null on an
+  `sdk_gphone`-style user agent, so the APK suites cannot file issues. Dropped
+  at `beforeSend` rather than by skipping `init`, so the suite still proves the
+  shipping startup path works.
+
+**The web suite is the one still open.** `playwright.config.js` defaults
+`baseURL` to the live site — a production build, a real DSN, an ordinary
+desktop user agent. Nothing distinguishes it from a tester, so a failing web
+test can still file an issue that looks like a real user's crash.
+
+**`Users 0` on every issue means nothing here.** `scrubEvent` deletes
+`event.user`, so the user count is structurally zero on every event. Read the
+event count instead.
+
+The org fell to Sentry's free Developer plan on 2026-08-21 when the trial
+ended: **5k errors a month**, and anything past that is dropped, not queued.
+Tracing and replay are pinned to zero in `monitoring.js`, so errors are the
+only category that can fill — but one crash loop in a WebView can spend a
+month's allowance in an afternoon.
 
 The DSN is a write-only ingest key and is meant to be public; web reads it from
 Cloudflare Pages variables, the APK bakes in whatever `.env` held at build time
