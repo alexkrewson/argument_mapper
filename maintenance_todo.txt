@@ -4,8 +4,75 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
-  START HERE — end of 2026-08-21. The 08-14 block below is accurate history
-  except on price: promo codes are no longer the route.
+  START HERE — end of 2026-09-06. Closed testing is over and production
+  access is in review. Every block below is accurate history for its date.
+  ============================================================================
+
+  THE FOURTEEN DAYS ARE DONE. The TesterBee round ran 2026-08-21 to 09-04, and
+  production access was applied for on 09-06. Google says up to seven days.
+  Nothing is blocked on us while it sits there.
+
+  WHAT THE FORM WAS TOLD, so a resubmission can say the same thing:
+        recruit     friends and family first, then TesterBee named outright
+                    as a paid provider. The question asks whether you used
+                    one, so dodging it is the only wrong answer.
+        difficulty  Difficult
+        audience    adults who argue in writing, plus debate and critical
+                    thinking teaching. Not directed at children, which has to
+                    agree with the content rating answers.
+        value       lifted from store-listing.md, no claim larger
+        installs    0 - 10K
+        changes     the three 08-13/08-14 fixes, described as found by
+                    hands-on device testing rather than reported by testers,
+                    because no tester reported anything.
+        readiness   validate:apk's 55 checks, both suites, the ~50-case
+                    manual-test-plan.md pass, Sentry live throughout.
+
+  THE ROUND IN NUMBERS, off auth.users joined to argument_mapper.debates: 22
+  accounts, of which about eleven are Alex's own test addresses, and 62 maps,
+  of which 51 are Alex's. EVERYONE WHO IS NOT ALEX MADE TEN MAPS. In the round
+  window (signups on 08-21 and 08-22): 6 accounts, 5 of them made a map, 6
+  maps between them. Twelve testers were paid for.
+  THE ONE GOOD DATAPOINT: mdsalman7269aj@gmail.com signed up 08-22 and last
+  touched a map on 09-06, sixteen days later, long after the obligation ended.
+
+  SIGNUP IS NOT BROKEN, and establishing that took most of 09-06. Four
+  accounts appeared that day, all unconfirmed, which looked exactly like the
+  unwarmed Resend domain this file has warned about since July. It was not.
+  Ruled out in order:
+        delivery    Resend logged all six confirmation emails as delivered
+        reputation  mail-tester scored 10/10, and a fresh signup to a real
+                    Gmail landed in the ordinary inbox, not spam
+        template    Confirm signup carries {{ .Token }} and NO link, so the
+                    code the app asks for is the only way in, and it is there
+        client      verifyOtp({ type: "signup" }) at AuthModal.jsx:80 is right
+  Proved working end to end twice on 09-06: tanvirrahman.codes confirmed at
+  15:24:29Z after three attempts, the mail-tester address at 15:50:02Z. The
+  other three abandoned, and tanvir made nothing after getting in.
+
+  A STUCK USER RE-SUBMITS SIGNUP RATHER THAN PRESSING RESEND CODE. Tanvir's
+  three emails are three /signup calls carrying user_confirmation_requested,
+  not /resend. Worth knowing before reading a Resend log as three resends.
+
+  AT LEAST ONE TESTER WAS ON THE WEB APP, NOT THE APK. That /verify entry's
+  referer is https://idisagree.trolleysolution.com. capacitor.config.json has
+  no server.url, so the Android WebView reports its origin as
+  https://localhost — the same quirk that broke the Stripe redirect in 46eb07d
+  — and cannot produce that referer. Whether the 08-21 and 08-22 testers were
+  also on the web can no longer be answered, see retention below. Worth
+  finding out what URL TesterBee actually hands a tester.
+
+  AUTH LOG RETENTION IS ABOUT A DAY on the free tier. Anything the Auth Logs
+  could tell you about a tester, take it the same day or it is gone.
+
+  ALLOWBACKUP IS NOW FALSE, reversing deferred fix 4 in the 08-12 block: Auto
+  Backup was copying the Supabase session to the user's Google Drive. It is a
+  manifest change, so it takes effect on the NEXT build, not on the release
+  currently in review.
+
+  ============================================================================
+  End of 2026-08-21. Still accurate on the discount and on TesterBee; the
+  round it describes has since finished, see the 09-06 block above.
   ============================================================================
 
   THE ROUTE IS AN APP-LEVEL DISCOUNT, not promo codes. Set in the Play

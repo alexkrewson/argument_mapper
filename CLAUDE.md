@@ -28,6 +28,9 @@ record of it. Nothing needs copying between machines any more.
 - **`supabase.from("debates")` is the live table name.** User-facing copy says
   "productive disagreement", but the schema, `data-debate-id`, the
   `debate-flow` anchor and the identifiers are deliberately unchanged.
+  In SQL it is **`argument_mapper.debates`, not `public.debates`** — the
+  client sets `db: { schema: "argument_mapper" }` in `src/utils/supabase.js`,
+  so a dashboard query against `public` fails with 42P01.
 - **iDisagree has its own Supabase project: `hdhqpeevtofevymayvie`.** Production
   moved there 2026-08-02. The old shared project (`ycuuxnscbxiibsnefgef`, "the
   keeper") still holds packing_lists and comment_cluster/Analyzer, plus an
