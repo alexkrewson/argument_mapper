@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- allowBackup is false, not the default true. Auto Backup copies app
+         data to the user's Google Drive, and the Supabase session lives in
+         that data, so an auth token was travelling to Drive and restoring
+         itself onto a reinstall. Turning it off is user-visible - there is no
+         longer a backup to restore from - which is why it was left alone for
+         twelve testers and changed now. Takes effect on the next build. -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
