@@ -14,8 +14,10 @@ work superseded it — read down only as far as you need.
 
 `manual-test-plan.md` is the on-device pass: ~50 cases weighted towards what the
 automated suites can't reach (touch, the back button, a real inbox, a real
-network). It records what's been verified and **on which build** — every local
-build is `versionCode 2`, so nothing distinguishes them from the phone.
+network). It records what's been verified and **on which build** — but every
+local build carries whatever `versionCode` currently sits in `build.gradle`, so
+two builds at the same number are indistinguishable from the phone. Only
+`npm run release:aab` moves that number; ad-hoc builds never do.
 
 ## Machine setup
 

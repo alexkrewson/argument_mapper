@@ -4,8 +4,68 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
-  START HERE — end of 2026-09-06. Closed testing is over and production
-  access is in review. Every block below is accurate history for its date.
+  START HERE — end of 2026-09-22. Production access was granted and release
+  4 (1.0.1) is with Google for review. Every block below is accurate history
+  for its date.
+  ============================================================================
+
+  IT IS IN PRODUCTION REVIEW. Release 4 (1.0.1) went to Google on 2026-09-22,
+  sent as "Submit 2 changes for review" — the release itself plus a countries
+  change. MANAGED PUBLISHING IS OFF, so approval publishes it with no further
+  step from anyone. A first production review runs to days, not hours.
+
+  PRODUCTION ACCESS HAD ALREADY BEEN GRANTED, and the 09-06 block below is
+  wrong to say it was still in review. The grant notice sits on the app
+  Dashboard BELOW THE FOLD — "Congratulations! Your app has been granted
+  Google Play production access". Nothing arrived by email, and the
+  notifications bell held only the Sep 8 developer-verification broadcast.
+  Sixteen days were spent waiting for something that had already happened.
+        the lesson  the Dashboard's own release checklist is the status.
+                    Publishing overview reports CHANGE submissions only and
+                    never mentions production access. Submission activity
+                    likewise: it records from 2026-05-01, had four entries
+                    ending Aug 21, and its silence about 09-06 proves only
+                    that no change was submitted that day.
+
+  ALL 172 COUNTRIES, AND THAT IS THE WHOLE LIST. Selecting "All" yields 172
+  because Play does not operate in Cuba, North Korea, Iran, Syria and a few
+  others under US sanctions. They are not boxes anyone forgot to tick. Tracks
+  hold SEPARATE country lists, which is why Production was empty while the
+  closed track was not, and why the change read "Add 172" rather than
+  amending something. Reversible at any time, and Google is seller of record,
+  so widening availability creates no tax filing for us.
+
+  THE BUILD PATH IS `npm run release:aab`. It runs scripts/bump-version.mjs
+  first, so versionCode moves ON ITS OWN — do not hand-edit it, that double
+  bumps. This release took 3 -> 4 and is the FIRST BUILD CARRYING
+  allowBackup=false, the manifest fix from 23a238a that could only take effect
+  on a new build. The .aab lands in
+  android/app/build/outputs/bundle/release/ and uploads itself to Drive.
+
+  ANDROID DEVELOPER VERIFICATION IS DONE and needs nothing before the
+  Sep 30 2026 deadline: com.alexkrewson.argumentmapper has been Registered
+  since 2026-08-12, with 3 keys. The Sep 8 notification threatening global
+  removal was a broadcast to every developer, not a prompt aimed at us. The
+  package sits under the Trolley Solution account despite the alexkrewson
+  name; that mismatch is expected and is not a sign of a missing entry.
+
+  TWO KNOWN-HARMLESS THINGS LEFT ALONE:
+        symbols     Play warns the bundle ships native code without debug
+                    symbols. All of it is Sentry's — libsentry.so and
+                    libsentry-android.so, nothing of ours — so the warning is
+                    advisory, and JS errors never needed it.
+                    `ndk { debugSymbolLevel 'SYMBOL_TABLE' }` in the release
+                    buildType silences it whenever a rebuild is convenient.
+        rclone      scripts/upload-apk.mjs pushes every build to Drive using
+                    rclone's SHARED Google client_id, which rclone warns is
+                    being retired DURING 2026. That upload will stop working
+                    at some point this year; making our own client_id is the
+                    documented fix.
+
+  ============================================================================
+  End of 2026-09-06. Wrong on one thing only — production access was not
+  still in review, it had already been granted, see the 09-22 block above.
+  The round's numbers, the signup investigation and allowBackup all hold.
   ============================================================================
 
   THE FOURTEEN DAYS ARE DONE. The TesterBee round ran 2026-08-21 to 09-04, and
