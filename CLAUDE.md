@@ -124,3 +124,12 @@ Cloudflare Pages, project `idisagree`, building from `master` — **not** GitHub
 Pages, despite the Pages API still reporting `build_type: workflow`. A pushed
 commit that fails to build is silent from outside, so confirm with
 `npm run deploy:verify` rather than assuming the push was enough.
+
+**Run `npm run build` first if you've built for Android this session.**
+`deploy:verify` compares the entry-bundle hash in the local `dist/` against
+what the live site serves — and every Android path (`build:apk`,
+`build:aab:release`, `release:aab`, `ship`) runs `build:mobile`, which leaves
+`dist/` holding the mobile bundle. Comparing that to the web site can never
+match, so the check reports `The deploy did not take effect` for a deploy
+that landed perfectly. `dist/index.html` tells you which one you're holding:
+`src="./assets/…"` is mobile, `src="/assets/…"` is web.
