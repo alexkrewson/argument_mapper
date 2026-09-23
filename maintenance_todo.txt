@@ -4,15 +4,34 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
-  START HERE — end of 2026-09-22. Production access was granted and release
-  4 (1.0.1) is with Google for review. Every block below is accurate history
-  for its date.
+  START HERE — end of 2026-09-23. IT IS LIVE ON GOOGLE PLAY. Every block
+  below is accurate history for its date.
   ============================================================================
 
-  IT IS IN PRODUCTION REVIEW. Release 4 (1.0.1) went to Google on 2026-09-22,
-  sent as "Submit 2 changes for review" — the release itself plus a countries
-  change. MANAGED PUBLISHING IS OFF, so approval publishes it with no further
-  step from anyone. A first production review runs to days, not hours.
+  IDISAGREE IS PUBLIC, at $1.99:
+  play.google.com/store/apps/details?id=com.alexkrewson.argumentmapper
+  Release 4 (1.0.1) was submitted 2026-09-22 and was live at 100% rollout
+  within about 22 hours — far faster than the "days, not hours" a first
+  production review is supposed to take. Do not plan around that being
+  typical, but do not assume days either.
+
+  THE LISTING RENDERS AS DESIGNED. Verified on the live store page: the
+  -square icon shows the whole tree with no launcher clipping, so the
+  adaptive-icon inset work holds on Play as well as on device; all six
+  screenshots are there including Midnight; content rating came back
+  Everyone despite the honest yes on user-generated content; the full
+  description opens on the intended line. Nothing needed fixing after the
+  fact.
+
+  PLAY'S STATS LAG ABOUT A DAY, so a fresh release looks dead. Installs,
+  crash rate and revenue all showed "–" with "Data is not yet available"
+  22 hours in. Separately, MONTHLY ACTIVE DEVICES READS 5, DOWN 72% — that
+  is the TesterBee cohort decaying inside a 28-day window that predates
+  production entirely. Neither number means anything yet; do not debug them.
+
+  WHAT ACTUALLY PROVED IT SHIPPED: the "View on Play" link beside the package
+  name on the app Dashboard. It only appears once a public store page exists.
+  "Latest production release · 22 hours ago · 100%" corroborates it.
 
   PRODUCTION ACCESS HAD ALREADY BEEN GRANTED, and the 09-06 block below is
   wrong to say it was still in review. The grant notice sits on the app
@@ -61,6 +80,11 @@ Top Priority Ideas (below)
                     being retired DURING 2026. That upload will stop working
                     at some point this year; making our own client_id is the
                     documented fix.
+
+  ============================================================================
+  End of 2026-09-22. Accurate for its date; the release it describes as "with
+  Google" went live 2026-09-23, see the block above.
+  ============================================================================
 
   ============================================================================
   End of 2026-09-06. Wrong on one thing only — production access was not
