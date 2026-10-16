@@ -41,7 +41,11 @@ Deno.serve(async (req) => {
   const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "2024-04-10" });
 
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
+    // Listed here, not left to the Dashboard: that setting is account-wide and
+    // this account is shared with Distillery. Only methods that settle at
+    // checkout -- card covers Google Pay and Apple Pay, Link pays by card.
+    // "link" must be enabled in the Dashboard or every session fails to create.
+    payment_method_types: ["card", "link"],
     line_items: [{
       price_data: {
         currency: "usd",

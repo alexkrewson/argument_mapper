@@ -21,7 +21,13 @@ Deno.serve(async (req) => {
     return new Response(`Webhook signature verification failed: ${err}`, { status: 400 });
   }
 
-  if (event.type === "checkout.session.completed") {
+  // completed fires for every finished checkout, but a delayed method (a bank
+  // debit) finishes with payment_status "unpaid" and pays later through
+  // async_payment_succeeded. Crediting on completed alone would hand out
+  // credits for money that can still bounce. grant_purchase keys on the
+  // session id, so a session seen by both events is credited once.
+  if (event.type === "checkout.session.completed" ||
+      event.type === "checkout.session.async_payment_succeeded") {
     const session = event.data.object as Stripe.Checkout.Session;
 
     // Ignore anything this app didn't sell. Stripe delivers every completion to
@@ -38,6 +44,10 @@ Deno.serve(async (req) => {
     // without one.
     if (session.metadata?.app !== APP_ID) {
       return new Response(`Ignoring session from ${session.metadata?.app ?? "an unmarked app"}`, { status: 200 });
+    }
+
+    if (session.payment_status !== "paid") {
+      return new Response(`Session ${session.id} is ${session.payment_status}; waiting for payment`, { status: 200 });
     }
 
     const userId       = session.client_reference_id;
