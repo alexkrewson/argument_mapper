@@ -125,7 +125,7 @@ Top Priority Ideas (below)
            completed event is past Stripe's 30-day trim, so whether
            payment_status reaches that version is UNPROVEN -- hence "absent
            counts as paid". The next real web purchase settles it.
-           Enabled wallets: Apple Pay, Link. Google Pay is OFF. Wallets are
+           Enabled wallets: Apple Pay, Google Pay (on 10-16), Link. Wallets are
            account-wide, so they apply to Distillery too (it hard-codes card,
            so the other payment-method toggles don't reach it).
     [ ] 5. Play: service account in Google Cloud with the Android Publisher
