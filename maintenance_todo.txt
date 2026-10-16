@@ -112,7 +112,16 @@ Top Priority Ideas (below)
                Google Auth Platform > Audience > Publish app. With only
                email/profile/openid scopes no verification review is needed.
     [ ] 4. Only then deploy the web app — its "Continue with Google" button
-           errors until step 3 is done.
+           errors until step 3 is done. Everything is on branch play-billing
+           (pushed 2026-10-16); merging it to master IS the web deploy.
+           It also carries a Stripe change (59e755a) with two preconditions:
+           Link ENABLED in Stripe > Settings > Payment methods (or every
+           checkout session fails to create), and the webhook endpoint
+           subscribed to checkout.session.async_payment_succeeded. Then
+           deploy create-checkout-session + stripe-webhook with
+           --project-ref hdhqpeevtofevymayvie. Distillery hard-codes card
+           too, so Dashboard payment-method toggles don't reach it -- but
+           the Google Pay / Apple Pay wallet toggles do, for both apps.
     [ ] 5. Play: service account in Google Cloud with the Android Publisher
            API enabled, invited in Play Console > Users and permissions with
            View financial data + Manage orders and subscriptions. Its JSON key
