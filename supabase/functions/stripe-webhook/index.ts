@@ -46,7 +46,11 @@ Deno.serve(async (req) => {
       return new Response(`Ignoring session from ${session.metadata?.app ?? "an unmarked app"}`, { status: 200 });
     }
 
-    if (session.payment_status !== "paid") {
+    // Absent means "paid" here, not "unpaid": this endpoint renders events at
+    // API version 2019-09-09, and no payload old enough to prove the field
+    // reaches that version was left untrimmed to check. Only methods that
+    // settle at checkout are offered, so an absent status is a settled one.
+    if (session.payment_status && session.payment_status !== "paid") {
       return new Response(`Session ${session.id} is ${session.payment_status}; waiting for payment`, { status: 200 });
     }
 
