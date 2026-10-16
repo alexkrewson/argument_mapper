@@ -122,7 +122,10 @@ Top Priority Ideas (below)
                listed test users can sign in and everyone else gets an error.
                Google Auth Platform > Audience > Publish app. With only
                email/profile/openid scopes no verification review is needed.
-    [ ] 4. Only then deploy the web app — its "Continue with Google" button
+    [x] 4. WEB DEPLOYED 2026-10-16: play-billing fast-forwarded to master
+           (017184f); live bundle carries "Continue with Google", /privacy
+           shows Sep 26. deploy:verify false-negatived on hash (cause 2).
+           Was: Only then deploy the web app — its "Continue with Google" button
            errors until step 3 is done. Everything is on branch play-billing
            (pushed 2026-10-16); merging it to master IS the web deploy.
            STRIPE PART DONE 2026-10-16, ahead of the merge (functions
