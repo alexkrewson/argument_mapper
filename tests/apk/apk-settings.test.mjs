@@ -70,16 +70,10 @@ describe("APK settings menu (free)", { skip }, () => {
       "settings-user-email",
       "settings-signout",
       "settings-delete-data-btn",
+      "settings-buy-credits",
     ]) {
       assert.ok(await app.exists(id), `missing ${id}`);
     }
-    // The balance still shows; only the purchase path is gone. See the
-    // buy-credits test below for why this is asserted rather than dropped.
-    assert.equal(
-      await app.exists("settings-buy-credits"),
-      false,
-      "Top up button is present on Android — violates Play's Payments policy",
-    );
   });
 
   test("account shows the signed-in email and a credit balance", async () => {
@@ -122,22 +116,31 @@ describe("APK settings menu (free)", { skip }, () => {
     assert.ok(await app.isSignedIn(), "session lost after a rejected password change");
   });
 
-  // Inverted 2026-08-03. This used to open the Stripe modal; on Android that is
-  // now a policy violation rather than a feature. Play's Payments policy wants
-  // Play Billing for credits consumed in-app, so the whole purchase path is
-  // web-only. Asserting ABSENCE here is what keeps it that way -- if someone
-  // later removes the isNativePlatform() guard, this test is what notices.
-  // The web equivalent still runs: tests/buy-credits.spec.js.
-  test("Buy Credits is not reachable on Android", async () => {
-    await app.ensureSection("settings-account-toggle", "settings-credits-amount");
-    shot("no-buy-credits-on-native");
+  // Re-inverted 2026-09-26. From 08-03 this asserted Top up was ABSENT,
+  // because the only purchase path was Stripe and Play's Payments policy wants
+  // Play Billing for credits used in-app. Android now has Play Billing, so the
+  // invariant worth guarding is different: the modal opens, and it is the PLAY
+  // modal -- never the Stripe packs, never a link out.
+  //
+  // This emulator is a google_apis image with no Play Store, so the honest
+  // result here is "not available on this device". A real purchase can only be
+  // tested on a phone that installed the app from a Play track.
+  test("Top up on Android opens the Google Play modal, not Stripe", async () => {
+    await app.ensureSection("settings-account-toggle", "settings-buy-credits");
+    await app.click("settings-buy-credits");
+    await waitFor(
+      () => app.eval(`!!document.querySelector('[data-testid="credits-modal-error"], .credits-pack-btn')`),
+      { what: "the Play modal to finish loading", timeout: 15_000 },
+    );
+    shot("play-credits-modal");
 
-    assert.equal(await app.exists("settings-buy-credits"), false, "Top up button is reachable");
-    assert.equal(await app.exists("credits-modal-close"), false, "credits modal rendered unprompted");
+    const note = await app.eval(`document.querySelector('.credits-modal-note:last-of-type')?.innerText ?? ''`);
+    assert.match(String(note), /Google Play/, `not the Play modal: "${note}"`);
+    assert.doesNotMatch(String(note), /Stripe/, "Stripe copy shown on Android");
 
-    // The balance is still shown -- users should know where they stand even
-    // when they can't top up from here.
-    assert.ok(await app.exists("settings-credits-amount"), "credit balance is missing too");
+    await app.click("credits-modal-close");
+    await sleep(900);
+    assert.equal(await app.exists("credits-modal-close"), false, "credits modal did not close");
   });
 
   test("delete-data asks for confirmation and cancel aborts", async () => {
@@ -341,7 +344,13 @@ describe("APK settings menu (free)", { skip }, () => {
   test("sign out clears the session, then sign back in", async () => {
     await app.ensureSection("settings-account-toggle", "settings-signout");
     await app.click("settings-signout");
-    await sleep(4000);
+    // Waits on the outcome rather than sleeping a fixed 4s. Sign-out is a
+    // network call (POST /auth/v1/logout) and the session only clears when it
+    // returns; on 2026-09-26 an emulator DNS timeout (resolv terrno 110) made
+    // it take ~4.5s, and the fixed sleep lost that race three runs in a row.
+    // Still fails if sign-out never happens -- it just stops racing DNS.
+    await waitFor(async () => !(await app.exists("tab-history")),
+      { what: "sign-out to clear the session", timeout: 15_000 }).catch(() => {});
     await app.closeSettings();
     shot("signed-out");
 

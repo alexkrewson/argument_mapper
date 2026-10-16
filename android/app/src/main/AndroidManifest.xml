@@ -35,6 +35,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Google sign-in comes home here. Google refuses OAuth inside a
+                 WebView (disallowed_useragent), so sign-in runs in a Custom
+                 Tab and Supabase redirects to this scheme with a PKCE code.
+                 The package name as the scheme is what keeps another app from
+                 plausibly claiming it. singleTask above is what brings this
+                 same activity forward and closes the tab on top of it. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.alexkrewson.argumentmapper" android:host="auth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

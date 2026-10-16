@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Capacitor } from "@capacitor/core";
 import { THEMES } from "../utils/themes.js";
 import { supabase } from "../utils/supabase";
 import { copyText } from "../utils/clipboard";
@@ -161,22 +160,23 @@ export default function SettingsPanel({ open, onOpenChange: setOpen, currentThem
                     <div className="settings-credits-card">
                       <span className="settings-credits-amount" data-testid="settings-credits-amount">{formatCredits(creditBalance)}</span>
                       <span className="settings-credits-unit">remaining</span>
-                      {/* No in-app purchase on Android: Play's Payments policy
-                          wants Play Billing for credits consumed in the app, so
-                          the Stripe path is web-only. Deliberately no "buy on
-                          our website" hint -- steering to an external purchase
-                          is the part of that policy with teeth. */}
-                      {!Capacitor.isNativePlatform() && (
-                        <button className="settings-credits-buy" data-testid="settings-buy-credits" onClick={() => { onBuyCredits(); setOpen(false); }}>
-                          Top up
-                        </button>
-                      )}
+                      {/* Stripe on web, Google Play Billing on Android --
+                          BuyCreditsModal picks. Never a "buy on our website"
+                          link inside the app: steering to an external purchase
+                          is the part of Play's Payments policy with teeth. */}
+                      <button className="settings-credits-buy" data-testid="settings-buy-credits" onClick={() => { onBuyCredits(); setOpen(false); }}>
+                        Top up
+                      </button>
                     </div>
                   )}
                   <div className="settings-user-email" data-testid="settings-user-email">{user.email}</div>
-                  <button className="theme-option" data-testid="settings-change-password" onClick={() => { onOpenAuth("change_password"); setOpen(false); }}>
-                    Change password
-                  </button>
+                  {/* An account made with Google has no password to change,
+                      and the change flow re-authenticates with the old one. */}
+                  {user.app_metadata?.providers?.includes("email") !== false && (
+                    <button className="theme-option" data-testid="settings-change-password" onClick={() => { onOpenAuth("change_password"); setOpen(false); }}>
+                      Change password
+                    </button>
+                  )}
                   <button className="theme-option" data-testid="settings-signout" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>
                     Sign out
                   </button>

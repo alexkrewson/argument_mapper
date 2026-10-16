@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false
+
+[functions.play-purchase]
+verify_jwt = false

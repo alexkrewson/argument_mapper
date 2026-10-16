@@ -4,6 +4,133 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
+  START HERE — 2026-09-26. PLAY BILLING TOP-UPS AND GOOGLE SIGN-IN: CODE
+  DONE. MIGRATION + BOTH FUNCTIONS DEPLOYED, GOOGLE OAUTH CLIENT CREATED;
+  SUPABASE PROVIDER NOT YET ON; WEB AND APP NOT DEPLOYED; NOTHING COMMITTED.
+  The 09-23 block below is still accurate about the store listing.
+  ============================================================================
+
+  A SECURITY HOLE, FOUND WHILE DOING THIS — WAS LIVE, CLOSED 2026-09-26. Migration
+  20260724151739 (and bootstrap-new-project.sql) grants anon + authenticated
+  EXECUTE on every routine and ALL on every table in argument_mapper.
+  add_credits is SECURITY DEFINER, and profiles has an "update own" policy.
+  So, if production matches the files, anyone with the public anon key can
+  mint credits, and any signed-in user can set their own credits_cents.
+  CONFIRMED LIVE on production: all four checks (anon + authenticated could
+  execute add_credits, authenticated could UPDATE profiles, the update policy
+  existed) came back true. Alex applied
+  migrations/20260926120000_purchase_ledger_and_lockdown.sql by pasting it
+  into the SQL editor (the session's permission rules refuse production SQL),
+  and the same check then read false x4.
+  WAS IT USED? No sign of it. Audit: every account whose balance + logged AI
+  spend exceeds the $2.00 signup grant. Three rows, all Alex's own:
+        alex.krewson@gmail.com   $20.37, exactly the 08-08 real 50c payment
+        +idisagree-test          $6.91, hand-topped for the costly suites
+        +test7                   >= $3.83 received, 36 calls; the 08-11 phone
+                                 pass account. ~$1.83 above the grant is in no
+                                 note -- a web Stripe purchase or a hand top-up.
+  Blind spot: AI spend before ai_call_log existed (08-02 to 08-08).
+
+  WHAT WAS BUILT
+        ledger      argument_mapper.credit_purchases, unique (source, reference),
+                    written only through grant_purchase(), which records and
+                    credits in one transaction and no-ops on a repeat.
+                    stripe-webhook now uses it too — so a Stripe retry can no
+                    longer double-credit, and privacy.html's claim that we store
+                    a transaction reference became true (it wasn't before).
+        play        android/.../PlayBillingPlugin.java, a local Capacitor plugin
+                    on Billing Library 9.1.0 (v8+ required from 2026-08-31).
+                    It NEVER consumes. functions/play-purchase verifies the token
+                    with the Android Publisher API, checks obfuscatedAccountId ==
+                    the caller, grants, THEN consumes server-side. Anything left
+                    unconsumed is re-claimed on every sign-in/launch, so a crash
+                    anywhere costs nothing; Google refunds anything unclaimed
+                    after 3 days.
+        products    credits_50 / credits_200 / credits_500, granting 50 / 200 /
+                    500 cents. The server's CREDITS_BY_PRODUCT is the authority.
+                    A product not Active in Play Console just doesn't show.
+        google      signInWithOAuth, PKCE (flowType changed for web too). Android
+                    goes through a Custom Tab (@capacitor/browser) and returns on
+                    com.alexkrewson.argumentmapper://auth-callback (manifest
+                    intent-filter). Change password is hidden for Google-only
+                    accounts.
+        ui          Top up is back on Android (it had been hidden since 07-31).
+                    out_of_credits opens the modal on Android again.
+
+  VERIFIED: lint, web build, all five APK suites on the emulator, and two new
+  checks (manifest carries BILLING + the deep link; the Android modal is the
+  Play one, never Stripe). NOT VERIFIED, and cannot be from here: a real
+  purchase and a real Google sign-in. See manual-test-plan.md B10-B13 and J.
+
+  TWO THINGS THE EMULATOR TAUGHT
+        no-Play     with enableAutoServiceReconnection() on, a device with no
+                    Play Store fails every call as SERVICE_DISCONNECTED and hides
+                    the real BILLING_UNAVAILABLE. Removed; whenReady() connects on
+                    demand instead.
+        sign-out    the settings sign-out test slept a fixed 4s. An emulator DNS
+                    timeout (resolv terrno 110) made logout take ~4.5s, and it
+                    failed three runs in a row. It now waits on the outcome.
+
+  NEXT, IN THIS ORDER — each step is safe to stop after
+    [x] 1. Hole confirmed live, 20260926 migration applied, re-check false x4.
+    [x] 2. stripe-webhook and play-purchase deployed 2026-09-26 (Alex ran
+           them with the ! prefix; the session's rules refuse prod deploys).
+           Probed: webhook 400s an unsigned request, play-purchase 401s an
+           anonymous one. The webhook's grant_purchase path has not yet seen a
+           real signed event -- the next web purchase is its first.
+    [~] 3. Google sign-in config. HALF DONE, 2026-09-26/27, driven through
+           Chrome by Claude:
+           [x] Google Cloud Terms of Service accepted for alex.krewson@gmail.com
+               (it had never used Cloud Console before).
+           [x] Cloud project created: name "iDisagree", ID `idisagree`, no
+               organization, no billing account (OAuth needs none).
+               This account also manages idisagree-testers@googlegroups.com,
+               so it is very likely the Play Console login too -- which makes
+               `idisagree` the natural home for step 5's service account.
+           [x] Google Auth Platform (the OAuth consent screen) configured:
+               app name iDisagree, audience EXTERNAL, user support email and
+               developer contact both alex.krewson@gmail.com. The support
+               email is visible to users on Google's sign-in screen; change it
+               under Branding if that matters. Alex agreed to the Google API
+               Services User Data Policy.
+           [x] OAuth client created: type WEB APPLICATION (Supabase is the
+               party talking to Google, even for Android), name "Supabase
+               auth (web + Android)", one redirect URI:
+               https://hdhqpeevtofevymayvie.supabase.co/auth/v1/callback
+               No JavaScript origins -- the browser never calls Google directly.
+               The secret was shown once; Alex saved it. It is NOT in this
+               file or the conversation, deliberately.
+           [ ] Supabase > Auth > URL Configuration > Redirect URLs: add
+               com.alexkrewson.argumentmapper://auth-callback and
+               https://idisagree.trolleysolution.com/ (Stopped here: Supabase
+               needed a sign-in in that Chrome.)
+           [ ] Supabase > Auth > Providers > Google: enable, paste Client ID
+               and secret. Alex pastes the secret -- Claude may not enter
+               credentials into forms.
+           [ ] PUBLISH THE CONSENT SCREEN. It starts in "Testing", where only
+               listed test users can sign in and everyone else gets an error.
+               Google Auth Platform > Audience > Publish app. With only
+               email/profile/openid scopes no verification review is needed.
+    [ ] 4. Only then deploy the web app — its "Continue with Google" button
+           errors until step 3 is done.
+    [ ] 5. Play: service account in Google Cloud with the Android Publisher
+           API enabled, invited in Play Console > Users and permissions with
+           View financial data + Manage orders and subscriptions. Its JSON key
+           -> Supabase secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON.
+    [ ] 6. npm run release:aab, upload to INTERNAL testing first. Play
+           Console only allows one-time products once a bundle with the BILLING
+           permission is uploaded. Create credits_50/200/500, Activate them.
+    [ ] 7. License testing: add the tester Gmail, install from the internal
+           track, run manual-test-plan J. Then promote to production.
+
+  LEFT FOR LATER, DELIBERATELY
+        refunds     a Play refund doesn't claw credits back. Voided Purchases
+                    API or RTDN would; at these amounts it isn't worth it yet.
+        RTDN        a pending payment that clears is credited on the NEXT
+                    launch, not the moment it clears. Pub/Sub notifications
+                    would close that gap.
+
+  ============================================================================
   START HERE — end of 2026-09-23. IT IS LIVE ON GOOGLE PLAY. Every block
   below is accurate history for its date.
   ============================================================================

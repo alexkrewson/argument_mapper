@@ -236,6 +236,22 @@ round, by id.
       refused, then the right one works.
 - [ ] B8. Sign out, then kill the app and relaunch — still signed out.
 - [ ] B9. Session survives a phone reboot while signed in.
+- [ ] B10. **Continue with Google** (added 2026-09-26). A Chrome Custom Tab
+      opens — a browser sheet with a URL bar, NOT a page inside the app. Pick an
+      account; the tab closes by itself and you are signed in, in the app.
+      If you land in the WEB app inside the tab instead, the redirect
+      `com.alexkrewson.argumentmapper://auth-callback` is missing from Supabase's
+      Redirect URLs list and Supabase fell back to the Site URL.
+- [ ] B11. Google again, but back out of Google's account picker. The modal
+      should show an error or return to "Continue with Google", never hang on
+      "Finish in the browser…". Try it twice: once cancelling on Google's page,
+      once closing the tab with the system back button (that one sends nothing
+      back, and relies on the tab's browserFinished event instead).
+- [ ] B12. Google with the SAME address as an existing email/password account.
+      You should land in that account — same History, same credit balance —
+      not a new empty one. Supabase links verified identities by email.
+- [ ] B13. Signed in with Google only: Settings → ACCOUNT shows **no** Change
+      password button (there is no password to change).
 
 ## C. Core argument flow
 
@@ -360,6 +376,36 @@ saying so; the rest is a badge and an explanation.
       And check the flag is deserved — if you can say what the statement was
       responding to, it isn't a non-sequitur. *A prompt change, so this one is
       a judgement call every run.*
+
+## J. Credit top-ups through Google Play (added 2026-09-26)
+
+**Only testable on a phone that installed the app FROM a Play track**, signed
+in to Play with an account listed under Play Console → Settings → License
+testing. A sideloaded or debug build gets "Google Play purchases aren't
+available on this device", correctly. License testers are never charged; the
+purchase is recorded with `is_test = true` in `argument_mapper.credit_purchases`.
+
+- [ ] J1. Settings → ACCOUNT → Top up. Three packs, each showing a credit amount
+      (50¢ / $2 / $5) and a Play price beneath it. A missing pack means that
+      product isn't Active in Play Console, not an app bug.
+- [ ] J2. Buy the $2 pack. Play's own bottom sheet appears (says "Test card,
+      always approves" for a license tester). Approve. The modal closes and the
+      balance rises by exactly $2.00 within a few seconds.
+- [ ] J3. Buy again straight away. It must be allowed. If Play says "You
+      already own this item", the server failed to CONSUME the first purchase —
+      check the play-purchase function logs for "Consume failed".
+- [ ] J4. Start a purchase and dismiss Play's sheet. No error, no charge, no
+      balance change.
+- [ ] J5. **The crash case.** Use the tester card "Slow test card, approves
+      after a few minutes". The modal says payment is pending. Force-stop the
+      app, wait for the approval, relaunch — the credits arrive on launch.
+- [ ] J6. Use the tester card "Always declines". A clear failure, "you
+      haven't been charged", balance unchanged.
+- [ ] J7. Run out of credits mid-turn. The Top up modal opens by itself — on
+      Android this used to be a dead end ("You're out of AI credits.").
+- [ ] J8. In Supabase, `select * from argument_mapper.credit_purchases order by
+      id desc` shows one row per purchase above, source `play`, never two rows
+      for one purchase.
 
 ## H. Crash reporting
 

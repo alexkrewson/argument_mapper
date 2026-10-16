@@ -3426,6 +3426,35 @@ button {
 }
 .auth-input:focus { border-color: #94a3b8; }
 
+/* Google's own button spec: white, grey border, the four-colour G, never
+   recoloured to the theme. The dark variant is Google's dark variant. */
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #747775;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f1f1f;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.auth-google-btn:disabled { opacity: 0.6; cursor: default; }
+.auth-google-logo { width: 18px; height: 18px; flex-shrink: 0; }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.auth-divider::before,
+.auth-divider::after { content: ""; flex: 1; border-top: 1px solid #e2e8f0; }
+
 .auth-error {
   font-size: 0.8rem;
   color: #dc2626;
@@ -3596,6 +3625,10 @@ button {
   color: #f1f5f9;
 }
 [data-dark="true"] .auth-input:focus { border-color: #64748b; }
+[data-dark="true"] .auth-google-btn { background: #131314; border-color: #8e918f; color: #e3e3e3; }
+[data-dark="true"] .auth-divider { color: #92a1b5; }
+[data-dark="true"] .auth-divider::before,
+[data-dark="true"] .auth-divider::after { border-top-color: #334155; }
 [data-dark="true"] .auth-signup-done p { color: #f1f5f9; }
 [data-dark="true"] .auth-toggle-link { color: #92a1b5; }
 [data-dark="true"] .auth-toggle-link:hover { color: #f1f5f9; }

@@ -49,7 +49,7 @@
 <main>
 
 <h1>Privacy Policy</h1>
-<p class="meta">iDisagree · Last updated August 3, 2026</p>
+<p class="meta">iDisagree · Last updated September 26, 2026</p>
 
 <p>
   iDisagree ("we", "our", "the app") is an argument-mapping tool that uses AI to structure
@@ -64,7 +64,11 @@
   <tbody>
     <tr>
       <td>Email address</td>
-      <td>Used to create and sign in to your account (via Supabase Auth). We don't collect your name, phone number, or any other profile information.</td>
+      <td>Used to create and sign in to your account (via Supabase Auth). If you sign up with an email and password, we don't collect your name, phone number, or any other profile information.</td>
+    </tr>
+    <tr>
+      <td>Google account details (only if you choose "Continue with Google")</td>
+      <td>Google shares your email address, name, profile picture link and a Google account ID with our authentication provider, which stores them with your account. We use the email and account ID to sign you in. The app doesn't display or use your name or picture, and we never receive your Google password.</td>
     </tr>
     <tr>
       <td>Password</td>
@@ -76,7 +80,7 @@
     </tr>
     <tr>
       <td>AI credit balance &amp; purchase records</td>
-      <td>We track how many credits you have and deduct them as you use AI features. When you buy credits, we store the amount purchased and a Stripe transaction reference — never your card number.</td>
+      <td>We track how many credits you have and deduct them as you use AI features. When you buy credits, we store the amount purchased, which pack it was, and the transaction reference from Stripe (web) or Google Play (Android app) — never your card number or other payment details.</td>
     </tr>
     <tr>
       <td>Theme &amp; sound preferences</td>
@@ -102,10 +106,17 @@
 
 <h2>Payments</h2>
 <p>
-  AI credit purchases are handled entirely by <a href="https://stripe.com/privacy">Stripe</a>. When you
-  buy credits, you're taken to a Stripe-hosted checkout page — your card details go directly to Stripe
-  and never touch our servers. We only receive confirmation that a payment succeeded and the amount, so
-  we can add the corresponding credits to your account.
+  On the web, AI credit purchases are handled entirely by <a href="https://stripe.com/privacy">Stripe</a>.
+  When you buy credits, you're taken to a Stripe-hosted checkout page — your card details go directly to
+  Stripe and never touch our servers. We only receive confirmation that a payment succeeded and the
+  amount, so we can add the corresponding credits to your account.
+</p>
+<p>
+  In the Android app, purchases go through <a href="https://policies.google.com/privacy">Google Play</a>
+  instead, under your Google Play account. We receive a purchase reference, an order ID and which pack
+  you bought, which we check with Google before adding the credits. We tag each purchase with your
+  iDisagree account ID so the credits reach the right account; Google never receives your email address
+  from us.
 </p>
 
 <h2>Who we share data with</h2>
@@ -113,7 +124,8 @@
 <ul>
   <li><strong>Supabase</strong> — database, authentication, and server-side functions.</li>
   <li><strong>Anthropic</strong> — AI processing of your disagreement content (see above).</li>
-  <li><strong>Stripe</strong> — payment processing for credit purchases.</li>
+  <li><strong>Stripe</strong> — payment processing for credit purchases on the web.</li>
+  <li><strong>Google</strong> — payment processing for credit purchases in the Android app (Google Play), and sign-in if you choose "Continue with Google".</li>
   <li><strong>Cloudflare</strong> — hosts and serves the web app.</li>
   <li><strong>Sentry</strong> — crash and error reports (see below).</li>
 </ul>

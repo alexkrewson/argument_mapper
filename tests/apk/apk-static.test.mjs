@@ -52,6 +52,19 @@ describe("APK static validation", { skip: apkExists ? false : "APK not built" },
     );
   });
 
+  // The compiled manifest is binary XML; its string pool is UTF-16LE, so a
+  // byte search for the UTF-16 form is enough to prove a string is declared.
+  test("manifest declares Play Billing and the sign-in deep link", () => {
+    const manifest = zip.getEntry("AndroidManifest.xml").getData();
+    const has = (s) => manifest.includes(Buffer.from(s, "utf16le"));
+    // Merged in from the billing library. Without it, Play Console will not
+    // let one-time products be created against the bundle.
+    assert.ok(has("com.android.vending.BILLING"), "BILLING permission missing");
+    // Google sign-in returns here from the Custom Tab; see src/utils/oauth.js.
+    assert.ok(has("com.alexkrewson.argumentmapper") && has("auth-callback"),
+      "auth-callback deep link missing from the manifest");
+  });
+
   test("APK is signed", () => {
     // AGP 8 debug builds are v2/v3-only: nothing in META-INF, signature lives in
     // the APK Signing Block instead. Detect its magic rather than zip entries.

@@ -32,6 +32,7 @@ import { fmtNodeId } from "./utils/format.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
 import { randomName } from "./utils/names.js";
 import { supabase } from "./utils/supabase";
+import { isPlayBillingPlatform, claimUnconsumedPurchases, onPlayPurchasesUpdated } from "./utils/playBilling";
 import { useAuth } from "./hooks/useAuth";
 import "./App.css";
 
@@ -341,21 +342,28 @@ export default function App() {
     setCreditBalance(balance);
   }, []);
 
+  // Credit any Play purchase the server hasn't seen: one interrupted between
+  // Play's sheet and play-purchase, or a pending payment that has since
+  // cleared. Runs on sign-in, and whenever Play reports a purchase finishing
+  // while the app is open.
+  useEffect(() => {
+    if (!user || !isPlayBillingPlatform()) return;
+    const claim = () => claimUnconsumedPurchases(user.id)
+      .then((balance) => { if (balance != null) setCreditBalance(balance); })
+      .catch(() => { /* no Play Store, or offline: retried next launch */ });
+    claim();
+    return onPlayPurchasesUpdated(claim);
+  }, [user]);
+
   const handleAiError = useCallback((err) => {
     if (err.code === "sign_in_required") {
       setShowAuthModal(true);
       return true;
     }
     if (err.code === "out_of_credits") {
-      // On Android the Buy Credits modal is unreachable by design (Play's
-      // Payments policy), so auto-opening it would show a dead end. Say what
-      // happened and stop there -- pointing at an external purchase is what
-      // the policy actually prohibits.
-      if (Capacitor.isNativePlatform()) {
-        setError("You're out of AI credits.");
-      } else {
-        setShowBuyCredits(true);
-      }
+      // Android tops up through Google Play Billing and web through Stripe;
+      // BuyCreditsModal picks the route, so both just open it.
+      setShowBuyCredits(true);
       return true;
     }
     return false;
@@ -1666,7 +1674,7 @@ export default function App() {
       {showAuthModal && <AuthModal initialMode={authInitialMode} onClose={() => { setShowAuthModal(false); setAuthInitialMode("signin"); }} />}
 
       {/* Buy credits modal */}
-      {showBuyCredits && <BuyCreditsModal onClose={() => setShowBuyCredits(false)} />}
+      {showBuyCredits && <BuyCreditsModal user={user} onPurchased={handleCreditUpdate} onClose={() => setShowBuyCredits(false)} />}
 
       {exitArmed && (
         <div className="exit-toast" role="status" data-testid="exit-toast">Press back again to exit</div>

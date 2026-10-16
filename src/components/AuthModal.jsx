@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../utils/supabase";
+import { Browser } from "@capacitor/browser";
+import { signInWithGoogle, OAUTH_ERROR_EVENT } from "../utils/oauth";
 
 export default function AuthModal({ onClose, initialMode = "signin" }) {
   // "signin" | "signup" | "forgot" | "otp_verify" | "reset_password" | "change_password"
@@ -16,7 +18,61 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
   // and different destination once the code checks out.
   const [otpPurpose, setOtpPurpose] = useState("recovery");
 
+  // True while Google's sign-in is open in a Custom Tab (Android only; web
+  // navigates away). The modal stays up so a failure has somewhere to show.
+  const [googleWaiting, setGoogleWaiting] = useState(false);
+  // Whether that tab is still on screen. Separate from googleWaiting because
+  // the tab closes BEFORE the session arrives on success, and the listeners
+  // below must outlive it. Closing it with the back button sends nothing back
+  // to the app, so this is the only signal the attempt was abandoned.
+  const [googleTabOpen, setGoogleTabOpen] = useState(false);
+
   const clearError = () => setError(null);
+
+  useEffect(() => {
+    if (!googleWaiting) return;
+    const onError = (e) => { setError(e.detail); setGoogleWaiting(false); setGoogleTabOpen(false); };
+    window.addEventListener(OAUTH_ERROR_EVENT, onError);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") onClose();
+    });
+    // browserFinished is Android/iOS only; on web the page has navigated away.
+    const finished = Browser.addListener("browserFinished", () => setGoogleTabOpen(false));
+    return () => {
+      window.removeEventListener(OAUTH_ERROR_EVENT, onError);
+      subscription.unsubscribe();
+      finished.then((l) => l.remove()).catch(() => {});
+    };
+  }, [googleWaiting, onClose]);
+
+  const handleGoogle = async () => {
+    clearError();
+    setGoogleWaiting(true);
+    setGoogleTabOpen(true);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setError(err.message);
+      setGoogleWaiting(false);
+      setGoogleTabOpen(false);
+    }
+  };
+
+  const googleButton = (
+    <>
+      <button type="button" className="auth-google-btn" onClick={handleGoogle}
+        disabled={loading || googleTabOpen} data-testid="auth-google">
+        <svg className="auth-google-logo" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        </svg>
+        {googleTabOpen ? "Finish in the browser…" : "Continue with Google"}
+      </button>
+      <div className="auth-divider"><span>or</span></div>
+    </>
+  );
 
   const handleSignIn = async (e) => {
     e.preventDefault();
@@ -198,6 +254,7 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
 
         ) : mode === "signin" ? (
           <form className="auth-form" onSubmit={handleSignIn}>
+            {googleButton}
             <input className="auth-input" type="email" placeholder="Email" value={email}
               onChange={(e) => setEmail(e.target.value)} required autoFocus data-testid="auth-email" />
             <input className="auth-input" type="password" placeholder="Password" value={password}
@@ -218,6 +275,7 @@ export default function AuthModal({ onClose, initialMode = "signin" }) {
 
         ) : mode === "signup" ? (
           <form className="auth-form" onSubmit={handleSignUp}>
+            {googleButton}
             <input className="auth-input" type="email" placeholder="Email" value={email}
               onChange={(e) => setEmail(e.target.value)} required autoFocus data-testid="auth-email" />
             <input className="auth-input" type="password" placeholder="Password" value={password}

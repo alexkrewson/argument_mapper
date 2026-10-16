@@ -41,6 +41,10 @@ record of it. Nothing needs copying between machines any more.
   with the other two apps: deleting `auth.users` here costs this app only. Alex
   consequently has two independent identities under the same email, one in each
   project; changing the password in one does not change the other.
+- **Every `supabase` CLI command takes `--project-ref hdhqpeevtofevymayvie`.**
+  `supabase/.temp/project-ref` (checked in) links this checkout to
+  `rctaosokjpwdkuewmvyc`, a third project that is neither iDisagree nor the
+  keeper, so a bare `functions deploy` or `db push` lands there.
 - **Never delete rows by position.** Always by id — a test once deleted a real
   user's debate by assuming "topmost History row = mine".
 - **`npm run build:mobile`, never `npm run build`, for Android.** The Vite
