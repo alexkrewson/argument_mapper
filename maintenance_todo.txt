@@ -78,8 +78,8 @@ Top Priority Ideas (below)
            Probed: webhook 400s an unsigned request, play-purchase 401s an
            anonymous one. The webhook's grant_purchase path has not yet seen a
            real signed event -- the next web purchase is its first.
-    [~] 3. Google sign-in config. HALF DONE, 2026-09-26/27, driven through
-           Chrome by Claude:
+    [x] 3. Google sign-in config. DONE 2026-10-16. Started 09-26/27 through
+           Chrome by Claude, finished by Alex from panels:
            [x] Google Cloud Terms of Service accepted for alex.krewson@gmail.com
                (it had never used Cloud Console before).
            [x] Cloud project created: name "iDisagree", ID `idisagree`, no
@@ -100,14 +100,25 @@ Top Priority Ideas (below)
                No JavaScript origins -- the browser never calls Google directly.
                The secret was shown once; Alex saved it. It is NOT in this
                file or the conversation, deliberately.
-           [ ] Supabase > Auth > URL Configuration > Redirect URLs: add
+           [x] Supabase > Auth > URL Configuration > Redirect URLs: add
                com.alexkrewson.argumentmapper://auth-callback and
                https://idisagree.trolleysolution.com/ (Stopped here: Supabase
                needed a sign-in in that Chrome.)
-           [ ] Supabase > Auth > Providers > Google: enable, paste Client ID
-               and secret. Alex pastes the secret -- Claude may not enter
-               credentials into forms.
-           [ ] PUBLISH THE CONSENT SCREEN. It starts in "Testing", where only
+           [x] Supabase > Auth > Providers > Google: enabled. The 09-26
+               secret couldn't be found, so a SECOND secret was added to the
+               client on 10-16 and is in Bitwarden as "iDisagree - Google
+               OAuth client secret (Supabase)". The first is still enabled;
+               disable it once a real Google sign-in has worked.
+           [x] PUBLISH THE CONSENT SCREEN. Done 10-16 (per Alex). Needed
+               Branding first: home page, /privacy (not /privacy.html, which
+               308s), authorized domains trolleysolution.com + the
+               supabase.co one Google had added itself. NO LOGO -- a logo
+               triggers brand verification.
+               Probed: /authorize 302s to Google for both redirect_to values,
+               and Google serves its sign-in page, not a client error.
+               Testing-vs-published can't be seen until a non-test account
+               signs in, which is step 4's first check.
+               Was: It starts in "Testing", where only
                listed test users can sign in and everyone else gets an error.
                Google Auth Platform > Audience > Publish app. With only
                email/profile/openid scopes no verification review is needed.
