@@ -114,14 +114,20 @@ Top Priority Ideas (below)
     [ ] 4. Only then deploy the web app — its "Continue with Google" button
            errors until step 3 is done. Everything is on branch play-billing
            (pushed 2026-10-16); merging it to master IS the web deploy.
-           It also carries a Stripe change (59e755a) with two preconditions:
-           Link ENABLED in Stripe > Settings > Payment methods (or every
-           checkout session fails to create), and the webhook endpoint
-           subscribed to checkout.session.async_payment_succeeded. Then
-           deploy create-checkout-session + stripe-webhook with
-           --project-ref hdhqpeevtofevymayvie. Distillery hard-codes card
-           too, so Dashboard payment-method toggles don't reach it -- but
-           the Google Pay / Apple Pay wallet toggles do, for both apps.
+           STRIPE PART DONE 2026-10-16, ahead of the merge (functions
+           deploy independently of the web app): checkout offers card + Link,
+           the webhook skips any session whose payment_status is present and
+           not "paid", and also handles async_payment_succeeded (subscribed on
+           endpoint "exquisite-legacy"). Both deployed. Probed: webhook 400s a
+           forged signature (not 401), checkout 401s anon and 200s the test
+           account. That 200 left an unpaid 50c live session to expire.
+           The endpoint renders events at API 2019-09-09 and every saved
+           completed event is past Stripe's 30-day trim, so whether
+           payment_status reaches that version is UNPROVEN -- hence "absent
+           counts as paid". The next real web purchase settles it.
+           Enabled wallets: Apple Pay, Link. Google Pay is OFF. Wallets are
+           account-wide, so they apply to Distillery too (it hard-codes card,
+           so the other payment-method toggles don't reach it).
     [ ] 5. Play: service account in Google Cloud with the Android Publisher
            API enabled, invited in Play Console > Users and permissions with
            View financial data + Manage orders and subscriptions. Its JSON key
