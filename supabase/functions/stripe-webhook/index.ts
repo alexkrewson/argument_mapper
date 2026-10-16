@@ -53,9 +53,16 @@ Deno.serve(async (req) => {
       { db: { schema: "argument_mapper" } },
     );
 
-    const { error } = await supabaseAdmin.rpc("add_credits", {
-      p_user_id: userId,
-      p_amount:  creditsCents,
+    // grant_purchase, not add_credits: it records the session id in
+    // credit_purchases and credits in the same transaction, so a Stripe retry
+    // of an event we already handled is a no-op instead of a second top-up.
+    const { data, error } = await supabaseAdmin.rpc("grant_purchase", {
+      p_user_id:       userId,
+      p_source:        "stripe",
+      p_reference:     session.id,
+      p_credits_cents: creditsCents,
+      p_order_id:      typeof session.payment_intent === "string" ? session.payment_intent : null,
+      p_is_test:       !event.livemode,
     });
 
     if (error) {
@@ -63,7 +70,10 @@ Deno.serve(async (req) => {
       return new Response("Failed to add credits", { status: 500 });
     }
 
-    console.log(`Added ${creditsCents}¢ credits to user ${userId}`);
+    const granted = data?.[0]?.granted;
+    console.log(granted
+      ? `Added ${creditsCents}¢ credits to user ${userId}`
+      : `Session ${session.id} already credited; ignoring the repeat`);
   }
 
   return new Response(JSON.stringify({ received: true }), {

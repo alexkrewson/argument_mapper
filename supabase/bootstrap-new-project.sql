@@ -12,6 +12,11 @@
 -- migration creates the column at 50.0 and a later migration raises it; running
 -- only the first would silently give every new signup $0.50 and undo the
 -- headroom the closed-testing cohort depends on.
+--
+-- NOT SAFE ON ITS OWN SINCE 2026-09-26. The grants near the end hand anon and
+-- authenticated EXECUTE on add_credits and UPDATE on profiles, which lets
+-- anyone mint credits. Run migrations/20260926120000_purchase_ledger_and_lockdown.sql
+-- straight after this, before the project serves a single request.
 -- ============================================================================
 
 create schema if not exists argument_mapper;
