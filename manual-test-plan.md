@@ -257,7 +257,8 @@ round, by id.
       Google with the SAME address as an existing email/password account.
       You should land in that account — same History, same credit balance —
       not a new empty one. Supabase links verified identities by email.
-- [ ] B13. Signed in with Google only: Settings → ACCOUNT shows **no** Change
+- [x] B13. PASS 2026-10-16, build 5 (email+Google account: button shown, correctly).
+      Signed in with Google only: Settings → ACCOUNT shows **no** Change
       password button (there is no password to change).
 
 ## C. Core argument flow
@@ -392,7 +393,8 @@ testing. A sideloaded or debug build gets "Google Play purchases aren't
 available on this device", correctly. License testers are never charged; the
 purchase is recorded with `is_test = true` in `argument_mapper.credit_purchases`.
 
-- [ ] J1. Settings → ACCOUNT → Top up. Three packs, each showing a credit amount
+- [x] J1. PASS 2026-10-16, build 5.
+      Settings → ACCOUNT → Top up. Three packs, each showing a credit amount
       (50¢ / $2 / $5) and a Play price beneath it. A missing pack means that
       product isn't Active in Play Console, not an app bug.
 - [x] J2. PASS 2026-10-16, build 5 (server side: credit_purchases row 1).
@@ -403,12 +405,14 @@ purchase is recorded with `is_test = true` in `argument_mapper.credit_purchases`
       so the first was consumed. Buy again straight away. It must be allowed. If Play says "You
       already own this item", the server failed to CONSUME the first purchase —
       check the play-purchase function logs for "Consume failed".
-- [ ] J4. Start a purchase and dismiss Play's sheet. No error, no charge, no
+- [x] J4. PASS 2026-10-16, build 5.
+      Start a purchase and dismiss Play's sheet. No error, no charge, no
       balance change.
 - [ ] J5. **The crash case.** Use the tester card "Slow test card, approves
       after a few minutes". The modal says payment is pending. Force-stop the
       app, wait for the approval, relaunch — the credits arrive on launch.
-- [ ] J6. Use the tester card "Always declines". A clear failure, "you
+- [x] J6. PASS 2026-10-16, build 5.
+      Use the tester card "Always declines". A clear failure, "you
       haven't been charged", balance unchanged.
 - [ ] J7. Run out of credits mid-turn. The Top up modal opens by itself — on
       Android this used to be a dead end ("You're out of AI credits.").

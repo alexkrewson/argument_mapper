@@ -18,6 +18,7 @@
 
 import * as Sentry from "@sentry/capacitor";
 import * as SentryReact from "@sentry/react";
+import { isReloadingForStaleChunk } from "./staleChunk.js";
 import { Capacitor } from "@capacitor/core";
 
 const DSN = import.meta.env.VITE_SENTRY_DSN;
@@ -70,6 +71,11 @@ function scrubEvent(event) {
   // the emulator, so the suite goes on proving that the shipping startup path
   // works. Returning null is the last gate before the network.
   if (isEmulator()) return null;
+
+  // A stale tab after a deploy. The page is already reloading itself, so the
+  // report would be noise against the 5k/month allowance. If the reload was
+  // refused (a second failure within a minute), this is false and it reports.
+  if (isReloadingForStaleChunk()) return null;
 
   // sendDefaultPii is already false; this is the belt to that's braces.
   delete event.user;
