@@ -395,10 +395,12 @@ purchase is recorded with `is_test = true` in `argument_mapper.credit_purchases`
 - [ ] J1. Settings → ACCOUNT → Top up. Three packs, each showing a credit amount
       (50¢ / $2 / $5) and a Play price beneath it. A missing pack means that
       product isn't Active in Play Console, not an app bug.
-- [ ] J2. Buy the $2 pack. Play's own bottom sheet appears (says "Test card,
+- [x] J2. PASS 2026-10-16, build 5 (server side: credit_purchases row 1).
+      Buy the $2 pack. Play's own bottom sheet appears (says "Test card,
       always approves" for a license tester). Approve. The modal closes and the
       balance rises by exactly $2.00 within a few seconds.
-- [ ] J3. Buy again straight away. It must be allowed. If Play says "You
+- [x] J3. PASS 2026-10-16: second $2 purchase 17 s later went through (row 2),
+      so the first was consumed. Buy again straight away. It must be allowed. If Play says "You
       already own this item", the server failed to CONSUME the first purchase —
       check the play-purchase function logs for "Consume failed".
 - [ ] J4. Start a purchase and dismiss Play's sheet. No error, no charge, no
@@ -410,7 +412,8 @@ purchase is recorded with `is_test = true` in `argument_mapper.credit_purchases`
       haven't been charged", balance unchanged.
 - [ ] J7. Run out of credits mid-turn. The Top up modal opens by itself — on
       Android this used to be a dead end ("You're out of AI credits.").
-- [ ] J8. In Supabase, `select * from argument_mapper.credit_purchases order by
+- [x] J8. PASS 2026-10-16: rows 1-2, source play, credits_200, 200c, is_test
+      true, one row per purchase. In Supabase, `select * from argument_mapper.credit_purchases order by
       id desc` shows one row per purchase above, source `play`, never two rows
       for one purchase.
 
