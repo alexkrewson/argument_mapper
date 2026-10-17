@@ -46,9 +46,12 @@ Top Priority Ideas (below)
   make a new key (Cloud > Service accounts > play-purchase-verifier > Keys)
   and disable the old one rather than hunting for a copy.
 
+  GOOGLE CLIENT SECRETS: the 09-26 secret (never found) was DISABLED, not
+  deleted, on 10-16; web Google sign-in confirmed working afterwards on the
+  remaining one, which is in Bitwarden as "iDisagree - Google OAuth client
+  secret (Supabase)". Deleting the disabled one is optional.
+
   LEFT FOR ALEX
-        - disable the OLD Google client secret (Cloud > Clients > Supabase
-          client). The new one is in Bitwarden.
         - the J5/J7 and B11 phone cases, whenever convenient.
 
   ============================================================================
