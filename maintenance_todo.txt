@@ -4,10 +4,51 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
-  START HERE — 2026-09-26. PLAY BILLING TOP-UPS AND GOOGLE SIGN-IN: CODE
-  DONE. MIGRATION + BOTH FUNCTIONS DEPLOYED, GOOGLE OAUTH CLIENT CREATED;
-  SUPABASE PROVIDER NOT YET ON; WEB AND APP NOT DEPLOYED; NOTHING COMMITTED.
-  The 09-23 block below is still accurate about the store listing.
+  START HERE — end of 2026-10-16. BUILD 5 (Play top-ups + Google sign-in)
+  SUBMITTED FOR PRODUCTION REVIEW. Web is live with all of it. Everything
+  is on master; play-billing is merged and can be deleted.
+  ============================================================================
+
+  WAITING ON GOOGLE: production release 5 (1.0.1), full rollout, plus a
+  Data safety update, sent together. Managed publishing is OFF, so approval
+  publishes it with no further click. ~1 day last time. Proof it shipped:
+  the store page's "Updated on" date, not email.
+
+  VERIFIED TODAY
+        web         Google sign-in works (Alex, own account -> consent screen
+                    is published). Stripe checkout offers card + Link, Google
+                    Pay, Apple Pay; webhook only credits paid sessions.
+        phone       build 5 from the internal track: B10 B12 B13 J1-J4 J6 J8
+                    pass. J8 rows 1-2 are Alex's license-test purchases.
+                    Not run: B11 (no Google page appears with one account
+                    signed in to Chrome), J5, J7.
+        emulator    validate:apk 59/59 before the build.
+
+  THINGS THAT WILL BITE AGAIN
+        own app     Play won't sell the developer their own paid app ("Price
+                    is out of date"). Redeem a promo code. Alex redeemed one of
+                    the LAST THREE in Downloads/promotion_codes.csv (probably
+                    the very last) -- start further up the file next time.
+        internal    a new tester sees the PRODUCTION build first. Clearing
+                    Play Store cache + storage made it offer the update.
+        versionName still 1.0.1 for builds 4 and 5 -- indistinguishable on
+                    the phone. Bump it (android/app/build.gradle) next build.
+        chunks      every push renamed every web chunk (commit SHA in the
+                    entry), breaking open tabs -- Sentry IDISAGREE-4. Fixed
+                    twice: src/utils/staleChunk.js reloads once, and
+                    Cloudflare build watch paths now exclude *.md and *.txt,
+                    so notes-only pushes no longer rebuild the site.
+
+  LEFT FOR ALEX
+        - disable the OLD Google client secret (Cloud > Clients > Supabase
+          client). The new one is in Bitwarden.
+        - service-account key idisagree-6d13bafc8615.json: Downloads ->
+          Bitwarden, then delete.
+        - the J5/J7 and B11 phone cases, whenever convenient.
+
+  ============================================================================
+  2026-09-26. Accurate history; its NEXT list is finished, see 10-16 above.
+  PLAY BILLING TOP-UPS AND GOOGLE SIGN-IN: CODE DONE.
   ============================================================================
 
   A SECURITY HOLE, FOUND WHILE DOING THIS — WAS LIVE, CLOSED 2026-09-26. Migration

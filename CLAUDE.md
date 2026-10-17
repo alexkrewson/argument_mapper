@@ -6,11 +6,11 @@ Read the shared conventions first: `CHANGELOG.md`, then `best-practices.md`,
 `github.com/alexkrewson/apps-shared`. Say "sync shared" to have them re-applied
 to this project.
 
-**Start at the `START HERE` block in `maintenance_todo.txt`** — the one dated
-2026-08-21, at the top. It carries the current state: the app is on the Play
-closed track, how testers get it free, and who the bought testers are. Every
-block below it is accurate history for its own date, and each says what later
-work superseded it — read down only as far as you need.
+**Start at the `START HERE` block in `maintenance_todo.txt`** — the newest
+one, at the top (2026-10-16 as of writing). It carries the current state: what
+is waiting on Google, what was verified and on which build, and what is left
+for Alex. Every block below it is accurate history for its own date, and each
+says what later work superseded it — read down only as far as you need.
 
 `manual-test-plan.md` is the on-device pass: ~50 cases weighted towards what the
 automated suites can't reach (touch, the back button, a real inbox, a real
