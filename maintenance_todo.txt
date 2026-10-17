@@ -142,7 +142,9 @@ Top Priority Ideas (below)
            Enabled wallets: Apple Pay, Google Pay (on 10-16), Link. Wallets are
            account-wide, so they apply to Distillery too (it hard-codes card,
            so the other payment-method toggles don't reach it).
-    [~] 5. DONE 2026-10-16 except Play's propagation: service account
+    [x] 5. DONE 2026-10-16. Play accepted the account ~1h after the invite,
+           right after the first product was created -- re-probe returned
+           400 invalid_purchase. Details: service account
            play-purchase-verifier@idisagree.iam.gserviceaccount.com, Android
            Publisher API enabled, invited with ONLY View financial data +
            Manage orders and subscriptions, JSON key set as the Supabase secret
@@ -157,7 +159,11 @@ Top Priority Ideas (below)
            -> Supabase secret GOOGLE_PLAY_SERVICE_ACCOUNT_JSON.
     [~] 6. BUILT 2026-10-16: versionCode 5 (versionName still 1.0.1),
            validate:apk 59/59 on the emulator first. Upload to internal +
-           products handed to Alex. PRICES: FACE VALUE, Alex's call --
+           products handed to Alex. Internal release 5 Active, tester list
+           'iDisagree testers' ticked. credits_50 created + Active, purchase
+           option id 'buy' -- Play marks a product's FIRST option Backwards
+           compatible automatically (no switch at creation), which is the one
+           the classic purchases.products API and queryProductDetails see. PRICES: FACE VALUE, Alex's call --
            credits_50 $0.50, credits_200 $2.00, credits_500 $5.00; Google's
            15% is absorbed.
            Was: npm run release:aab, upload to INTERNAL testing first. Play
