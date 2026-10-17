@@ -10,7 +10,9 @@ Top Priority Ideas (below)
   ============================================================================
 
   WAITING ON GOOGLE: production release 5 (1.0.1), full rollout, plus a
-  Data safety update, sent together. Managed publishing is OFF, so approval
+  Data safety update, sent together -- Publishing overview read "Changes in
+  review" at 21:19. Data safety now adds OAuth sign-in, Purchase history
+  (App functionality) and Name (Account management), both optional. Managed publishing is OFF, so approval
   publishes it with no further click. ~1 day last time. Proof it shipped:
   the store page's "Updated on" date, not email.
 
@@ -39,11 +41,14 @@ Top Priority Ideas (below)
                     Cloudflare build watch paths now exclude *.md and *.txt,
                     so notes-only pushes no longer rebuild the site.
 
+  SERVICE-ACCOUNT KEY: the downloaded JSON was removed from Downloads the
+  same day. It lives only in the Supabase secret. If it's ever needed again,
+  make a new key (Cloud > Service accounts > play-purchase-verifier > Keys)
+  and disable the old one rather than hunting for a copy.
+
   LEFT FOR ALEX
         - disable the OLD Google client secret (Cloud > Clients > Supabase
           client). The new one is in Bitwarden.
-        - service-account key idisagree-6d13bafc8615.json: Downloads ->
-          Bitwarden, then delete.
         - the J5/J7 and B11 phone cases, whenever convenient.
 
   ============================================================================

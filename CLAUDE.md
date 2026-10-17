@@ -137,3 +137,16 @@ what the live site serves — and every Android path (`build:apk`,
 match, so the check reports `The deploy did not take effect` for a deploy
 that landed perfectly. `dist/index.html` tells you which one you're holding:
 `src="./assets/…"` is mobile, `src="/assets/…"` is web.
+
+**Build after committing, or it still won't match.** `vite.config.js` stamps
+the commit (`git rev-parse --short HEAD`, plus `-dirty`) into the entry chunk,
+so a local build made before the commit, or with uncommitted changes, hashes
+differently from the deploy. When in doubt, grep the live entry bundle for a
+string the commit added instead.
+
+**Notes-only pushes don't deploy.** Cloudflare's build watch paths exclude
+`*.md` and `*.txt` (set 2026-10-16), so a push touching only those is skipped
+and `deploy:verify` will rightly see no change. Any other file in the push
+builds as normal. That setting exists because every deploy renames every
+chunk, and a tab open across a deploy then fails its next lazy import;
+`src/utils/staleChunk.js` reloads such a tab once.
