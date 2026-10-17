@@ -236,18 +236,25 @@ round, by id.
       refused, then the right one works.
 - [ ] B8. Sign out, then kill the app and relaunch — still signed out.
 - [ ] B9. Session survives a phone reboot while signed in.
-- [ ] B10. **Continue with Google** (added 2026-09-26). A Chrome Custom Tab
+- [x] B10. **PASS 2026-10-16, build 5 (internal track).** No picker appeared:
+      with one Google account already signed in to Chrome and consent given,
+      Google approves instantly and the tab only flashes. That is correct.
+      **Continue with Google** (added 2026-09-26). A Chrome Custom Tab
       opens — a browser sheet with a URL bar, NOT a page inside the app. Pick an
       account; the tab closes by itself and you are signed in, in the app.
       If you land in the WEB app inside the tab instead, the redirect
       `com.alexkrewson.argumentmapper://auth-callback` is missing from Supabase's
       Redirect URLs list and Supabase fell back to the Site URL.
-- [ ] B11. Google again, but back out of Google's account picker. The modal
+- [ ] B11. NOT REACHABLE with one Google account signed in to Chrome -- no
+      page appears to back out of (2026-10-16). To run it, sign out of Google
+      in the phone's Chrome first, or use a phone with two Google accounts.
+      Google again, but back out of Google's account picker. The modal
       should show an error or return to "Continue with Google", never hang on
       "Finish in the browser…". Try it twice: once cancelling on Google's page,
       once closing the tab with the system back button (that one sends nothing
       back, and relies on the tab's browserFinished event instead).
-- [ ] B12. Google with the SAME address as an existing email/password account.
+- [x] B12. PASS 2026-10-16, build 5: linked to the existing email account.
+      Google with the SAME address as an existing email/password account.
       You should land in that account — same History, same credit balance —
       not a new empty one. Supabase links verified identities by email.
 - [ ] B13. Signed in with Google only: Settings → ACCOUNT shows **no** Change
