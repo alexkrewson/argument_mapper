@@ -9,7 +9,11 @@ Top Priority Ideas (below)
   is on master; play-billing is merged and can be deleted.
   ============================================================================
 
-  WAITING ON GOOGLE: production release 5 (1.0.1), full rollout, plus a
+  PUBLISHED: checked 2026-10-17 -- the public store page reads "Updated on
+  Oct 16, 2026" (was Sep 22). Build 5 is live in production for everyone;
+  nothing is in review. What follows is how it was submitted.
+
+  SUBMITTED TO GOOGLE: production release 5 (1.0.1), full rollout, plus a
   Data safety update, sent together -- Publishing overview read "Changes in
   review" at 21:19. Data safety now adds OAuth sign-in, Purchase history
   (App functionality) and Name (Account management), both optional. Managed publishing is OFF, so approval
