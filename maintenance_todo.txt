@@ -23,7 +23,7 @@ Top Priority Ideas (below)
                     manual-test-plan case.
 
   ============================================================================
-  STAGE 2 PLAN (2026-10-22) — TWO-PERSON DEBATES, STRICT TURNS. NOT STARTED.
+  STAGE 2 PLAN (2026-10-22) — TWO-PERSON DEBATES, STRICT TURNS. STEP 1 DONE.
   ============================================================================
 
   ALEX DECIDED
@@ -88,8 +88,15 @@ Top Priority Ideas (below)
         stage 1     either member can turn the view link on or off.
 
   STEPS (each one shippable; web only)
-        1  migration: members + backfill + RLS swap, history unchanged in UI.
-           Prove no existing user loses a debate (count before/after).
+        1  DONE 10-22. migrations/20261022120000_debate_members.sql, applied
+           by Alex in the SQL editor; it rolls itself back if any debate
+           lacks its creator. Only SELECT admits members so far; INSERT/
+           UPDATE/DELETE are still creator-only (steps 2 and 5 change that).
+           Verified: anon is refused the table and is_debate_member; the test
+           account sees 12 debates / 12 side-'a' memberships; a new debate
+           gets its member row from the trigger, and INSERT...RETURNING
+           still works; delete cascades the membership; client inserts into
+           debate_members are refused (42501); free web suite 39/39 live.
         2  submit_turn + client save path for shared debates.
         3  invites: create / accept / in-app list. History shows the partner.
         4  turn lock on the input + typing/thinking indicator + Realtime map.
