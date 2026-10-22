@@ -20,7 +20,7 @@ export default function DebateHistory({ user, onLoadDebate, onNewDebate, current
     setLoading(true);
     supabase
       .from("debates")
-      .select("id, title, created_at, updated_at, speaker_a, speaker_b, map_data")
+      .select("id, title, created_at, updated_at, speaker_a, speaker_b, map_data, turn_side, version")
       .order("updated_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) setError(error.message);

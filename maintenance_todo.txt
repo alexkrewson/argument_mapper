@@ -23,7 +23,7 @@ Top Priority Ideas (below)
                     manual-test-plan case.
 
   ============================================================================
-  STAGE 2 PLAN (2026-10-22) — TWO-PERSON DEBATES, STRICT TURNS. STEP 1 DONE.
+  STAGE 2 PLAN (2026-10-22) — TWO-PERSON DEBATES, STRICT TURNS. STEPS 1-2 DONE.
   ============================================================================
 
   ALEX DECIDED
@@ -97,7 +97,25 @@ Top Priority Ideas (below)
            gets its member row from the trigger, and INSERT...RETURNING
            still works; delete cascades the membership; client inserts into
            debate_members are refused (42501); free web suite 39/39 live.
-        2  submit_turn + client save path for shared debates.
+        2  DONE 10-22. migrations/20261022130000_submit_turn.sql (applied by
+           Alex): debates.turn_side + version, submit_turn(), and "Creators
+           update debates" now admits solo debates only (turn_side null).
+           Client: src/utils/turns.js; App's auto-save sends shared debates
+           through queueSharedSave (one at a time, so versions chain); an AI
+           turn passes the turn (passTurnRef); Skip Turn on a shared debate
+           sends the current map with the pass, so a debounced edit isn't
+           lost; a conflict reloads the latest map with a message.
+           Verified on production, solo account only: v0 save -> v1, a stale
+           v0 save -> stale_version, a pass-only save keeps the map, a
+           non-member -> 42501, anon -> 42501, solo direct UPDATE still
+           works. Free web suite 39/39 against dev (share-view needed a
+           retry around its viewer click: a poll can detach the badge).
+           NOT VERIFIED: the turn check and the two-person client path.
+           Nothing can make a debate shared until step 3, which is also
+           where they get tested (needs a SECOND test account).
+           Also needed in step 3: share.js toggles share_token with a direct
+           UPDATE, which shared debates now refuse. Give it an RPC that any
+           member may call.
         3  invites: create / accept / in-app list. History shows the partner.
         4  turn lock on the input + typing/thinking indicator + Realtime map.
         5  leave semantics, delete-account, privacy.html.

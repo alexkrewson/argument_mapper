@@ -54,9 +54,14 @@ test.describe("Share view-only", () => {
 
         // Tapping a node shows it read-only.
         // A real mouse click at the badge: the tap is cytoscape's, not the DOM's.
-        const box = await viewer.locator('[data-node-id="node_2"]').boundingBox();
-        await viewer.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-        await expect(viewer.getByTestId("shared-node-card")).toContainText("Share check reply");
+        // Retried: each poll re-renders the badges, so the one just measured
+        // can be detached by the time boundingBox() asks (null box).
+        await expect(async () => {
+          const box = await viewer.locator('[data-node-id="node_2"]').boundingBox();
+          expect(box).not.toBeNull();
+          await viewer.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+          await expect(viewer.getByTestId("shared-node-card")).toContainText("Share check reply", { timeout: 2_000 });
+        }).toPass({ timeout: 15_000 });
 
         // Stop sharing: the next poll loses the map.
         await page.getByTestId("share-btn").click();

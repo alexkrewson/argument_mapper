@@ -34,6 +34,7 @@ import { computeFadedInfo } from "./utils/fadedInfo.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
 import { randomName } from "./utils/names.js";
 import { supabase } from "./utils/supabase";
+import { SIDE_TO_SPEAKER, isTurnConflict, getMySide, submitTurn, fetchDebate } from "./utils/turns.js";
 import { isPlayBillingPlatform, claimUnconsumedPurchases, onPlayPurchasesUpdated } from "./utils/playBilling";
 import { useAuth } from "./hooks/useAuth";
 import "./App.css";
@@ -306,6 +307,13 @@ export default function App() {
   // and until it is written down the user has been charged for something they
   // could still lose. Nothing else in the app is worth money to redo.
   const saveNowRef = useRef(false);
+  // Two-person debates. null for a solo debate; otherwise { mySide, turnSide,
+  // version } as the server last told us. Shared saves go through
+  // submit_turn one at a time (saveChainRef), so each carries the version
+  // the previous one returned -- two in flight would reject each other.
+  const sharedRef = useRef(null);
+  const passTurnRef = useRef(false);       // the next shared save also passes the turn
+  const saveChainRef = useRef(Promise.resolve());
 
   const chatLogRef = useRef(null);
   useEffect(() => {
@@ -393,20 +401,81 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [user, inner.nodes.length]);
 
+  /**
+   * Save a shared debate's turn, after any shared save already in flight.
+   * `row = null` only passes the turn. Off-turn it does nothing: the turn
+   * lock in the input is what stops edits, this just keeps a late debounced
+   * save from firing after Skip Turn has already handed the turn over.
+   */
+  const queueSharedSave = (row, passTurn) => {
+    saveChainRef.current = saveChainRef.current.then(async () => {
+      const shared = sharedRef.current;
+      const debateId = currentDebateIdRef.current;
+      if (!shared || !debateId || shared.turnSide !== shared.mySide) return;
+      setSaveStatus("saving");
+      try {
+        const res = await submitTurn(debateId, shared.version, row, passTurn);
+        sharedRef.current = { ...shared, version: res.version, turnSide: res.turn_side };
+        if (passTurn) setCurrentSpeaker(SIDE_TO_SPEAKER[res.turn_side]);
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus(null), 2000);
+      } catch (err) {
+        setSaveStatus(null);
+        if (isTurnConflict(err)) {
+          setError("The map changed since you last saw it, so the latest version has been loaded.");
+          await reloadCurrentDebate();
+        } else {
+          console.error("Shared save failed:", err);
+          setError(err.message);
+        }
+      }
+    });
+    return saveChainRef.current;
+  };
+
+  const reloadCurrentDebate = async () => {
+    if (!currentDebateIdRef.current) return;
+    try {
+      handleLoadDebate(await fetchDebate(currentDebateIdRef.current));
+    } catch (err) {
+      console.error("Reload failed:", err);
+    }
+  };
+
+  const handleSkipTurn = () => {
+    if (!sharedRef.current) {
+      setCurrentSpeaker((prev) => prev === "Blue" ? "Green" : "Blue");
+      return;
+    }
+    // Sends the current map with the pass, so a manual edit still waiting
+    // out the debounce lands in this save rather than being dropped.
+    queueSharedSave(inner.nodes.length > 0 ? buildSaveRow() : null, true);
+  };
+
+  /** The debates row for the map as it stands in this render. */
+  const buildSaveRow = () => {
+    const autoTitle = inner.title ||
+      inner.nodes.find((n) => n.type === "claim")?.content?.slice(0, 60) ||
+      `Productive Disagreement — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    return { title: autoTitle, map_data: histEntries[histIndex], theme_key: themeKey, speaker_a: resolvedTheme.a.name, speaker_b: resolvedTheme.b.name, user_id: user?.id };
+  };
+
   // Auto-save: 1.5s after any map change, or immediately after a paid AI turn.
   useEffect(() => {
     if (!user || inner.nodes.length === 0) return;
     if (skipNextSaveRef.current) { skipNextSaveRef.current = false; return; }
     const delay = saveNowRef.current ? 0 : 1500;
     saveNowRef.current = false;
-    const entry = histEntries[histIndex];
-    const autoTitle = inner.title ||
-      inner.nodes.find((n) => n.type === "claim")?.content?.slice(0, 60) ||
-      `Productive Disagreement — ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+    const row = buildSaveRow();
     const timer = setTimeout(async () => {
+      if (sharedRef.current && currentDebateIdRef.current) {
+        const passTurn = passTurnRef.current;
+        passTurnRef.current = false;
+        queueSharedSave(row, passTurn);
+        return;
+      }
       setSaveStatus("saving");
       try {
-        const row = { title: autoTitle, map_data: entry, theme_key: themeKey, speaker_a: resolvedTheme.a.name, speaker_b: resolvedTheme.b.name, user_id: user.id };
         if (currentDebateIdRef.current) {
           const { error } = await supabase.from("debates").update(row).eq("id", currentDebateIdRef.current);
           if (error) throw error;
@@ -429,6 +498,18 @@ export default function App() {
     skipNextSaveRef.current = true;
     dispatchHistory({ type: "load", entry: debate.map_data });
     currentDebateIdRef.current = debate.id;
+    if (debate.turn_side) {
+      // mySide stays null (so every save no-ops) until we know it.
+      sharedRef.current = { mySide: null, turnSide: debate.turn_side, version: debate.version };
+      setCurrentSpeaker(SIDE_TO_SPEAKER[debate.turn_side]);
+      getMySide(debate.id, user.id).then((mySide) => {
+        if (sharedRef.current && currentDebateIdRef.current === debate.id) {
+          sharedRef.current = { ...sharedRef.current, mySide };
+        }
+      }).catch((err) => console.error("Could not read your side:", err));
+    } else {
+      sharedRef.current = null;
+    }
     if (debate.theme_key) handleThemeChange(debate.theme_key);
     if (debate.speaker_a || debate.speaker_b) {
       setPlayerNames((prev) => ({
@@ -446,6 +527,7 @@ export default function App() {
   const handleNewDebate = () => {
     dispatchHistory({ type: "load", entry: { map: EMPTY_MAP, analysis: null } });
     currentDebateIdRef.current = null;
+    sharedRef.current = null;
     setPlayerNames({ a: "User A", b: "User B" });
     setHasSubmitted({ a: false, b: false });
     setCurrentSpeaker("Blue");
@@ -615,6 +697,7 @@ export default function App() {
       }
 
       saveNowRef.current = true;   // paid for: persist without waiting out the debounce
+      passTurnRef.current = true;  // shared debates: this save also hands the turn over
       pushHistory(cleanMap, sanitizeAnalysis(updatedMap.moderator_analysis || null));
       triggerGameFeedback(nodesBefore, cleanMap.argument_map.nodes, submittingSpeaker);
 
@@ -1579,7 +1662,7 @@ export default function App() {
             loading={loading}
             loadingSpeaker={loadingSpeaker}
             directMode={directMode}
-            onSkipTurn={() => setCurrentSpeaker((prev) => prev === "Blue" ? "Green" : "Blue")}
+            onSkipTurn={handleSkipTurn}
             onUndo={handleUndo}
             onRedo={handleRedo}
             canUndo={canUndo}
