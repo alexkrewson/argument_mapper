@@ -20,8 +20,90 @@ Top Priority Ideas (below)
                     suite, 39/39, against `npm run dev` (TEST_BASE_URL).
         NOT DONE    no APK build carries it yet (the viewer itself is web-only;
                     the APK only makes links, pointed at the live site). No
-                    manual-test-plan case. No decision recorded on a stage 2
-                    (comments / co-editing).
+                    manual-test-plan case.
+
+  ============================================================================
+  STAGE 2 PLAN (2026-10-22) — TWO-PERSON DEBATES, STRICT TURNS. NOT STARTED.
+  ============================================================================
+
+  ALEX DECIDED
+        pay         each speaker pays for their own AI call. Already true:
+                    claude-proxy charges whoever's JWT made the call.
+        invite      a separate invite link (never the view link), AND an in-app
+                    invitation for a signed-in invitee.
+        off-turn    no inputs or changes at all when it isn't your turn. You
+                    see a typing / thinking indicator by the input instead.
+        platform    web first. Android later.
+        owners      no owner. Both people own the map equally, it shows in both
+                    Histories, and nobody can skip the other's turn.
+
+  WHY IT ISN'T SMALL
+        turn        currentSpeaker is React state (App.jsx:211), never saved.
+                    The server must hold whose turn it is.
+        saves       App.jsx:411 writes the whole map_data. With two writers, a
+                    stale tab erases the other's turn. All shared writes go
+                    through one database function that checks the turn AND
+                    the version.
+        ownership   RLS "Users own their debates", DebateHistory's query and
+                    delete-account all assume debates.user_id is the owner.
+
+  DESIGN
+        members     argument_mapper.debate_members (debate_id, user_id, side
+                    'a'|'b'), unique per (debate, side). Backfill every
+                    existing debate's user_id as side 'a'. Every debate RLS
+                    policy becomes "is a member"; debates.user_id stays only
+                    as "who created it".
+        turn        debates gets turn_side ('a'|'b', null = solo) and version
+                    int. submit_turn(debate_id, expected_version, map_data, ...)
+                    is SECURITY DEFINER: the caller must be the member whose
+                    side = turn_side and expected_version must match. It saves,
+                    flips the turn and bumps the version in one transaction. A
+                    mismatch means reload the map; it never merges. Direct
+                    UPDATE on a two-member debate is closed off by RLS.
+        turn ends   on Submit (the AI-processed statement) or Skip Turn.
+                    Manual node add/edit/rate is allowed during your own turn
+                    and does NOT pass the turn.
+        indicator   a Realtime broadcast channel per debate, members only:
+                    "typing" while the box has focus and text, "thinking"
+                    while the AI call runs. It's ephemeral, so a closed tab
+                    just stops sending. No database writes for it.
+        live map    Realtime postgres_changes on the debate row (members can
+                    SELECT, and Realtime respects RLS), plus stage 1's
+                    5-second poll as the fallback.
+        invites     debate_invites (token uuid, debate_id, side, invitee_email
+                    null, created_by, accepted_at). One open invite per debate;
+                    it dies once the seat is filled. accept_invite(token)
+                    requires sign-in and adds the member. In-app invitation:
+                    RLS lets a user read invites whose invitee_email equals
+                    their own auth.jwt() email. Creating an invite never says
+                    whether that email has an account, so this can't be used
+                    to find out who uses the app. No email is sent for now;
+                    the link is the way in.
+        leaving     History "delete" on a two-member debate means LEAVE. The
+                    row goes only when the last member leaves. delete-account
+                    leaves shared debates and deletes solo ones.
+        privacy     privacy.html must say that the other member keeps a shared
+                    map, your words included, after you leave or delete your
+                    account. It must change in the same commit as leaving.
+        stage 1     either member can turn the view link on or off.
+
+  STEPS (each one shippable; web only)
+        1  migration: members + backfill + RLS swap, history unchanged in UI.
+           Prove no existing user loses a debate (count before/after).
+        2  submit_turn + client save path for shared debates.
+        3  invites: create / accept / in-app list. History shows the partner.
+        4  turn lock on the input + typing/thinking indicator + Realtime map.
+        5  leave semantics, delete-account, privacy.html.
+        6  tests: two browser contexts in tests/collab.spec.js, free tier
+           (manual nodes + Skip Turn, no AI). Turn order, the stale-version
+           reject, invite accept, leave. A manual-test-plan section.
+
+  ASSUMED (Alex to confirm or overturn)
+        - Whoever sends the invite keeps their side; the invitee gets the other.
+        - If the second member leaves, the debate goes back to solo and can be
+          re-invited.
+        - The title, theme and speaker names are only editable on your turn,
+          the same as the map.
 
   ============================================================================
   START HERE — end of 2026-10-16. BUILD 5 (Play top-ups + Google sign-in)
