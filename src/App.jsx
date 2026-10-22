@@ -20,6 +20,7 @@ import ConcessionConfirmModal from "./components/ConcessionConfirmModal";
 import AIChangeLogModal from "./components/AIChangeLogModal";
 import AuthModal from "./components/AuthModal";
 import BuyCreditsModal from "./components/BuyCreditsModal";
+import ShareModal from "./components/ShareModal";
 import DebateHistory from "./components/DebateHistory";
 import AboutTab from "./components/AboutTab";
 import { updateArgumentMap, rateNode, chatWithModerator, parseConversation, extractConversationFromImage } from "./utils/claude";
@@ -29,6 +30,7 @@ import { computeScores, computeScoreDelta, POINTS } from "./utils/scoring.js";
 import { playHappy, playSad, playBigWin } from "./utils/sounds.js";
 import { speakerBorder } from "./utils/speakers.js";
 import { fmtNodeId } from "./utils/format.js";
+import { computeFadedInfo } from "./utils/fadedInfo.js";
 import { THEMES, DEFAULT_THEME_KEY } from "./utils/themes.js";
 import { randomName } from "./utils/names.js";
 import { supabase } from "./utils/supabase";
@@ -259,6 +261,8 @@ export default function App() {
   const [saveNudgeDismissed, setSaveNudgeDismissed] = useState(false);
   const [creditBalance, setCreditBalance] = useState(null);
   const [showBuyCredits, setShowBuyCredits] = useState(false);
+  // The debate the share modal is open for: undefined = closed, null = not saved yet.
+  const [shareFor, setShareFor] = useState(undefined);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [exitArmed, setExitArmed] = useState(false); // Android: "press back again to exit"
   const [lastUsage, setLastUsage] = useState(null); // { input, output, costCents }
@@ -1177,80 +1181,7 @@ export default function App() {
     setSelectedNode(node);
   }, []);
 
-  // Compute faded/colored node sets for visual invalidation:
-  // - fadedNodeIds: opacity-faded due to thumbs-up (agreement) or thumbs-down (retraction)
-  // - contradictionFadedIds: light-red background (contradiction-affected)
-  // - walkbackFadedIds: light-orange background (goalpost-moving-affected)
-  // - contradictionBorderIds: thick red border (the two contradicting nodes)
-  // - walkbackBorderIds: thick orange border (the two walkback nodes)
-  const fadedInfo = useMemo(() => {
-    // Build predecessor map: targetId → Set of sourceIds
-    const predecessorMap = new Map();
-    for (const edge of inner.edges) {
-      if (!predecessorMap.has(edge.to)) predecessorMap.set(edge.to, new Set());
-      predecessorMap.get(edge.to).add(edge.from);
-    }
-
-    function bfsBack(startIds) {
-      const visited = new Set(startIds);
-      const queue = [...startIds];
-      while (queue.length > 0) {
-        const current = queue.shift();
-        for (const predId of predecessorMap.get(current) || []) {
-          if (!visited.has(predId)) {
-            visited.add(predId);
-            queue.push(predId);
-          }
-        }
-      }
-      return visited;
-    }
-
-    // Thumbs-up/down opacity fading (agreement + retraction).
-    // Expand rated sets to include twins before BFS so twin subtrees fade together.
-    const expandWithTwins = (ids) => {
-      const expanded = new Set(ids);
-      for (const id of ids) {
-        for (const twinId of (inner.nodes.find((n) => n.id === id)?.metadata?.twins ?? [])) {
-          expanded.add(twinId);
-        }
-      }
-      return [...expanded];
-    };
-    const agreedIds = inner.nodes.filter((n) => n.rating === "up").map((n) => n.id);
-    const downIds = inner.nodes.filter((n) => n.rating === "down").map((n) => n.id);
-    const fadedNodeIds = new Set([...bfsBack(expandWithTwins(agreedIds)), ...bfsBack(expandWithTwins(downIds))]);
-
-    // Contradiction borders: both the flagging node AND the node being contradicted
-    const contradictionBorderIds = new Set();
-    const walkbackBorderIds = new Set();
-    for (const node of inner.nodes) {
-      if (node.metadata?.contradicts) {
-        contradictionBorderIds.add(node.id);
-        contradictionBorderIds.add(node.metadata.contradicts);
-      }
-      if (node.metadata?.moves_goalposts_from) {
-        walkbackBorderIds.add(node.id);
-        walkbackBorderIds.add(node.metadata.moves_goalposts_from);
-      }
-    }
-
-    // Contradiction colored backgrounds: contradicted node + predecessors + all border nodes
-    const contradictionTargetIds = inner.nodes
-      .filter((n) => n.metadata?.contradicts)
-      .map((n) => n.metadata.contradicts);
-    const contradictionFadedIds = bfsBack(contradictionTargetIds);
-    for (const id of contradictionBorderIds) contradictionFadedIds.add(id);
-
-    // Walkback colored backgrounds: walked-back node + predecessors + all border nodes
-    const walkbackTargetIds = inner.nodes
-      .filter((n) => n.metadata?.moves_goalposts_from)
-      .map((n) => n.metadata.moves_goalposts_from);
-    const walkbackFadedIds = bfsBack(walkbackTargetIds);
-    for (const id of walkbackBorderIds) walkbackFadedIds.add(id);
-
-    return { fadedNodeIds, contradictionFadedIds, walkbackFadedIds, contradictionBorderIds, walkbackBorderIds };
-  }, [inner.nodes, inner.edges]);
+  const fadedInfo = useMemo(() => computeFadedInfo(inner.nodes, inner.edges), [inner.nodes, inner.edges]);
 
   // Compute invalidation-adjusted moderator analysis.
   // Accounts for all forms of argument invalidation: thumbs-up/down, contradictions,
@@ -1330,6 +1261,12 @@ export default function App() {
             <span className={`save-status save-status--${saveStatus}`}>
               {saveStatus === "saving" ? "Saving…" : "Saved ✓"}
             </span>
+          )}
+          {user && inner.nodes.length > 0 && (
+            <button className="settings-btn share-btn" data-testid="share-btn"
+                    onClick={() => setShareFor(currentDebateIdRef.current)} title="Share a view-only link">
+              Share
+            </button>
           )}
           <SettingsPanel open={settingsOpen} onOpenChange={setSettingsOpen} currentThemeKey={themeKey} onThemeChange={handleThemeChange} onThemePreviewStart={setPreviewThemeKey} onThemePreviewEnd={handleThemePreviewEnd} user={user} onOpenAuth={(mode = "signin") => { setAuthInitialMode(mode); setShowAuthModal(true); }} gameMode={gameMode} onGameModeChange={handleGameModeChange} gameSounds={gameSounds} onGameSoundsChange={handleGameSoundsChange} creditBalance={creditBalance} onBuyCredits={() => setShowBuyCredits(true)} onCopyContext={() => copyText(JSON.stringify(argumentMap, null, 2))} />
         </header>
@@ -1672,6 +1609,8 @@ export default function App() {
 
       {/* Auth modal */}
       {showAuthModal && <AuthModal initialMode={authInitialMode} onClose={() => { setShowAuthModal(false); setAuthInitialMode("signin"); }} />}
+
+      {shareFor !== undefined && <ShareModal debateId={shareFor} onClose={() => setShareFor(undefined)} />}
 
       {/* Buy credits modal */}
       {showBuyCredits && <BuyCreditsModal user={user} onPurchased={handleCreditUpdate} onClose={() => setShowBuyCredits(false)} />}

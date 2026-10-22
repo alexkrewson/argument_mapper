@@ -4,6 +4,26 @@ Top Priority Ideas (below)
 ================================================================================
 
   ============================================================================
+  START HERE — 2026-10-22. VIEW-ONLY SHARE LINKS SHIPPED TO WEB.
+  The 10-16 block below is still accurate for everything else.
+  ============================================================================
+
+  WHAT: the owner turns a link on for one debate (Share button); anyone with
+  /?view=<token> watches the map signed out, polled every 5s. Off kills the
+  link; on again mints a new token. Written 10-17, left uncommitted, finished
+  10-22.
+        db          migrations/20261017120000_share_links.sql -- APPLIED to
+                    production 10-22 by Alex in the SQL editor. Verified: anon
+                    RPC answers [] for an unknown token; anon cannot list
+                    shared debates.
+        tests       tests/share-view.spec.js (free tier) + the whole free web
+                    suite, 39/39, against `npm run dev` (TEST_BASE_URL).
+        NOT DONE    no APK build carries it yet (the viewer itself is web-only;
+                    the APK only makes links, pointed at the live site). No
+                    manual-test-plan case. No decision recorded on a stage 2
+                    (comments / co-editing).
+
+  ============================================================================
   START HERE — end of 2026-10-16. BUILD 5 (Play top-ups + Google sign-in)
   SUBMITTED FOR PRODUCTION REVIEW. Web is live with all of it. Everything
   is on master; play-billing is merged and can be deleted.
